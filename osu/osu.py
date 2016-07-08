@@ -127,12 +127,15 @@ class Osu:
         userinfo = get_user(key, username, 0, "Autodetect", 1).decode("utf-8")
         userbest = get_user_best(key, username, 0, 3, "Autodetect").decode("utf-8")
 
-        if (len(json.loads(userinfo)) > 0):
-          self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 0) # only takes the first one
-          await self.bot.send_typing(channel)
-          await self.bot.send_file(channel, 'user.png')
-        else:
-          await self.bot.say("Player not found :cry:")
+        try: 
+            if (len(json.loads(userinfo)) > 0):
+              self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 0) # only takes the first one
+              await self.bot.send_typing(channel)
+              await self.bot.send_file(channel, 'user.png')
+            else:
+              await self.bot.say("Player not found :cry:")
+        except:
+            await self.bot.say(help_msg)
 
 
     @commands.command(pass_context=True, no_pm=True)
@@ -494,7 +497,7 @@ class Osu:
                   draw.text(left_align + 100, top_initial + 30 + (i) * spacing, "{}".format(truncate_text(best_beatmaps[i]['title'])))
                   draw.text(left_align + 100, top_initial + 50 + (i) * spacing, "[{}]".format(truncate_text(best_beatmaps[i]['version'])))
 
-                  draw.text(left_align + 320, top_initial + 30 + (i) * spacing, "{}pp".format(userbest[i]['pp']))
+                  draw.text(left_align + 335, top_initial + 30 + (i) * spacing, "{:0.2f}pp".format(float(userbest[i]['pp'])))
 
                   # handle mod images
                   mods = mod_calculation(userbest[i]['enabled_mods'])
@@ -506,7 +509,7 @@ class Osu:
                       mod = urlopen(mod_req)
                       with Image(file=mod) as mod_icon:
                           mod_icon.resize(46, 34)
-                          base_img.composite(mod_icon, left=left_align + 315 + 45*(j), top=top_initial + 32 + (i) * spacing)
+                          base_img.composite(mod_icon, left=left_align + 330 + 45*(j), top=top_initial + 32 + (i) * spacing)
                       mod.close()
                   draw(base_img)
 
