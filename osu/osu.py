@@ -13,7 +13,7 @@ from wand.drawing import Drawing
 from wand.color import Color
 from cogs.utils import checks
 
-bg_urls = ['http://puu.sh/pSSFN/34704f54e7.jpg', 'http://puu.sh/pSSHJ/20fd045df0.jpg','http://puu.sh/pSSKb/0bbe644cce.png', 'http://puu.sh/pSSKK/7276fedd9f.jpg', 'http://puu.sh/pST3z/238863993a.png','http://puu.sh/pST4a/563337774d.jpg']
+bg_urls = ['http://puu.sh/pUdMe/4cdc33ed08.jpg','http://puu.sh/pUdJb/47220936c9.jpg','http://puu.sh/pUdBf/8959a98929.png','http://puu.sh/pUdyQ/62eee8b326.jpg','http://puu.sh/pSSFN/34704f54e7.jpg', 'http://puu.sh/pSSHJ/20fd045df0.jpg','http://puu.sh/pSSKb/0bbe644cce.png', 'http://puu.sh/pSSKK/7276fedd9f.jpg', 'http://puu.sh/pST3z/238863993a.png','http://puu.sh/pST4a/563337774d.jpg']
 help_msg = "Make sure you have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osukeyset** to set your key"
 
 class Osu:
