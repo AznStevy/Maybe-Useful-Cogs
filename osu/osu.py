@@ -122,19 +122,18 @@ class Osu:
         msg = ctx.message
         author = ctx.message.author
         channel = ctx.message.channel
-        try: 
-            # get userinfo
-            userinfo = get_user(key, username, 0, "Autodetect", 1).decode("utf-8")
-            userbest = get_user_best(key, username, 0, 3, "Autodetect").decode("utf-8")
+         
+        # get userinfo
+        userinfo = get_user(key, username, 0, "Autodetect", 1).decode("utf-8")
+        userbest = get_user_best(key, username, 0, 3, "Autodetect").decode("utf-8")
 
-            if (len(json.loads(userinfo)) > 0):
-              self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 0) # only takes the first one
-              await self.bot.send_typing(channel)
-              await self.bot.send_file(channel, 'user.png')
-            else:
-              await self.bot.say("Player not found :cry:")
-        except:
-            await self.bot.say(help_msg)
+        if (len(json.loads(userinfo)) > 0):
+          self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 0) # only takes the first one
+          await self.bot.send_typing(channel)
+          await self.bot.send_file(channel, 'user.png')
+        else:
+          await self.bot.say("Player not found :cry:")
+
 
     @commands.command(pass_context=True, no_pm=True)
     async def taikoprofile(self, ctx, *, username):
@@ -324,7 +323,7 @@ class Osu:
 
     # user and userbest comes in json format
     def user_profile(self, user, userbest, gamemode):
-        """Gives a user profile with some information"""
+        """Gives a user profile image with some information"""
         font = 'Verdana, Geneva, sans-serif'
         key = self.osu_api_key["osu_api_key"]
 
@@ -497,7 +496,18 @@ class Osu:
 
                   draw.text(left_align + 320, top_initial + 30 + (i) * spacing, "{}pp".format(userbest[i]['pp']))
 
-                  draw.text(left_align + 320, top_initial + 50 + (i) * spacing, "{}".format(userbest[i]['enabled_mods']))
+                  # handle mod images
+                  mods = mod_calculation(userbest[i]['enabled_mods'])
+                  if len(mods) > 0:
+                    for j in range(len(mods)):
+                      # puts on mod images
+                      mod_url = 'https://new.ppy.sh/images/badges/mods/{}.png'.format(mods[j])
+                      mod_req = urllib.request.Request(mod_url, headers={'User-Agent': 'Mozilla/5.0'})
+                      mod = urlopen(mod_req)
+                      with Image(file=mod) as mod_icon:
+                          mod_icon.resize(46, 34)
+                          base_img.composite(mod_icon, left=left_align + 315 + 45*(j), top=top_initial + 32 + (i) * spacing)
+                      mod.close()
                   draw(base_img)
 
             # save the image
@@ -512,8 +522,48 @@ def truncate_text(text):
     text = text[0:17] + '...'
   return text
 
-def mod_calculation():
-  print("stuff")
+# gives a list of the ranked mods
+def mod_calculation(number):
+  number = int(number)
+  mod_list =[]
+
+  if number >= 16384:
+    number -= 16384
+    mod_list.append('perfect')
+  if number >= 4096:
+    number-= 4096
+    mod_list.append('spun-out')
+  if number >= 1024:
+    number-= 1024
+    mod_list.append('flashlight')
+  if number >= 576:
+    number-= 576
+    mod_list.append('nightcore')
+  if number >= 256:
+    number-= 256
+    mod_list.append('half-time')
+  if number >= 128:
+    number-= 128
+    mod_list.append('relax')
+  if number >= 64:
+    number-= 64
+    mod_list.append('double-time')
+  if number >= 32:
+    number-= 32
+    mod_list.append('sudden-death')
+  if number >= 16:
+    number-= 16
+    mod_list.append('hard-rock')
+  if number >= 8:
+    number-= 8
+    mod_list.append('hidden')
+  if number >= 2:
+    number-= 2
+    mod_list.append('easy')
+  if number >= 1:
+    number-= 1
+    mod_list.append('no-fail')
+  return mod_list
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # osu!apy Methods written by albinohat (https://github.com/albinohat/osu-apy)
@@ -531,27 +581,6 @@ def build_request(list_of_params, url):
   
   ## Remove the trailing '&' because I'm OCD.
   return url[:-1]
-
-## get_beatmaps - Returns a JSON payload containing information about a beatmap set or beatmap.
-## key          - Your API key. (Required)
-## since        - A MYSQL-formatted date which is the cut off for the returned data.
-## set_id       - A beatmap set ID. 
-## beatmap_id   - A beatmap ID. 
-## user_id      - A user ID. 
-def get_beatmap(key, since, set_id, beatmap_id):
-  ''' Create a list to store the attributes which are present.'''
-  list_of_params = []
-
-  ## Populate the list of PHP variables.
-  ## Only prepend the PHP variable names if they are there.
-  list_of_params.append(parameterize_key(key))
-  list_of_params.append(parameterize_since(since))
-  list_of_params.append(parameterize_id("s", set_id)) 
-  list_of_params.append(parameterize_id("b", beatmap_id)) 
-  list_of_params.append(parameterize_id("u", user_id))
-
-  ## Build the request URLand return the response.
-  return urllib.request.urlopen(build_request(list_of_params, "https://osu.ppy.sh/api/get_beatmaps?")).read()
 
 ## get_beatmaps - Returns a JSON payload containing information about a beatmap set or beatmap.
 ## key          - Your API key. (Required)
