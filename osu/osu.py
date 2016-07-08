@@ -35,7 +35,7 @@ class Osu:
             return
         else:
             self.osu_api_key["osu_api_key"] = key.content
-            fileIO("data/osu/apikey.json", "save", self.credentials)
+            fileIO("data/osu/apikey.json", "save", self.osu_api_key)
             await self.bot.whisper("API Key details added.")
 
     @commands.command(pass_context=True, no_pm=True)
@@ -776,7 +776,7 @@ def check_files():
                 if key not in osu_api_key.keys():
                     current[key] = osu_api_key[key]
                     print("Adding " + str(key) +
-                          " field to osu credentials.json")
+                          " field to osu apikey.json")
             fileIO(credential_file, "save", current)
 
 def setup(bot):
