@@ -13,7 +13,7 @@ from wand.drawing import Drawing
 from wand.color import Color
 from cogs.utils import checks
 
-bg_urls = ['http://puu.sh/pSSFe/dabdb8abcd.png', 'http://puu.sh/pSSFN/34704f54e7.jpg', 'http://puu.sh/pSSGC/1949a11347.jpg', 'http://puu.sh/pSSHJ/20fd045df0.jpg','http://puu.sh/pSSKb/0bbe644cce.png', 'http://puu.sh/pSSKK/7276fedd9f.jpg', 'http://puu.sh/pST3z/238863993a.png','http://puu.sh/pST4a/563337774d.jpg']
+bg_urls = ['http://puu.sh/pSSFN/34704f54e7.jpg', 'http://puu.sh/pSSHJ/20fd045df0.jpg','http://puu.sh/pSSKb/0bbe644cce.png', 'http://puu.sh/pSSKK/7276fedd9f.jpg', 'http://puu.sh/pST3z/238863993a.png','http://puu.sh/pST4a/563337774d.jpg']
 help_msg = "Make sure you have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osukeyset** to set your key"
 
 class Osu:
@@ -140,6 +140,7 @@ class Osu:
         # get user
         gamemode = int(gamemode)
         user = user
+        font = 'Verdana, Geneva, sans-serif'
 
         # generate background and crops image to correct size
         bg_url = bg_urls[random.randint(0,len(bg_urls))-1]
@@ -191,6 +192,7 @@ class Osu:
                 draw.text_alignment = 'right'
                 draw.font_size = 20
                 draw.font_weight = 500
+                draw.font_family = font
                 draw.fill_color = Color('#FFFFFF')
                 x = 255 # x offset
                 draw.text(x, 60, "Rank: ")
@@ -203,6 +205,7 @@ class Osu:
             with Drawing() as draw:
                 draw.font_size = 26
                 draw.font_weight = 500
+                draw.font_family = font
                 draw.text_alignment = 'center'
                 draw.fill_color = Color('#FFFFFF')
                 draw.text_decoration = 'underline'
@@ -211,6 +214,7 @@ class Osu:
             with Drawing() as draw:                
                 draw.font_size = 20
                 draw.font_weight = 500
+                draw.font_family = font
                 draw.fill_color = Color('#FFFFFF')
                 draw.text_decoration = 'no'
                 x = 255 # x offset
