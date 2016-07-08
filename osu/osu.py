@@ -13,8 +13,8 @@ from wand.drawing import Drawing
 from wand.color import Color
 from cogs.utils import checks
 
-bg_urls = ['http://puu.sh/pUdMe/4cdc33ed08.jpg','http://puu.sh/pUdJb/47220936c9.jpg','http://puu.sh/pUdBf/8959a98929.png','http://puu.sh/pUdyQ/62eee8b326.jpg','http://puu.sh/pSSFN/34704f54e7.jpg', 'http://puu.sh/pSSHJ/20fd045df0.jpg','http://puu.sh/pSSKb/0bbe644cce.png', 'http://puu.sh/pSSKK/7276fedd9f.jpg', 'http://puu.sh/pST3z/238863993a.png','http://puu.sh/pST4a/563337774d.jpg']
-help_msg = "Make sure you have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osukeyset** to set your key"
+bg_urls = ['http://puu.sh/pUeKt/bd02db94a1.jpg', 'http://puu.sh/pUdMe/4cdc33ed08.jpg','http://puu.sh/pUdJb/47220936c9.jpg','http://puu.sh/pUdBf/8959a98929.png','http://puu.sh/pUdyQ/62eee8b326.jpg','http://puu.sh/pSSFN/34704f54e7.jpg', 'http://puu.sh/pSSHJ/20fd045df0.jpg','http://puu.sh/pSSKb/0bbe644cce.png', 'http://puu.sh/pST3z/238863993a.png','http://puu.sh/pST4a/563337774d.jpg']
+help_msg = "You either don't exist in the database, haven't played enough, or don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osukeyset** to set your key"
 
 class Osu:
     """Cog to give osu! stats for all gamemodes, hopefully."""
@@ -117,22 +117,87 @@ class Osu:
 
     @commands.command(pass_context=True, no_pm=True)
     async def osuprofile(self, ctx, *, username):
-        """Gives osu! standard user stats, STILL DOESN'T WORK LOL I TRIED"""
+        """Gives osu! standard user best plays"""
         key = self.osu_api_key["osu_api_key"]
         msg = ctx.message
         author = ctx.message.author
         channel = ctx.message.channel
+        try: 
+            # get userinfo
+            userinfo = get_user(key, username, 0, "Autodetect", 1).decode("utf-8")
+            userbest = get_user_best(key, username, 0, 3, "Autodetect").decode("utf-8")
 
-        # get userinfo
-        userinfo = get_user(key, username, 0, "Autodetect", 1).decode("utf-8")
-        userbest = get_user_best(key, username, 0, 3, "Autodetect").decode("utf-8")
+            if (len(json.loads(userinfo)) > 0):
+              self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 0) # only takes the first one
+              await self.bot.send_typing(channel)
+              await self.bot.send_file(channel, 'user.png')
+            else:
+              await self.bot.say("Player not found :cry:")
+        except:
+            await self.bot.say(help_msg)
 
-        if (len(json.loads(userinfo)) > 0):
-          self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 0) # only takes the first one
-          await self.bot.send_typing(channel)
-          await self.bot.send_file(channel, 'user.png')
-        else:
-          await self.bot.say("Player not found :cry:")
+    @commands.command(pass_context=True, no_pm=True)
+    async def taikoprofile(self, ctx, *, username):
+        """Gives taiko user stats and best plays"""
+        key = self.osu_api_key["osu_api_key"]
+        msg = ctx.message
+        author = ctx.message.author
+        channel = ctx.message.channel
+        try: 
+            # get userinfo
+            userinfo = get_user(key, username, 1, "Autodetect", 1).decode("utf-8")
+            userbest = get_user_best(key, username, 1, 3, "Autodetect").decode("utf-8")
+
+            if (len(json.loads(userinfo)) > 0):
+              self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 1) # only takes the first one
+              await self.bot.send_typing(channel)
+              await self.bot.send_file(channel, 'user.png')
+            else:
+              await self.bot.say("Player not found :cry:")
+        except:
+            await self.bot.say(help_msg)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def ctbprofile(self, ctx, *, username):
+        """Gives ctb user stats and best plays"""
+        key = self.osu_api_key["osu_api_key"]
+        msg = ctx.message
+        author = ctx.message.author
+        channel = ctx.message.channel
+        try: 
+            # get userinfo
+            userinfo = get_user(key, username, 2, "Autodetect", 1).decode("utf-8")
+            userbest = get_user_best(key, username, 2, 3, "Autodetect").decode("utf-8")
+
+            if (len(json.loads(userinfo)) > 0):
+              self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 2) # only takes the first one
+              await self.bot.send_typing(channel)
+              await self.bot.send_file(channel, 'user.png')
+            else:
+              await self.bot.say("Player not found :cry:")
+        except:
+            await self.bot.say(help_msg)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def maniaprofile(self, ctx, *, username):
+        """Gives osu! mania user stats and best plays"""
+        key = self.osu_api_key["osu_api_key"]
+        msg = ctx.message
+        author = ctx.message.author
+        channel = ctx.message.channel
+        try: 
+            # get userinfo
+            userinfo = get_user(key, username, 3, "Autodetect", 1).decode("utf-8")
+            userbest = get_user_best(key, username, 3, 3, "Autodetect").decode("utf-8")
+
+            if (len(json.loads(userinfo)) > 0):
+              self.user_profile(json.loads(userinfo)[0],json.loads(userbest), 3) # only takes the first one
+              await self.bot.send_typing(channel)
+              await self.bot.send_file(channel, 'user.png')
+            else:
+              await self.bot.say("Player not found :cry:")
+        except:
+            await self.bot.say(help_msg)
 
     def user_small(self, user, gamemode):
         """Gives a small user profile image"""
@@ -260,13 +325,17 @@ class Osu:
     # user and userbest comes in json format
     def user_profile(self, user, userbest, gamemode):
         """Gives a user profile with some information"""
+        font = 'Verdana, Geneva, sans-serif'
         key = self.osu_api_key["osu_api_key"]
 
         ## handle data retrieval for top beatmaps
         gamemode = int(gamemode)
 
-        # get best plays MAP info
-        bestplay = json.loads(get_beatmaps(key, '09-04-98', None, beatmap_id=userbest[0]['beatmap_id'], user_id=user['user_id']).decode("utf-8"))
+        # get best plays map titles
+        best_beatmaps = []
+        for i in range(len(userbest)):
+            beatmap = json.loads(get_beatmap(key, beatmap_id=userbest[i]['beatmap_id']).decode("utf-8"))
+            best_beatmaps.append(beatmap[0])
 
         # generate background and crops image to correct size
         bg_url = bg_urls[random.randint(0,len(bg_urls))-1]
@@ -337,12 +406,17 @@ class Osu:
             with Drawing() as draw:
                 draw.font_size = 26
                 draw.font_weight = 500
+                draw.font_family = font
+                draw.text_alignment = 'center'
                 draw.fill_color = Color('#FFFFFF')
                 draw.text_decoration = 'underline'
-                draw.text(155, 35, user['username'])
+                draw.text(310, 35, user['username'])
                 draw(base_img)
+            with Drawing() as draw:                
                 draw.font_size = 20
                 draw.font_weight = 500
+                draw.font_family = font
+                draw.fill_color = Color('#FFFFFF')
                 draw.text_decoration = 'no'
                 x = 255 # x offset
                 draw.text(x, 60, "#{} (#{})".format(user['pp_rank'], user['pp_country_rank']))
@@ -351,7 +425,7 @@ class Osu:
                 draw.text(x, 135, "{}%".format(user['accuracy'][0:5]))
                 draw(base_img)
 
-            # draw osu with correct gamemode
+            # draw osu icon
             osu_logo_url = 'http://puu.sh/pT7JR/577b0cc30c.png'
             osu_req = urllib.request.Request(osu_logo_url, headers={'User-Agent': 'Mozilla/5.0'})
             osu = urlopen(osu_req)
@@ -380,22 +454,66 @@ class Osu:
                 base_img.composite(flag_icon, left=440, top=17)
             flag.close()
 
-            # create tiles for best plays using top_play_beatmaps and userbest. Includes rank, title, diff, mods, pp, timestamp
+            # writes best performances
             with Drawing() as draw:
-                draw.font_size = 18
-                draw.font_weight = 500
-                # draw.text(180, 180, "{}".format(bestplay[0]['title']))
-                draw.text(40, 190, "{}".format(userbest[0]['beatmap_id']))
-                draw.text(20, 190, "{}".format(userbest[0]['rank']))
-                draw.text(20, 200, "{}".format(userbest[0]['pp']))
-                draw.text(20, 210, "{}".format(userbest[0]['score']))
-                draw.text(20, 220, "{}".format(userbest[0]['enabled_mods']))
-                draw.text(20, 230, "{}".format(userbest[0]['date']))
-                draw(base_img)
+                draw.font_size = 32
+                draw.font_weight = 1000
+                draw.font_family = font
+                draw.text_alignment = 'center'
+                draw.fill_color = Color('#555')
+                draw.fill_opacity = 0.6
+                draw.text(244, 205, "{}".format('Best Performances'))
+                draw(base_img)            
+
+            # create tiles for best plays using top_play_beatmaps and userbest. Includes rank, title, diff, mods, pp, timestamp
+            left_align = 20
+            top_initial = 230
+            spacing = 85
+
+            # draw transparent white rectangles
+            for i in range(3):
+              with Drawing() as draw:
+                  draw.fill_color = Color('#CCC')
+                  draw.fill_opacity = 0.6
+                  draw.rectangle(left=left_align + 2,top=top_initial + spacing * i - 5, width=445, height = 70)
+                  draw(base_img)
+
+            for i in range(len(userbest)): 
+              with Drawing() as draw:
+                  draw.font_size = 24
+                  draw.font_weight = 2000
+
+                  # rank image
+                  rank_url = 'https://new.ppy.sh/images/badges/score-ranks/{}.png'.format(userbest[i]['rank'])
+                  rank_req = urllib.request.Request(rank_url, headers={'User-Agent': 'Mozilla/5.0'})
+                  rank = urlopen(rank_req)
+                  with Image(file=rank) as rank_icon:
+                    rank_icon.resize(70,70)      
+                    base_img.composite(rank_icon, left=left_align, top=top_initial + (i) * spacing)
+                  rank.close() 
+
+                  draw.text(left_align + 100, top_initial + 30 + (i) * spacing, "{}".format(truncate_text(best_beatmaps[i]['title'])))
+                  draw.text(left_align + 100, top_initial + 50 + (i) * spacing, "[{}]".format(truncate_text(best_beatmaps[i]['version'])))
+
+                  draw.text(left_align + 320, top_initial + 30 + (i) * spacing, "{}pp".format(userbest[i]['pp']))
+
+                  draw.text(left_align + 320, top_initial + 50 + (i) * spacing, "{}".format(userbest[i]['enabled_mods']))
+                  draw(base_img)
 
             # save the image
             base_img.save(filename='user.png')
         bg.close()
+
+#--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# other helpers
+#--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+def truncate_text(text):
+  if len(text) > 17:
+    text = text[0:17] + '...'
+  return text
+
+def mod_calculation():
+  print("stuff")
 
 #--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # osu!apy Methods written by albinohat (https://github.com/albinohat/osu-apy)
@@ -420,7 +538,7 @@ def build_request(list_of_params, url):
 ## set_id       - A beatmap set ID. 
 ## beatmap_id   - A beatmap ID. 
 ## user_id      - A user ID. 
-def get_beatmaps(key, since, set_id, beatmap_id, user_id):
+def get_beatmap(key, since, set_id, beatmap_id):
   ''' Create a list to store the attributes which are present.'''
   list_of_params = []
 
@@ -431,6 +549,24 @@ def get_beatmaps(key, since, set_id, beatmap_id, user_id):
   list_of_params.append(parameterize_id("s", set_id)) 
   list_of_params.append(parameterize_id("b", beatmap_id)) 
   list_of_params.append(parameterize_id("u", user_id))
+
+  ## Build the request URLand return the response.
+  return urllib.request.urlopen(build_request(list_of_params, "https://osu.ppy.sh/api/get_beatmaps?")).read()
+
+## get_beatmaps - Returns a JSON payload containing information about a beatmap set or beatmap.
+## key          - Your API key. (Required)
+## since        - A MYSQL-formatted date which is the cut off for the returned data.
+## set_id       - A beatmap set ID. 
+## beatmap_id   - A beatmap ID. 
+## user_id      - A user ID. 
+def get_beatmap(key, beatmap_id):
+  ''' Create a list to store the attributes which are present.'''
+  list_of_params = []
+
+  ## Populate the list of PHP variables.
+  ## Only prepend the PHP variable names if they are there.
+  list_of_params.append(parameterize_key(key))
+  list_of_params.append(parameterize_id("b", beatmap_id)) 
 
   ## Build the request URLand return the response.
   return urllib.request.urlopen(build_request(list_of_params, "https://osu.ppy.sh/api/get_beatmaps?")).read()
