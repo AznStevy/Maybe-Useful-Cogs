@@ -96,7 +96,7 @@ class Osu:
     @commands.command(pass_context=True, no_pm=True)
     async def listbgs(self, ctx):
         """Ugly list of available backgrounds. Will fix."""
-        await self.bot.say("Here is a list of the current available backgrounds: \n\n {} as well as 'random'. \n\n If you like to set a background, do **<p>setbg**".format(list(bgs.keys())))
+        await self.bot.say("Here is a list of the current available backgrounds: \n\n ```{}``` as well as 'random'. \n\n If you like to set a background, do **<p>setbg**".format(list(bgs.keys())))
 
     @commands.command(pass_context=True, no_pm=True)
     async def setuser(self, ctx, *, username):
@@ -191,9 +191,9 @@ class Osu:
                 if username == self.user_settings[server.id][user.id]["osu_username"]:
                     self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
                 else:
-                    self.draw_user_small(json.loads(userinfo)[0], gamemode, "")            
+                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "")            
             else:
-                self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background                            
+                self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
             await self.bot.send_typing(channel)
             await self.bot.send_file(channel, 'data/osu/user_profile.png')
         else:
