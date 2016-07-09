@@ -6,14 +6,26 @@ import random
 import os
 from discord.ext import commands
 from urllib.request import urlopen
-from .utils.dataIO import fileIO
+from .utils.dataIO import dataIO, fileIO
 from wand.image import Image
 from wand.display import display
 from wand.drawing import Drawing
 from wand.color import Color
 from cogs.utils import checks
 
-bg_urls = ['http://puu.sh/pUeKt/bd02db94a1.jpg', 'http://puu.sh/pUdMe/4cdc33ed08.jpg','http://puu.sh/pUdJb/47220936c9.jpg','http://puu.sh/pUdBf/8959a98929.png','http://puu.sh/pUdyQ/62eee8b326.jpg','http://puu.sh/pSSFN/34704f54e7.jpg', 'http://puu.sh/pSSHJ/20fd045df0.jpg','http://puu.sh/pSSKb/0bbe644cce.png', 'http://puu.sh/pST3z/238863993a.png','http://puu.sh/pST4a/563337774d.jpg']
+bgs = {
+    'blue_triangles':'http://puu.sh/pUeKt/bd02db94a1.jpg',
+    'rainbow_circles': 'http://puu.sh/pUdMe/4cdc33ed08.jpg',
+    'blue_triangles_2': 'http://puu.sh/pVjqw/06b6b6395f.jpg',
+    'blue_triangles_3': 'http://puu.sh/pUdJb/47220936c9.jpg',
+    'purple_orange_pentagons': 'http://puu.sh/pUdBf/8959a98929.png',
+    'red_white_triangles': 'http://puu.sh/pUdyQ/62eee8b326.jpg',
+    'purple_pink_triangles': 'http://puu.sh/pSSFN/34704f54e7.jpg,',
+    'waterfall': 'http://puu.sh/pSSHJ/20fd045df0.jpg',
+    'pink_triangles': 'http://puu.sh/pST3z/238863993a.png',
+    'rainbow_triangles': 'http://puu.sh/pST4a/563337774d.jpg'
+}
+
 help_msg = "You either don't exist in the database, haven't played enough, or don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osukeyset** to set your key"
 
 class Osu:
@@ -22,12 +34,13 @@ class Osu:
     def __init__(self, bot):
         self.bot = bot
         self.osu_api_key = fileIO("data/osu/apikey.json", "load")
+        self.user_settings = fileIO("data/osu/user_settings.json", "load")
 
     @commands.command(pass_context=True)
     @checks.is_owner()
     async def osukeyset(self, ctx):
         """Sets your osu api key"""
-        await self.bot.whisper("Type your osu api key. You can reply here.")
+        await self.bot.whisper("Type your osu! api key. You can reply here.")
         key = await self.bot.wait_for_message(timeout=30,
                                                    author=ctx.message.author)
         if key is None:
@@ -80,6 +93,65 @@ class Osu:
         key = self.osu_api_key["osu_api_key"]
         await self.process_user_profile(ctx, username, 3)
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def listbgs(self, ctx):
+        """Lists available backgrounds"""
+        await self.bot.say("Here is a list of the current available backgrounds: \n\n {} as well as 'random'. \n\n If you like to set a background, do **<p>setbg**".format(list(bgs.keys())))
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def setbg(self, ctx, background_name):
+        """Sets user background"""
+        user = ctx.message.author
+        channel = ctx.message.channel
+        user_exists = self.check_user_exists(user)
+
+        if user_exists:
+            for i in range(len(self.user_settings)):
+                if user == self.user_settings[i]["user"]:
+                    self.user_settings[i]["background"] = background_name
+        else:
+            await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def setuser(self, ctx, *, username):
+        """Sets user information given an osu! username"""
+        user = ctx.message.author
+        channel = ctx.message.channel
+        server = user.server
+        user_exists = self.check_user_exists(user)
+
+        if not user_exists:
+            if not server.id not in self.user_settings:
+                self.user_settings[server.id] = {}
+
+            newuser = {
+                "discord_username": user, 
+                "osu_username": username, 
+                "bg": ""
+            }
+
+            self.user_settings[server.id][user.id] = newuser
+            dataIO.save_json("data/osu/user_settings.json", self.user_settings)
+            await self.bot.say("{}, your account has been linked.".format(user.mention))
+        else:
+            await self.bot.say("It seems that you already have an account linked.")
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def editusername(self, ctx, *, username):
+        """Edits user information given an osu! username"""
+        user = ctx.message.author
+        channel = ctx.message.channel
+        user_exists = self.check_user_exists(user)
+
+        if user_exists:
+            for i in range(len(self.user_settings)):
+                if user == self.user_settings[i]["user"]:
+                    self.user_settings[i]["osu_username"] = username
+                    fileIO('data/osu/user_settings.json', "save", self.user_settings)
+                    await self.bot.say("{}, your osu! username has been editted.".format(user.mention))
+        else:
+            await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
+
     # Gets json information to proccess the small version of the image
     async def process_user_small(self, ctx, username, gamemode: int):
         key = self.osu_api_key["osu_api_key"]
@@ -109,16 +181,23 @@ class Osu:
         else:
             await self.bot.say("Player not found :cry:")
 
+    # Checks if user exists
+    def check_user_exists(self, user):
+        for i in range(len(self.user_settings)):
+            if user == self.user_settings[i]["user"]:
+                return True
+        return False
+
     # Gives a small user profile image
     def user_small(self, user, gamemode: int):
         font = 'Tahoma'
 
-        # generate background and crops image to correct size
-        bg_url = bg_urls[random.randint(0,len(bg_urls))-1]
+        # checks if user has stored background
+        bg_url = random.choice(list(bgs.values()))
         bg_req = urllib.request.Request(bg_url, headers={'User-Agent': 'Mozilla/5.0'})
         bg = urlopen(bg_req)
         with Image(file=bg) as base_img:
-            # background cropping
+            # background cropping as base image
             base_img.resize(600,600)
             base_img.crop(0,0,488,170)
 
@@ -239,7 +318,7 @@ class Osu:
             best_beatmaps.append(beatmap[0])
 
         # generate background and crops image to correct size
-        bg_url = bg_urls[random.randint(0,len(bg_urls))-1]
+        bg_url = random.choice(list(bgs.values()))
         bg_req = urllib.request.Request(bg_url, headers={'User-Agent': 'Mozilla/5.0'})
         bg = urlopen(bg_req)
         with Image(file=bg) as base_img:
@@ -588,6 +667,12 @@ def check_files():
                     print("Adding " + str(key) +
                           " field to osu apikey.json")
             fileIO(api_file, "save", current)
+
+    # creates file for user backgrounds
+    user_file = "data/osu/user_settings.json"
+    if not fileIO(user_file, "check"):
+        print("Adding data/osu/user_settings.json...")
+        fileIO(user_file, "save", '')
 
 def setup(bot):
     check_folders()
