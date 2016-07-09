@@ -99,56 +99,53 @@ class Osu:
         await self.bot.say("Here is a list of the current available backgrounds: \n\n {} as well as 'random'. \n\n If you like to set a background, do **<p>setbg**".format(list(bgs.keys())))
 
     @commands.command(pass_context=True, no_pm=True)
-    async def setbg(self, ctx, background_name):
-        """Sets user background"""
-        user = ctx.message.author
-        channel = ctx.message.channel
-        user_exists = self.check_user_exists(user)
-
-        if user_exists:
-            for i in range(len(self.user_settings)):
-                if user == self.user_settings[i]["user"]:
-                    self.user_settings[i]["background"] = background_name
-        else:
-            await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
-
-    @commands.command(pass_context=True, no_pm=True)
     async def setuser(self, ctx, *, username):
         """Sets user information given an osu! username"""
         user = ctx.message.author
         channel = ctx.message.channel
         server = user.server
+
+        if user.server.id not in self.user_settings:
+            self.user_settings[user.server.id] = {}
+
         user_exists = self.check_user_exists(user)
-
         if not user_exists:
-            if not server.id not in self.user_settings:
-                self.user_settings[server.id] = {}
-
             newuser = {
-                "discord_username": user, 
-                "osu_username": username, 
-                "bg": ""
+                "discord_username": user.name, 
+                "osu_username": username,
+                "default_gamemode": 0,
+                "background": ""
             }
 
             self.user_settings[server.id][user.id] = newuser
-            dataIO.save_json("data/osu/user_settings.json", self.user_settings)
+            fileIO('data/osu/user_settings.json', "save", self.user_settings)
             await self.bot.say("{}, your account has been linked.".format(user.mention))
         else:
             await self.bot.say("It seems that you already have an account linked.")
-
+            
     @commands.command(pass_context=True, no_pm=True)
-    async def editusername(self, ctx, *, username):
+    async def edituser(self, ctx, *, username):
         """Edits user information given an osu! username"""
         user = ctx.message.author
+        server = user.server
         channel = ctx.message.channel
-        user_exists = self.check_user_exists(user)
 
-        if user_exists:
-            for i in range(len(self.user_settings)):
-                if user == self.user_settings[i]["user"]:
-                    self.user_settings[i]["osu_username"] = username
-                    fileIO('data/osu/user_settings.json', "save", self.user_settings)
-                    await self.bot.say("{}, your osu! username has been editted.".format(user.mention))
+        if self.check_user_exists(user):
+            self.user_settings[server.id][user.id]["osu_username"] = username
+            fileIO('data/osu/user_settings.json', "save", self.user_settings)
+            await self.bot.say("{}, your osu! username has been edited to '{}'".format(user.mention, username))
+        else:
+            await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def setbg(self, ctx, background_name):
+        """Sets user background"""
+        user = ctx.message.author
+        server = user.server
+        channel = ctx.message.channel
+
+        if self.check_user_exists(user):
+            self.user_settings[server.id][user.id]["background"] = background_name
         else:
             await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
 
@@ -183,10 +180,9 @@ class Osu:
 
     # Checks if user exists
     def check_user_exists(self, user):
-        for i in range(len(self.user_settings)):
-            if user == self.user_settings[i]["user"]:
-                return True
-        return False
+        if user.id not in self.user_settings[user.server.id]:
+            return False
+        return True
 
     # Gives a small user profile image
     def user_small(self, user, gamemode: int):
@@ -672,7 +668,7 @@ def check_files():
     user_file = "data/osu/user_settings.json"
     if not fileIO(user_file, "check"):
         print("Adding data/osu/user_settings.json...")
-        fileIO(user_file, "save", '')
+        fileIO(user_file, "save", {})
 
 def setup(bot):
     check_folders()
