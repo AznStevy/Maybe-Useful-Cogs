@@ -95,7 +95,7 @@ class Osu:
 
     @commands.command(pass_context=True, no_pm=True)
     async def listbgs(self, ctx):
-        """Lists available backgrounds"""
+        """Ugly list of available backgrounds. Will fix."""
         await self.bot.say("Here is a list of the current available backgrounds: \n\n {} as well as 'random'. \n\n If you like to set a background, do **<p>setbg**".format(list(bgs.keys())))
 
     @commands.command(pass_context=True, no_pm=True)
@@ -145,7 +145,11 @@ class Osu:
         channel = ctx.message.channel
 
         if self.check_user_exists(user):
-            self.user_settings[server.id][user.id]["background"] = background_name
+            if background_name in bgs.keys():
+                self.user_settings[server.id][user.id]["background"] = background_name
+                await self.bot.say("Your default background has been changed to: `{}`".format(background_name))
+            else:
+                await self.bot.say("Please choose an available background. Do **<p>listbgs** to see the list.")
         else:
             await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
 
@@ -153,10 +157,19 @@ class Osu:
     async def process_user_small(self, ctx, username, gamemode: int):
         key = self.osu_api_key["osu_api_key"]
         channel = ctx.message.channel
+        user = ctx.message.author
+        server = user.server
 
         userinfo = get_user(key, username, gamemode).decode("utf-8")
         if (len(json.loads(userinfo)) > 0):
-            self.user_small(json.loads(userinfo)[0], gamemode)
+            if self.check_user_exists(user):
+                if username == self.user_settings[server.id][user.id]["osu_username"]:
+                    self.draw_user_small(json.loads(userinfo)[0], gamemode, self.user_settings[server.id][user.id]["background"])
+                else:
+                    self.draw_user_small(json.loads(userinfo)[0], gamemode, "")
+            else:
+                self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background
+            await self.bot.send_typing(channel)            
             await self.bot.send_file(channel, 'data/osu/user.png')
         else:
             await self.bot.say("Player not found :cry:")
@@ -165,6 +178,8 @@ class Osu:
     async def process_user_profile(self, ctx, username, gamemode: int):
         key = self.osu_api_key["osu_api_key"]
         channel = ctx.message.channel
+        user = ctx.message.author
+        server = user.server
         num_best_plays = 3
 
         # get userinfo
@@ -172,7 +187,13 @@ class Osu:
         userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
 
         if (len(json.loads(userinfo)) > 0):
-            self.user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode) # only takes the first one
+            if self.check_user_exists(user):
+                if username == self.user_settings[server.id][user.id]["osu_username"]:
+                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
+                else:
+                    self.draw_user_small(json.loads(userinfo)[0], gamemode, "")            
+            else:
+                self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background                            
             await self.bot.send_typing(channel)
             await self.bot.send_file(channel, 'data/osu/user_profile.png')
         else:
@@ -185,11 +206,15 @@ class Osu:
         return True
 
     # Gives a small user profile image
-    def user_small(self, user, gamemode: int):
+    def draw_user_small(self, user, gamemode: int, background:str):
         font = 'Tahoma'
 
         # checks if user has stored background
-        bg_url = random.choice(list(bgs.values()))
+        if background in bgs.keys():
+            bg_url = bgs[background]
+        else:
+            bg_url = random.choice(list(bgs.values()))  
+
         bg_req = urllib.request.Request(bg_url, headers={'User-Agent': 'Mozilla/5.0'})
         bg = urlopen(bg_req)
         with Image(file=bg) as base_img:
@@ -303,7 +328,7 @@ class Osu:
         bg.close()
 
     # Gives a user profile image with some information
-    def user_profile(self, user, userbest, gamemode:int):
+    def draw_user_profile(self, user, userbest, gamemode:int, background:str):
         font = 'Verdana, Geneva, sans-serif'
         key = self.osu_api_key["osu_api_key"]
 
@@ -314,7 +339,11 @@ class Osu:
             best_beatmaps.append(beatmap[0])
 
         # generate background and crops image to correct size
-        bg_url = random.choice(list(bgs.values()))
+        # checks if user has stored background
+        if background in bgs.keys():
+            bg_url = bgs[background]
+        else:
+            bg_url = random.choice(list(bgs.values()))  
         bg_req = urllib.request.Request(bg_url, headers={'User-Agent': 'Mozilla/5.0'})
         bg = urlopen(bg_req)
         with Image(file=bg) as base_img:
