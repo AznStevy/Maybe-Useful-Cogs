@@ -60,44 +60,44 @@ class Osu:
             await self.bot.whisper("API Key details added.")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def osu(self, ctx, *, username):
+    async def osu(self, ctx, *, username=None):
         """Gives osu! standard user stats"""
         await self.process_user_small(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def taiko(self, ctx, *, username):
+    async def taiko(self, ctx, *, username=None):
         """Gives taiko user stats"""
         await self.process_user_small(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def ctb(self, ctx, *, username):
+    async def ctb(self, ctx, *, username=None):
         """Gives Catch the Beat user stats"""
         await self.process_user_small(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def mania(self, ctx, *, username):
+    async def mania(self, ctx, *, username=None):
         """Gives osu standard user stats"""
         await self.process_user_small(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def osutop(self, ctx, *, username):
+    async def osutop(self, ctx, *, username=None):
         """Gives osu! standard user best plays"""
         await self.process_user_profile(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def taikotop(self, ctx, *, username):
+    async def taikotop(self, ctx, *, username=None):
         """Gives taiko user stats and best plays"""
         key = self.osu_api_key["osu_api_key"]
         await self.process_user_profile(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def ctbtop(self, ctx, *, username):
+    async def ctbtop(self, ctx, *, username=None):
         """Gives ctb user stats and best plays"""
         key = self.osu_api_key["osu_api_key"]
         await self.process_user_profile(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def maniatop(self, ctx, *, username):
+    async def maniatop(self, ctx, *, username=None):
         """Gives osu! mania user stats and best plays"""
         key = self.osu_api_key["osu_api_key"]
         await self.process_user_profile(ctx, username, 3)
@@ -175,6 +175,14 @@ class Osu:
         user = ctx.message.author
         server = user.server
 
+        # determines correct username
+        if not username:
+            if self.check_user_exists(user):
+                username = self.user_settings[server.id][user.id]["osu_username"]
+            else:
+                await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
+                return # bad practice, but too lazy to make it nice
+
         userinfo = get_user(key, username, gamemode).decode("utf-8")
         if (len(json.loads(userinfo)) > 0):
             if self.check_user_exists(user):
@@ -196,6 +204,14 @@ class Osu:
         user = ctx.message.author
         server = user.server
         num_best_plays = 3
+
+        # determines correct username
+        if not username:
+            if self.check_user_exists(user):
+                username = self.user_settings[server.id][user.id]["osu_username"]
+            else:
+                await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
+                return # bad practice, but too lazy to make it nice
 
         # get userinfo
         userinfo = get_user(key, username, gamemode).decode("utf-8")
