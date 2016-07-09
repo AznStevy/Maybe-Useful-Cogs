@@ -187,9 +187,9 @@ class Osu:
                 if username == self.user_settings[server.id][user.id]["osu_username"]:
                     self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
                 else:
-                    self.draw_user_profile(json.loads(userinfo)[0], gamemode, "") # random background                            
+                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
             else:
-                self.draw_user_profile(json.loads(userinfo)[0], gamemode, "") # random background                            
+                self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
             await self.bot.send_typing(channel)
             await self.bot.send_file(channel, 'data/osu/user_profile.png')
         else:
