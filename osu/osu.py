@@ -96,7 +96,7 @@ class Osu:
     @commands.command(pass_context=True, no_pm=True)
     async def listbgs(self, ctx):
         """Ugly list of available backgrounds. Will fix."""
-        await self.bot.say("Here is a list of the current available backgrounds: \n\n ```{}``` as well as 'random'. \n\n If you like to set a background, do **<p>setbg**".format(list(bgs.keys())))
+        await self.bot.say("Here is a list of the current available backgrounds: \n\n {} as well as 'random'. \n\n If you like to set a background, do **<p>setbg**".format(list(bgs.keys())))
 
     @commands.command(pass_context=True, no_pm=True)
     async def setuser(self, ctx, *, username):
@@ -145,11 +145,7 @@ class Osu:
         channel = ctx.message.channel
 
         if self.check_user_exists(user):
-            if background_name in bgs.keys():
-                self.user_settings[server.id][user.id]["background"] = background_name
-                await self.bot.say("Your default background has been changed to: `{}`".format(background_name))
-            else:
-                await self.bot.say("Please choose an available background. Do **<p>listbgs** to see the list.")
+            self.user_settings[server.id][user.id]["background"] = background_name
         else:
             await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
 
@@ -166,7 +162,7 @@ class Osu:
                 if username == self.user_settings[server.id][user.id]["osu_username"]:
                     self.draw_user_small(json.loads(userinfo)[0], gamemode, self.user_settings[server.id][user.id]["background"])
                 else:
-                    self.draw_user_small(json.loads(userinfo)[0], gamemode, "")
+                    self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background
             else:
                 self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background
             await self.bot.send_typing(channel)            
@@ -191,9 +187,9 @@ class Osu:
                 if username == self.user_settings[server.id][user.id]["osu_username"]:
                     self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
                 else:
-                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "")            
+                    self.draw_user_profile(json.loads(userinfo)[0], gamemode, "") # random background                            
             else:
-                self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+                self.draw_user_profile(json.loads(userinfo)[0], gamemode, "") # random background                            
             await self.bot.send_typing(channel)
             await self.bot.send_file(channel, 'data/osu/user_profile.png')
         else:
@@ -254,7 +250,7 @@ class Osu:
             profile = urlopen(profile_req)
             with Image(file=profile) as profile_img:
                 # user_profile image resizing
-                profile_img.resize(130,130)    	
+                profile_img.resize(130,130)     
                 base_img.composite(profile_img, left=10, top=10)
             profile.close()
 
