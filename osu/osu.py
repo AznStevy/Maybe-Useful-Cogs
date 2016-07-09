@@ -1,10 +1,11 @@
 import discord
+from discord.ext import commands
+from __main__ import send_cmd_help
 import json, re, sys, urllib.request, urllib.parse, urllib.error
 import codecs
 import requests
 import random
 import os
-from discord.ext import commands
 from urllib.request import urlopen
 from .utils.dataIO import dataIO, fileIO
 from wand.image import Image
@@ -23,7 +24,8 @@ bgs = {
     'purple_pink_triangles': 'http://puu.sh/pSSFN/34704f54e7.jpg,',
     'waterfall': 'http://puu.sh/pSSHJ/20fd045df0.jpg',
     'pink_triangles': 'http://puu.sh/pST3z/238863993a.png',
-    'rainbow_triangles': 'http://puu.sh/pST4a/563337774d.jpg'
+    'rainbow_triangles': 'http://puu.sh/pST4a/563337774d.jpg',
+    'random': 'A random bg from this list'
 }
 
 help_msg = "You either don't exist in the database, haven't played enough, or don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osukeyset** to set your key"
@@ -36,9 +38,16 @@ class Osu:
         self.osu_api_key = fileIO("data/osu/apikey.json", "load")
         self.user_settings = fileIO("data/osu/user_settings.json", "load")
 
-    @commands.command(pass_context=True)
+    @commands.group(pass_context=True)
+    async def osuset(self, ctx):
+        """Where you can define some settings"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+            return 
+
+    @osuset.command(pass_context=True)
     @checks.is_owner()
-    async def osukeyset(self, ctx):
+    async def key(self, ctx):
         """Sets your osu api key"""
         await self.bot.whisper("Type your osu! api key. You can reply here.")
         key = await self.bot.wait_for_message(timeout=30,
@@ -71,35 +80,41 @@ class Osu:
         await self.process_user_small(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def osuprofile(self, ctx, *, username):
+    async def osutop(self, ctx, *, username):
         """Gives osu! standard user best plays"""
         await self.process_user_profile(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def taikoprofile(self, ctx, *, username):
+    async def taikotop(self, ctx, *, username):
         """Gives taiko user stats and best plays"""
         key = self.osu_api_key["osu_api_key"]
         await self.process_user_profile(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def ctbprofile(self, ctx, *, username):
+    async def ctbtop(self, ctx, *, username):
         """Gives ctb user stats and best plays"""
         key = self.osu_api_key["osu_api_key"]
         await self.process_user_profile(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def maniaprofile(self, ctx, *, username):
+    async def maniatop(self, ctx, *, username):
         """Gives osu! mania user stats and best plays"""
         key = self.osu_api_key["osu_api_key"]
         await self.process_user_profile(ctx, username, 3)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @osuset.command(pass_context=True, no_pm=True)
     async def listbgs(self, ctx):
         """Ugly list of available backgrounds. Will fix."""
-        await self.bot.say("Here is a list of the current available backgrounds: \n\n {} as well as 'random'. \n\n If you like to set a background, do **<p>setbg**".format(list(bgs.keys())))
+        await self.bot.say("Here is a list of the current available backgrounds: \n\n")
+        bg_list = "```"
+        for background in bgs.keys():
+            bg_list += "{:>24}  <{:>24}> \n".format(background, bgs[background])
+        bg_list += "```"
+        await self.bot.say(bg_list)
+        await self.bot.say("If you would like to set a default background, do **<p>osuset bg**".format(list(bgs.keys())))
 
-    @commands.command(pass_context=True, no_pm=True)
-    async def setuser(self, ctx, *, username):
+    @osuset.command(pass_context=True, no_pm=True)
+    async def user(self, ctx, *, username):
         """Sets user information given an osu! username"""
         user = ctx.message.author
         channel = ctx.message.channel
@@ -123,7 +138,7 @@ class Osu:
         else:
             await self.bot.say("It seems that you already have an account linked.")
             
-    @commands.command(pass_context=True, no_pm=True)
+    @osuset.command(pass_context=True, no_pm=True)
     async def edituser(self, ctx, *, username):
         """Edits user information given an osu! username"""
         user = ctx.message.author
@@ -135,19 +150,23 @@ class Osu:
             fileIO('data/osu/user_settings.json', "save", self.user_settings)
             await self.bot.say("{}, your osu! username has been edited to '{}'".format(user.mention, username))
         else:
-            await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
+            await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
 
-    @commands.command(pass_context=True, no_pm=True)
-    async def setbg(self, ctx, background_name):
+    @osuset.command(pass_context=True, no_pm=True)
+    async def bg(self, ctx, background_name):
         """Sets user background"""
         user = ctx.message.author
         server = user.server
         channel = ctx.message.channel
 
         if self.check_user_exists(user):
-            self.user_settings[server.id][user.id]["background"] = background_name
+            if background_name in bgs.keys():
+                self.user_settings[server.id][user.id]["background"] = background_name
+                await self.bot.say("{}, your default background is now: `{}`".format(user.mention, background_name))            
+            else:
+                await self.bot.say("That is not a valid background. Do **<p>osuset listbgs** to view a list.")          
         else:
-            await self.bot.say("It doesn't seem that you have an account linked. Do **<p>setuser** to link your discord to your osu! account.")
+            await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
 
     # Gets json information to proccess the small version of the image
     async def process_user_small(self, ctx, username, gamemode: int):
@@ -206,7 +225,7 @@ class Osu:
         font = 'Tahoma'
 
         # checks if user has stored background
-        if background in bgs.keys():
+        if background in bgs.keys() and background is not 'random':
             bg_url = bgs[background]
         else:
             bg_url = random.choice(list(bgs.values()))  
@@ -336,7 +355,7 @@ class Osu:
 
         # generate background and crops image to correct size
         # checks if user has stored background
-        if background in bgs.keys():
+        if background in bgs.keys() and background is not 'random':
             bg_url = bgs[background]
         else:
             bg_url = random.choice(list(bgs.values()))  
