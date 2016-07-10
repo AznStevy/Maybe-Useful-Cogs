@@ -31,7 +31,7 @@ bgs = {
 }
 
 help_msg = [
-            "You either don't exist in the database, haven't played enough, or don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osuset key** to set your key",
+            "That player either doesn't exist in the database, hasn't played enough, or you don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osuset key** to set your key",
             "It doesn't seem that you have an account linked. Do **<p>osuset user**.",
             "It doesn't seem that the discord user has an account linked."
             ]
@@ -131,38 +131,30 @@ class Osu:
             self.user_settings[user.server.id] = {}
 
         if not self.check_user_exists(user):
-            osu_user = json.loads(get_user(key, username, 1).decode("utf-8"))
-            newuser = {
-                "discord_username": user.name, 
-                "osu_username": username,
-                "osu_user_id": osu_user[0]["user_id"],
-                "default_gamemode": 0,
-                "background": ""
-            }
+            try:
+                osu_user = json.loads(get_user(key, username, 1).decode("utf-8"))
+                newuser = {
+                    "discord_username": user.name, 
+                    "osu_username": username,
+                    "osu_user_id": osu_user[0]["user_id"],
+                    "default_gamemode": 0,
+                    "background": ""
+                }
 
-            self.user_settings[server.id][user.id] = newuser
-            fileIO('data/osu/user_settings.json', "save", self.user_settings)
-            await self.bot.say("{}, your account has been linked to osu! username `{}`".format(user.mention, osu_user[0]["username"]))
+                self.user_settings[server.id][user.id] = newuser
+                fileIO('data/osu/user_settings.json', "save", self.user_settings)
+                await self.bot.say("{}, your account has been linked to osu! username `{}`".format(user.mention, osu_user[0]["username"]))
+            except:
+                await self.bot.say("{} doesn't exist in the osu! database.".format(username))
         else:
-            await self.bot.say("It seems that you already have an account linked.")
-            
-    @osuset.command(pass_context=True, no_pm=True)
-    async def edituser(self, ctx, *, username):
-        """Edits user information given an osu! username"""
-        user = ctx.message.author
-        server = user.server
-        channel = ctx.message.channel
-        key = self.osu_api_key["osu_api_key"]
-
-        if self.check_user_exists(user):
-            osu_user = json.loads(get_user(key, username, 1).decode("utf-8"))
-            self.user_settings[server.id][user.id]["osu_username"] = username
-            self.user_settings[server.id][user.id]["osu_user_id"] = osu_user[0]["user_id"]
-            fileIO('data/osu/user_settings.json', "save", self.user_settings)
-            await self.bot.say("{}, your osu! username has been edited to `{}`".format(user.mention, osu_user[0]["username"]))
-        else:
-            await self.bot.say(help_msg[1])
-
+            try:
+                osu_user = json.loads(get_user(key, username, 1).decode("utf-8"))
+                self.user_settings[server.id][user.id]["osu_username"] = username
+                self.user_settings[server.id][user.id]["osu_user_id"] = osu_user[0]["user_id"]
+                fileIO('data/osu/user_settings.json', "save", self.user_settings)
+                await self.bot.say("{}, your osu! username has been edited to `{}`".format(user.mention, osu_user[0]["username"]))
+            except:
+                await self.bot.say("{} doesn't exist in the osu! database.".format(username))           
     @osuset.command(pass_context=True, no_pm=True)
     async def bg(self, ctx, background_name):
         """Sets user background"""
@@ -568,7 +560,7 @@ class Osu:
                 with Drawing() as draw:
                     draw.fill_color = Color('#CCC')
                     draw.fill_opacity = 0.6
-                    draw.rectangle(left=left_align + 2,top=top_initial + spacing * i - 5, width=445, height = 70)
+                    draw.rectangle(left=left_align + 2,top=top_initial + spacing * i - 3, width=445, height = 70)
                     draw(base_img)
 
             for i in range(len(userbest)): 
@@ -582,7 +574,7 @@ class Osu:
                     rank = urlopen(rank_req)
                     with Image(file=rank) as rank_icon:
                         rank_icon.resize(70,70)      
-                        base_img.composite(rank_icon, left=left_align, top=top_initial + (i) * spacing)
+                        base_img.composite(rank_icon, left=left_align + 5, top=top_initial + (i) * spacing)
                     rank.close() 
 
                     draw.text(left_align + 100, top_initial + 30 + (i) * spacing, "{}".format(self.truncate_text(best_beatmaps[i]['title'])))
@@ -610,7 +602,7 @@ class Osu:
     # Truncates the text because some titles/versions are too long
     def truncate_text(self, text):
         if len(text) > 17:
-            text = text[0:17] + '...'
+            text = text[0:15] + '...'
         return text
 
     # gives a list of the ranked mods given a peppy number lol
