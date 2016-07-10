@@ -25,10 +25,11 @@ bgs = {
     'waterfall': 'http://puu.sh/pSSHJ/20fd045df0.jpg',
     'pink_triangles': 'http://puu.sh/pST3z/238863993a.png',
     'rainbow_triangles': 'http://puu.sh/pST4a/563337774d.jpg',
+    'blue_green_triangles': 'http://puu.sh/pWfYt/f3099aa970.jpg',
     'random': 'A random bg from this list'
 }
 
-help_msg = "You either don't exist in the database, haven't played enough, or don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osukeyset** to set your key"
+help_msg = "You either don't exist in the database, haven't played enough, or don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osuset key** to set your key"
 
 class Osu:
     """Cog to give osu! stats for all gamemodes."""
@@ -105,7 +106,7 @@ class Osu:
     @osuset.command(pass_context=True, no_pm=True)
     async def listbgs(self, ctx):
         """Ugly list of available backgrounds. Will fix."""
-        await self.bot.say("Here is a list of the current available backgrounds: \n\n")
+        await self.bot.say("Here is a list of the current available backgrounds:\n")
         bg_list = "```"
         for background in bgs.keys():
             bg_list += "{:>24}  <{:>24}> \n".format(background, bgs[background])
@@ -175,27 +176,30 @@ class Osu:
         user = ctx.message.author
         server = user.server
 
-        # determines correct username
-        if not username:
-            if self.check_user_exists(user):
-                username = self.user_settings[server.id][user.id]["osu_username"]
-            else:
-                await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
-                return # bad practice, but too lazy to make it nice
+        try: 
+            # determines correct username
+            if not username:
+                if self.check_user_exists(user):
+                    username = self.user_settings[server.id][user.id]["osu_username"]
+                else:
+                    await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
+                    return # bad practice, but too lazy to make it nice
 
-        userinfo = get_user(key, username, gamemode).decode("utf-8")
-        if (len(json.loads(userinfo)) > 0):
-            if self.check_user_exists(user):
-                if username == self.user_settings[server.id][user.id]["osu_username"]:
-                    self.draw_user_small(json.loads(userinfo)[0], gamemode, self.user_settings[server.id][user.id]["background"])
+            userinfo = get_user(key, username, gamemode).decode("utf-8")
+            if (len(json.loads(userinfo)) > 0):
+                if self.check_user_exists(user):
+                    if username == self.user_settings[server.id][user.id]["osu_username"]:
+                        self.draw_user_small(json.loads(userinfo)[0], gamemode, self.user_settings[server.id][user.id]["background"])
+                    else:
+                        self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background
                 else:
                     self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background
+                await self.bot.send_typing(channel)            
+                await self.bot.send_file(channel, 'data/osu/user.png')
             else:
-                self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background
-            await self.bot.send_typing(channel)            
-            await self.bot.send_file(channel, 'data/osu/user.png')
-        else:
-            await self.bot.say("Player not found :cry:")
+                await self.bot.say("Player not found :cry:")
+        except:
+            await self.bot.say(help_msg)
 
     # Gets json information to proccess the top play version of the image
     async def process_user_profile(self, ctx, username, gamemode: int):
@@ -205,33 +209,39 @@ class Osu:
         server = user.server
         num_best_plays = 3
 
-        # determines correct username
-        if not username:
-            if self.check_user_exists(user):
-                username = self.user_settings[server.id][user.id]["osu_username"]
-            else:
-                await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
-                return # bad practice, but too lazy to make it nice
+        try:
+            # determines correct username
+            if not username:
+                if self.check_user_exists(user):
+                    username = self.user_settings[server.id][user.id]["osu_username"]
+                else:
+                    await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
+                    return # bad practice, but too lazy to make it nice
 
-        # get userinfo
-        userinfo = get_user(key, username, gamemode).decode("utf-8")
-        userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
+            # get userinfo
+            userinfo = get_user(key, username, gamemode).decode("utf-8")
+            userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
 
-        if (len(json.loads(userinfo)) > 0):
-            if self.check_user_exists(user):
-                if username == self.user_settings[server.id][user.id]["osu_username"]:
-                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
+            if (len(json.loads(userinfo)) > 0):
+                if self.check_user_exists(user):
+                    if username == self.user_settings[server.id][user.id]["osu_username"]:
+                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
+                    else:
+                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
                 else:
                     self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+                await self.bot.send_typing(channel)
+                await self.bot.send_file(channel, 'data/osu/user_profile.png')
             else:
-                self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
-            await self.bot.send_typing(channel)
-            await self.bot.send_file(channel, 'data/osu/user_profile.png')
-        else:
-            await self.bot.say("Player not found :cry:")
+                await self.bot.say("Player not found :cry:")
+        except:
+            await self.bot.say(help_msg)            
 
     # Checks if user exists
     def check_user_exists(self, user):
+        if user.server.id not in self.user_settings:
+            self.user_settings[user.server.id] = {}
+
         if user.id not in self.user_settings[user.server.id]:
             return False
         return True
@@ -241,7 +251,7 @@ class Osu:
         font = 'Tahoma'
 
         # checks if user has stored background
-        if background in bgs.keys() and background is not 'random':
+        if background in bgs.keys() and str(background) is not 'random':
             bg_url = bgs[background]
         else:
             bg_url = random.choice(list(bgs.values()))  
@@ -371,7 +381,7 @@ class Osu:
 
         # generate background and crops image to correct size
         # checks if user has stored background
-        if background in bgs.keys() and background is not 'random':
+        if background in bgs.keys() and str(background) is not 'random':
             bg_url = bgs[background]
         else:
             bg_url = random.choice(list(bgs.values()))  
