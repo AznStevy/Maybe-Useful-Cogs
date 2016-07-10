@@ -11,4 +11,4 @@ Oh.
 
 **Support** 
 
-If you would like some support for these cogs because nothing ever works, you can talk to me in my server, [Stevy's Whateverthing](https://discord.gg/QFxABGj). I don't bite, I promise :3
+If you would like some support for these cogs because nothing ever works, you can talk to me in my testing/spam server, [bot testting](https://discord.gg/T5HHf7k). I don't bite, I promise :3
