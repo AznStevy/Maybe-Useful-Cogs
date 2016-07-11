@@ -42,6 +42,7 @@ class Osu:
     def __init__(self, bot):
         self.bot = bot
         self.osu_api_key = fileIO("data/osu/apikey.json", "load")
+        self.user_settings = fileIO("data/osu/user_settings.json", "load")
 
     @commands.group(pass_context=True)
     async def osuset(self, ctx):
@@ -648,8 +649,10 @@ class Osu:
             mod_list.append('no-fail')
         return mod_list
 
+    # processes user input for the beatmap
     async def process_beatmap(self, message):
         key = self.osu_api_key["osu_api_key"]
+        # process the the idea from a url in msg
         beatmap_id = message.content.replace('https://osu.ppy.sh/s/','') 
         beatmap_info = json.loads(get_beatmapset(key, beatmap_id).decode("utf-8"))
         await self.disp_beatmap(message, beatmap_info)
@@ -658,20 +661,30 @@ class Osu:
             await self.bot.send_message(message.channel, "That beatmap doesn't exist.")
         '''     
 
-
+    # displays the beatmap properly
     async def disp_beatmap(self, message, beatmap):
         # process time
         ## m, s = divmod(int(beatmap['total_length']), 60)
 
-        await self.bot.send_message(message.channel, "Found {} total maps.\n".format(len(beatmap)))
-               
-        for i in range(len(beatmap)):
-            beatmap_msg = "**{} - {}** [{}] by {}\n".format(beatmap[i]['title'], beatmap[i]['artist'], beatmap[i]['version'], beatmap[i]['creator'])
-            beatmap_msg += "**Difficulty:** `{:.2f}` **BPM:** `{}` **Length:** `{}`s \n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['bpm'], beatmap[i]['total_length'])
-            beatmap_msg += "**AR:** `{}` **OD:** `{}` **HP:** `{}` **CS:** `{}`\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
-            await self.bot.send_message(message.channel, beatmap_msg)
+        max_disp = 3
+        num_disp = min(len(beatmap), max_disp)
+        if (len(beatmap)>max_disp):
+            await self.bot.send_message(message.channel, "Found {} maps, but only displaying {}.\n".format(len(beatmap), max_disp))            
+        else:
+            await self.bot.send_message(message.channel, "Found {} maps.\n".format(len(beatmap)))
 
-    async def check_messages(self, message):
+        beatmap_msg = ""               
+        for i in range(len(beatmap) - 1, len(beatmap) - 1 - num_disp , -1):
+            if i == len(beatmap) - 1:
+                beatmap_msg = "```python\n{} - {}```\n".format(beatmap[i]['title'],beatmap[i]['artist'])
+            beatmap_msg += "```python\n"
+            beatmap_msg += "Version: [{}] by {}\n".format(beatmap[i]['version'], beatmap[i]['creator'])
+            beatmap_msg += "Difficulty: {:.2f}★ BPM: {} Length: {}s \n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['bpm'], beatmap[i]['total_length'])
+            beatmap_msg += "AR: {} OD: {} HP: {} CS: {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
+            beatmap_msg += "```"
+        await self.bot.send_message(message.channel, beatmap_msg)
+
+    async def find_beatmap(self, message):
         if message.author.id == self.bot.user.id:
             return
 
@@ -838,5 +851,5 @@ def setup(bot):
     except:
         raise ModuleNotFound("Wand is not installed. Do 'pip3 install Wand --upgrade' and make sure you have ImageMagick installed http://docs.wand-py.org/en/0.4.2/guide/install.html")
     n = Osu(bot)
-    bot.add_listener(n.check_messages, "on_message")    
+    bot.add_listener(n.find_beatmap, "on_message")    
     bot.add_cog(n)
