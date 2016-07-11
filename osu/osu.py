@@ -682,7 +682,6 @@ class Osu:
     # displays the beatmap properly
     async def disp_beatmap(self, message, beatmap):
         # process time
-        ## m, s = divmod(int(beatmap['total_length']), 60)
 
         max_disp = 3
         num_disp = min(len(beatmap), max_disp)
@@ -697,7 +696,8 @@ class Osu:
                 beatmap_msg = "```python\n{} - {}```\n".format(beatmap[i]['title'],beatmap[i]['artist'])
             beatmap_msg += "```python\n"
             beatmap_msg += "Version: [{}] by {}\n".format(beatmap[i]['version'], beatmap[i]['creator'])
-            beatmap_msg += "Difficulty: {:.2f}★ BPM: {} Length: {}s \n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['bpm'], beatmap[i]['total_length'])
+            m, s = divmod(int(beatmap[i]['total_length']), 60)
+            beatmap_msg += "Difficulty: {:.2f}★ BPM: {} Length: {}m {}s \n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['bpm'], m, s)
             beatmap_msg += "AR: {} OD: {} HP: {} CS: {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
             beatmap_msg += "```"
         await self.bot.send_message(message.channel, beatmap_msg)
