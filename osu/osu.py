@@ -42,7 +42,6 @@ class Osu:
     def __init__(self, bot):
         self.bot = bot
         self.osu_api_key = fileIO("data/osu/apikey.json", "load")
-        self.user_settings = fileIO("data/osu/user_settings.json", "load")
 
     @commands.group(pass_context=True)
     async def osuset(self, ctx):
@@ -154,7 +153,8 @@ class Osu:
                 fileIO('data/osu/user_settings.json', "save", self.user_settings)
                 await self.bot.say("{}, your osu! username has been edited to `{}`".format(user.mention, osu_user[0]["username"]))
             except:
-                await self.bot.say("{} doesn't exist in the osu! database.".format(username))           
+                await self.bot.say("{} doesn't exist in the osu! database.".format(username))
+                         
     @osuset.command(pass_context=True, no_pm=True)
     async def bg(self, ctx, background_name):
         """Sets user background"""
@@ -169,7 +169,7 @@ class Osu:
             else:
                 await self.bot.say("That is not a valid background. Do **<p>osuset listbgs** to view a list.")          
         else:
-            await self.bot.say(help_msg[1])
+            await self.bot.say(help_msg[1])  
 
     # Gets json information to proccess the small version of the image
     async def process_user_small(self, ctx, username, gamemode: int):
@@ -648,6 +648,42 @@ class Osu:
             mod_list.append('no-fail')
         return mod_list
 
+    async def process_beatmap(self, message):
+        key = self.osu_api_key["osu_api_key"]
+        beatmap_id = message.content.replace('https://osu.ppy.sh/s/','') 
+        beatmap_info = json.loads(get_beatmapset(key, beatmap_id).decode("utf-8"))
+        await self.disp_beatmap(message, beatmap_info)
+        '''
+        except:
+            await self.bot.send_message(message.channel, "That beatmap doesn't exist.")
+        '''     
+
+
+    async def disp_beatmap(self, message, beatmap):
+        # process time
+        ## m, s = divmod(int(beatmap['total_length']), 60)
+
+        await self.bot.send_message(message.channel, "Found {} total maps.\n".format(len(beatmap)))
+               
+        for i in range(len(beatmap)):
+            beatmap_msg = "**{} - {}** [{}] by {}\n".format(beatmap[i]['title'], beatmap[i]['artist'], beatmap[i]['version'], beatmap[i]['creator'])
+            beatmap_msg += "**Difficulty:** `{:.2f}` **BPM:** `{}` **Length:** `{}`s \n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['bpm'], beatmap[i]['total_length'])
+            beatmap_msg += "**AR:** `{}` **OD:** `{}` **HP:** `{}` **CS:** `{}`\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
+            await self.bot.send_message(message.channel, beatmap_msg)
+
+    async def check_messages(self, message):
+        if message.author.id == self.bot.user.id:
+            return
+
+        user = message.author
+        test = message.content
+        channel = message.channel
+        server  = user.server
+
+        if 'https://osu.ppy.sh/s/' in message.content:
+            await self.process_beatmap(message)
+
+
 ###-------------------------Python wrapper for osu! api-------------------------
 
 # Returns the full API request URL using the provided base URL and parameters.
@@ -665,6 +701,16 @@ def get_beatmap(key, beatmap_id):
     url_params.append(parameterize_key(key))
     url_params.append(parameterize_id("b", beatmap_id)) 
 
+    return urllib.request.urlopen(build_request(url_params, "https://osu.ppy.sh/api/get_beatmaps?")).read()
+
+# Gets the beatmap set
+def get_beatmapset(key, set_id):
+    url_params = []
+
+    url_params.append(parameterize_key(key))
+    url_params.append(parameterize_id("s", set_id)) 
+
+    ## Build the request URLand return the response.
     return urllib.request.urlopen(build_request(url_params, "https://osu.ppy.sh/api/get_beatmaps?")).read()
 
 # Grabs the scores
@@ -791,4 +837,6 @@ def setup(bot):
         from wand.color import Color
     except:
         raise ModuleNotFound("Wand is not installed. Do 'pip3 install Wand --upgrade' and make sure you have ImageMagick installed http://docs.wand-py.org/en/0.4.2/guide/install.html")
-    bot.add_cog(Osu(bot))
+    n = Osu(bot)
+    bot.add_listener(n.check_messages, "on_message")    
+    bot.add_cog(n)
