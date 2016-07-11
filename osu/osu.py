@@ -21,7 +21,7 @@ bgs = {
     'blue_triangles_2': 'http://puu.sh/pVjqw/06b6b6395f.jpg',
     'blue_triangles_3': 'http://puu.sh/pUdJb/47220936c9.jpg',
     'purple_orange_pentagons': 'http://puu.sh/pUdBf/8959a98929.png',
-    'red_white_triangles': 'http://puu.sh/pUdyQ/62eee8b326.jpg',
+    'pink_white_triangles': 'http://puu.sh/pUdyQ/62eee8b326.jpg',
     'purple_pink_triangles': 'http://puu.sh/pSSFN/34704f54e7.jpg,',
     'waterfall': 'http://puu.sh/pSSHJ/20fd045df0.jpg',
     'pink_triangles': 'http://puu.sh/pST3z/238863993a.png',
