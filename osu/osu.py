@@ -649,12 +649,30 @@ class Osu:
             mod_list.append('no-fail')
         return mod_list
 
+    # called by listener
+    async def find_beatmap(self, message):
+        if message.author.id == self.bot.user.id:
+            return
+
+        user = message.author
+        test = message.content
+        channel = message.channel
+        server  = user.server
+
+        if 'https://osu.ppy.sh/s/' in message.content or 'https://osu.ppy.sh/b/' in message.content:
+            await self.process_beatmap(message)
+
     # processes user input for the beatmap
     async def process_beatmap(self, message):
         key = self.osu_api_key["osu_api_key"]
         # process the the idea from a url in msg
-        beatmap_id = message.content.replace('https://osu.ppy.sh/s/','') 
-        beatmap_info = json.loads(get_beatmapset(key, beatmap_id).decode("utf-8"))
+        url = re.search("(?P<url>https?://[^\s]+)", message.content).group("url")
+        if url.find('https://osu.ppy.sh/s/') != -1:
+            beatmap_id = url.replace('https://osu.ppy.sh/s/','')
+            beatmap_info = json.loads(get_beatmapset(key, beatmap_id).decode("utf-8"))
+        elif url.find('https://osu.ppy.sh/b/') != -1:
+            beatmap_id = url.replace('https://osu.ppy.sh/b/','')
+            beatmap_info = json.loads(get_beatmap(key, beatmap_id).decode("utf-8"))
         await self.disp_beatmap(message, beatmap_info)
         '''
         except:
@@ -671,11 +689,11 @@ class Osu:
         if (len(beatmap)>max_disp):
             await self.bot.send_message(message.channel, "Found {} maps, but only displaying {}.\n".format(len(beatmap), max_disp))            
         else:
-            await self.bot.send_message(message.channel, "Found {} maps.\n".format(len(beatmap)))
+            await self.bot.send_message(message.channel, "Found {} map(s).\n".format(len(beatmap)))
 
         beatmap_msg = ""               
-        for i in range(len(beatmap) - 1, len(beatmap) - 1 - num_disp , -1):
-            if i == len(beatmap) - 1:
+        for i in range(num_disp):
+            if i == 0:
                 beatmap_msg = "```python\n{} - {}```\n".format(beatmap[i]['title'],beatmap[i]['artist'])
             beatmap_msg += "```python\n"
             beatmap_msg += "Version: [{}] by {}\n".format(beatmap[i]['version'], beatmap[i]['creator'])
@@ -683,18 +701,6 @@ class Osu:
             beatmap_msg += "AR: {} OD: {} HP: {} CS: {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
             beatmap_msg += "```"
         await self.bot.send_message(message.channel, beatmap_msg)
-
-    async def find_beatmap(self, message):
-        if message.author.id == self.bot.user.id:
-            return
-
-        user = message.author
-        test = message.content
-        channel = message.channel
-        server  = user.server
-
-        if 'https://osu.ppy.sh/s/' in message.content:
-            await self.process_beatmap(message)
 
 
 ###-------------------------Python wrapper for osu! api-------------------------
