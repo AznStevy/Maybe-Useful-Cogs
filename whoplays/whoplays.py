@@ -12,7 +12,7 @@ class WhoPlays:
     async def whoplays(self, ctx, *, game:str):
         """Shows a list of all the members"""
 
-        if len(game) < 2:
+        if len(game) <= 2:
             await self.bot.say("You need at least 3 characters.")
             return 
               
