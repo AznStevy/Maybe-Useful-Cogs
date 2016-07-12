@@ -1,12 +1,11 @@
+import os
 import discord
 from discord.ext import commands
 from discord.utils import find
 from __main__ import send_cmd_help
 import json, re, sys, urllib.request, urllib.parse, urllib.error
-import codecs
 import requests
 import random
-import os
 from urllib.request import urlopen
 from .utils.dataIO import dataIO, fileIO
 from wand.image import Image
@@ -210,32 +209,32 @@ class Osu:
         channel = ctx.message.channel
         user = ctx.message.author
         server = user.server
-        num_best_plays = 3
+        num_best_plays = 5 # edit for more plays
 
         if await self.process_username(ctx, username):
             username = await self.process_username(ctx, username)
         else:
             return
 
-        try:
-            # get userinfo
-            userinfo = get_user(key, username, gamemode).decode("utf-8")
-            userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
+        # try:
+        # get userinfo
+        userinfo = get_user(key, username, gamemode).decode("utf-8")
+        userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
 
-            if (len(json.loads(userinfo)) > 0):
-                if self.check_user_exists(user):
-                    if username == self.user_settings[server.id][user.id]["osu_username"]:
-                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
-                    else:
-                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+        if (len(json.loads(userinfo)) > 0):
+            if self.check_user_exists(user):
+                if username == self.user_settings[server.id][user.id]["osu_username"]:
+                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
                 else:
                     self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
-                await self.bot.send_typing(channel)
-                await self.bot.send_file(channel, 'data/osu/user_profile.png')
             else:
-                await self.bot.say("Player not found :cry:")
-        except:
-            await self.bot.say(help_msg[0])
+                self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+            await self.bot.send_typing(channel)
+            await self.bot.send_file(channel, 'data/osu/user_profile.png')
+        else:
+            await self.bot.say("Player not found :cry:")
+        # except:
+            # await self.bot.say(help_msg[0])
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def process_username(self, ctx, username):
@@ -414,11 +413,14 @@ class Osu:
         font = 'Verdana, Geneva, sans-serif'
         key = self.osu_api_key["osu_api_key"]
 
-        # get best plays map titles
+        # get best plays map information and scores
         best_beatmaps = []
+        best_acc = []
         for i in range(len(userbest)):
             beatmap = json.loads(get_beatmap(key, beatmap_id=userbest[i]['beatmap_id']).decode("utf-8"))
+            score = json.loads(get_scores(key, userbest[i]['beatmap_id'], user['user_id'], gamemode).decode("utf-8"))
             best_beatmaps.append(beatmap[0])
+            best_acc.append(self.calculate_acc(score[0]))
 
         # generate background and crops image to correct size
         # checks if user has stored background
@@ -543,45 +545,49 @@ class Osu:
 
             # writes best performances
             with Drawing() as draw:
-                draw.font_size = 32
+                draw.font_size = 28
                 draw.font_weight = 1000
                 draw.font_family = font
                 draw.text_alignment = 'center'
                 draw.fill_color = Color('#555')
                 draw.fill_opacity = 0.6
-                draw.text(244, 205, "{}".format('Best Performances'))
+                draw.text(244, 195, "{}".format('Best Performances'))
                 draw(base_img)            
 
             # create tiles for best plays using top_play_beatmaps and userbest. Includes rank, title, diff, mods, pp, timestamp
             left_align = 20
-            top_initial = 230
-            spacing = 85
+            top_initial = 210
+            spacing = 53
 
             # draw transparent white rectangles
-            for i in range(3):
+            for i in range(len(userbest)):
                 with Drawing() as draw:
                     draw.fill_color = Color('#CCC')
                     draw.fill_opacity = 0.6
-                    draw.rectangle(left=left_align + 2,top=top_initial + spacing * i - 3, width=445, height = 70)
+                    draw.rectangle(left=left_align + 2,top=top_initial + spacing * i - 2, width=445, height = 45)
                     draw(base_img)
 
             for i in range(len(userbest)): 
                 with Drawing() as draw:
-                    draw.font_size = 24
-                    draw.font_weight = 2000
+                    draw.font_size = 18
+                    draw.font_weight = 500
 
                     # rank image
                     rank_url = 'https://new.ppy.sh/images/badges/score-ranks/{}.png'.format(userbest[i]['rank'])
                     rank_req = urllib.request.Request(rank_url, headers={'User-Agent': 'Mozilla/5.0'})
                     rank = urlopen(rank_req)
                     with Image(file=rank) as rank_icon:
-                        rank_icon.resize(70,70)      
-                        base_img.composite(rank_icon, left=left_align + 5, top=top_initial + (i) * spacing)
+                        rank_icon.resize(45,45)      
+                        base_img.composite(rank_icon, left=left_align + 10, top=top_initial + (i) * spacing)
                     rank.close() 
 
-                    draw.text(left_align + 100, top_initial + 30 + (i) * spacing, "{}".format(self.truncate_text(best_beatmaps[i]['title'])))
-                    draw.text(left_align + 100, top_initial + 50 + (i) * spacing, "[{}]".format(self.truncate_text(best_beatmaps[i]['version'])))
-                    draw.text(left_align + 335, top_initial + 30 + (i) * spacing, "{:0.2f}pp".format(float(userbest[i]['pp'])))
+                    left_text_margin = left_align + 62
+                    right_text_margin = 370
+                    first_line = 17
+                    second_line = first_line + 20
+                    draw.text(left_text_margin, top_initial + first_line + (i) * spacing, "{} ({:0.2f}%)".format(self.truncate_text(best_beatmaps[i]['title']), best_acc[i]))
+                    draw.text(left_text_margin, top_initial + second_line + (i) * spacing, "[{}]".format(self.truncate_text(best_beatmaps[i]['version'])))
+                    draw.text(right_text_margin, top_initial + first_line + (i) * spacing, "{:0.2f}pp".format(float(userbest[i]['pp'])))
 
                     # handle mod images
                     mods = self.mod_calculation(userbest[i]['enabled_mods'])
@@ -592,8 +598,9 @@ class Osu:
                             mod_req = urllib.request.Request(mod_url, headers={'User-Agent': 'Mozilla/5.0'})
                             mod = urlopen(mod_req)
                             with Image(file=mod) as mod_icon:
-                                mod_icon.resize(46, 34)
-                                base_img.composite(mod_icon, left=left_align + 330 + 45*(j), top=top_initial + 32 + (i) * spacing)
+                                mod_icon.resize(30, 22)
+                                side_ways_spacing = 32
+                                base_img.composite(mod_icon, left=right_text_margin + side_ways_spacing*(j), top=top_initial + first_line + 3 + (i) * spacing) # because image
                             mod.close()
                     draw(base_img)
 
@@ -601,10 +608,21 @@ class Osu:
             base_img.save(filename='data/osu/user_profile.png')
         bg.close()
 
+    def calculate_acc(self, beatmap):
+        total_unscale_score = float(beatmap['count300']) * 300.0
+        total_unscale_score += float(beatmap['count100']) * 300.0
+        total_unscale_score += float(beatmap['count50']) * 300.0
+        total_unscale_score += float(beatmap['countmiss']) * 300.0
+
+        user_score = float(beatmap['count300']) * 300.0
+        user_score += float(beatmap['count100']) * 100.0
+        user_score += float(beatmap['count50']) * 50.0
+
+        return (float(user_score)/float(total_unscale_score)) * 100.0
     # Truncates the text because some titles/versions are too long
     def truncate_text(self, text):
-        if len(text) > 17:
-            text = text[0:15] + '...'
+        if len(text) > 24:
+            text = text[0:21] + '...'
         return text
 
     # gives a list of the ranked mods given a peppy number lol
