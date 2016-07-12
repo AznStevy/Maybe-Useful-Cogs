@@ -50,12 +50,15 @@ class WhoPlays:
             # create display
             msg = "```These are the server's most played games at the moment: \n\n"
             msg += "{:<25s}{:>25s}\n".format("Game:", "# Playing:")
+            count = 0
             for game in freq_list.keys():
-                if len(game) > 25:
-                    trunc_game = game [0:21] + "..."
-                    msg+= "{:<25s}{:>25d}\n".format(trunc_game, freq_list[game])
-                else:
-                    msg+= "{:<25s}{:>25d}\n".format(game, freq_list[game])
+                if count < 10:
+                    if len(game) > 25:
+                        trunc_game = game [0:21] + "..."
+                        msg+= "{:<25s}{:>25d}\n".format(trunc_game, freq_list[game])
+                    else:
+                        msg+= "{:<25s}{:>25d}\n".format(game, freq_list[game])
+                count += 1
             msg += "```" 
             await self.bot.say(msg)         
 
