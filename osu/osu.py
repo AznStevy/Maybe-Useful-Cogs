@@ -118,7 +118,7 @@ class Osu:
             bg_list += "{:>24}  <{:>24}> \n".format(background, bgs[background])
         bg_list += "```"
         await self.bot.say(bg_list)
-        await self.bot.say("If you would like to set a default background, do **{}osuset bg**".format(prefix)
+        await self.bot.say("If you would like to set a default background, do **{}osuset bg**".format(prefix))
 
     @osuset.command(pass_context=True, no_pm=True)
     async def user(self, ctx, *, username):
