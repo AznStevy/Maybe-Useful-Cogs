@@ -11,17 +11,19 @@ class WhoPlays:
     @commands.command(pass_context=True, no_pm=True)
     async def whoplays(self, ctx, *, game:str):
         """Shows a list of all the members"""
+
+        if len(game) < 2:
+            await self.bot.say("You need at least 3 characters.")
+            return 
+              
         server = ctx.message.server
         members = server.members
 
         playing_game = ""
         for member in members:
             if member.game is not None:
-                if len(game) > 2:
-                    if game.lower() in member.game.name.lower():
-                        playing_game += "+ {} ({})\n".format(member.name, member.game.name)
-                else:
-                    await self.bot.say("You need at least 3 characters.")                    
+                if game.lower() in member.game.name.lower():
+                    playing_game += "+ {} ({})\n".format(member.name, member.game.name)              
 
         if not playing_game:
             await self.bot.say("No one is playing that game.")
