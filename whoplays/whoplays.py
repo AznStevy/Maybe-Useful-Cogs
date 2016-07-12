@@ -21,7 +21,7 @@ class WhoPlays:
 
         playing_game = ""
         for member in members:
-            if member.game is not None:
+            if member.game is not None and not member.bot:
                 if game.lower() in member.game.name.lower():
                     playing_game += "+ {} ({})\n".format(member.name, member.game.name)              
 
@@ -42,7 +42,7 @@ class WhoPlays:
 
         freq_list = {}
         for member in members:
-            if member.game is not None:
+            if member.game is not None and not member.bot:
                 if member.game.name not in freq_list:
                     freq_list[member.game.name] = 0
                 freq_list[member.game.name]+=1
