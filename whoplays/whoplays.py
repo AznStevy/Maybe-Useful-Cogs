@@ -17,8 +17,11 @@ class WhoPlays:
         playing_game = ""
         for member in members:
             if member.game is not None:
-                if len(game) > 2 and game.lower() in member.game.name.lower():
-                    playing_game += "+ {} ({})\n".format(member.name, member.game.name)
+                if len(game) > 2:
+                    if game.lower() in member.game.name.lower():
+                        playing_game += "+ {} ({})\n".format(member.name, member.game.name)
+                else:
+                    await self.bot.say("You need at least 3 characters.")                    
 
         if not playing_game:
             await self.bot.say("No one is playing that game.")
