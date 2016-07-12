@@ -30,9 +30,10 @@ bgs = {
     'random': 'A random bg from this list'
 }
 
+prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
-            "That player either doesn't exist in the database, hasn't played enough, or you don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **<p>osuset key** to set your key",
-            "It doesn't seem that you have an account linked. Do **<p>osuset user**.",
+            "That player either doesn't exist in the database, hasn't played enough, or you don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **{}osuset key** to set your key".format(prefix),
+            "It doesn't seem that you have an account linked. Do **{}osuset user**.".format(prefix),
             "It doesn't seem that the discord user has an account linked."
             ]
 
@@ -117,7 +118,7 @@ class Osu:
             bg_list += "{:>24}  <{:>24}> \n".format(background, bgs[background])
         bg_list += "```"
         await self.bot.say(bg_list)
-        await self.bot.say("If you would like to set a default background, do **<p>osuset bg**".format(list(bgs.keys())))
+        await self.bot.say("If you would like to set a default background, do **{}osuset bg**".format(prefix)
 
     @osuset.command(pass_context=True, no_pm=True)
     async def user(self, ctx, *, username):
@@ -168,7 +169,7 @@ class Osu:
                 self.user_settings[server.id][user.id]["background"] = background_name
                 await self.bot.say("{}, your default background is now: `{}`".format(user.mention, background_name))            
             else:
-                await self.bot.say("That is not a valid background. Do **<p>osuset listbgs** to view a list.")          
+                await self.bot.say("That is not a valid background. Do **{}osuset listbgs** to view a list.".format(prefix))          
         else:
             await self.bot.say(help_msg[1])  
 
@@ -248,7 +249,7 @@ class Osu:
             if self.check_user_exists(user):
                 username = self.user_settings[server.id][user.id]["osu_username"]
             else:
-                await self.bot.say("It doesn't seem that you have an account linked. Do **<p>osuset user**.")
+                await self.bot.say("It doesn't seem that you have an account linked. Do **{}osuset user**.".format(prefix))
                 return # bad practice, but too lazy to make it nice
         # if it's a discord user, first check to see if they are in database and choose that username
         # then see if the discord username is a osu username, then try the string itself
