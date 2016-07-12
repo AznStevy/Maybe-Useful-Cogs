@@ -9,23 +9,22 @@ class WhoPlays:
         self.bot = bot
 
     @commands.command(pass_context=True, no_pm=True)
-    async def whoplays(self, ctx, *, game:str):
-        """Shows a list of all the members"""
-
+    async def whoplays(self, ctx, *, game):
+        """Shows a list of all the people playing a game."""
         if len(game) <= 2:
             await self.bot.say("You need at least 3 characters.")
-            return 
+            return     
               
         server = ctx.message.server
         members = server.members
 
         playing_game = ""
         for member in members:
-            if member.game is not None and not member.bot:
+            if member != None and member.game != None and member.game.name != None and not member.bot:
                 if game.lower() in member.game.name.lower():
-                    playing_game += "+ {} ({})\n".format(member.name, member.game.name)              
+                    playing_game += "+ {} ({})\n".format(member.name, member.game.name)            
 
-        if not playing_game:
+        if playing_game == "":
             await self.bot.say("No one is playing that game.")
         else:
             msg = "```python\n"
@@ -42,12 +41,12 @@ class WhoPlays:
 
         freq_list = {}
         for member in members:
-            if member.game is not None and not member.bot:
+            if member != None and member.game != None and member.game.name != None and not member.bot:
                 if member.game.name not in freq_list:
                     freq_list[member.game.name] = 0
                 freq_list[member.game.name]+=1
 
-        sorted_list = sorted(freq_list.items(), key=operator.itemgetter(1))    
+        sorted_list = sorted(freq_list.items(), key=operator.itemgetter(1), reverse = True)    
 
         if not freq_list:
             await self.bot.say("Surprisingly, no one is playing anything.")
@@ -55,15 +54,14 @@ class WhoPlays:
             # create display
             msg = "```These are the server's most played games at the moment: \n\n"
             msg += "{:<25s}{:>25s}\n".format("Game:", "# Playing:")
-            count = 0
-            for game in freq_list.keys():
-                if count < 10:
-                    if len(game) > 25:
-                        trunc_game = game [0:21] + "..."
-                        msg+= "{:<25s}{:>25d}\n".format(trunc_game, freq_list[game])
-                    else:
-                        msg+= "{:<25s}{:>25d}\n".format(game, freq_list[game])
-                count += 1
+            max_games = min(len(sorted_list), 10)
+            for i in range(max_games):
+                game, freq = sorted_list[i]
+                if len(game) > 25:
+                    trunc_game = game [0:21] + "..."
+                    msg+= "{:<25s}{:>25d}\n".format(trunc_game, freq_list[game])
+                else:
+                    msg+= "{:<25s}{:>25d}\n".format(game, freq_list[game])
             msg += "```" 
             await self.bot.say(msg)         
 
