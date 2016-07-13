@@ -216,25 +216,25 @@ class Osu:
         else:
             return
 
-        try:
+        #try:
             # get userinfo
-            userinfo = get_user(key, username, gamemode).decode("utf-8")
-            userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
+        userinfo = get_user(key, username, gamemode).decode("utf-8")
+        userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
 
-            if (len(json.loads(userinfo)) > 0):
-                if self.check_user_exists(user):
-                    if username == self.user_settings[server.id][user.id]["osu_username"]:
-                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
-                    else:
-                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+        if (len(json.loads(userinfo)) > 0):
+            if self.check_user_exists(user):
+                if username == self.user_settings[server.id][user.id]["osu_username"]:
+                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
                 else:
                     self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
-                await self.bot.send_typing(channel)
-                await self.bot.send_file(channel, 'data/osu/user_profile.png')
             else:
-                await self.bot.say("Player not found :cry:")
-        except:
-            await self.bot.say(help_msg[0])
+                self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+            await self.bot.send_typing(channel)
+            await self.bot.send_file(channel, 'data/osu/user_profile.png')
+        else:
+            await self.bot.say("Player not found :cry:")
+        #except:
+            #await self.bot.say(help_msg[0])
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def process_username(self, ctx, username):
@@ -609,7 +609,7 @@ class Osu:
         bg.close()
 
     def calculate_acc(self, beatmap, gamemode:int):
-        if gamemode == 0 or  gamemode == 3:
+        if gamemode == 0:
             total_unscale_score = float(beatmap['count300'])
             total_unscale_score += float(beatmap['count100']) 
             total_unscale_score += float(beatmap['count50']) 
@@ -635,6 +635,19 @@ class Osu:
             user_score = float(beatmap['count300']) 
             user_score += float(beatmap['count100']) 
             user_score  += float(beatmap['count50'])
+        elif gamemode == 3:
+            total_unscale_score = float(beatmap['count300'])
+            total_unscale_score += float(beatmap['countgeki']) 
+            total_unscale_score += float(beatmap['countkatu']) 
+            total_unscale_score += float(beatmap['count100'])  
+            total_unscale_score += float(beatmap['count50']) 
+            total_unscale_score += float(beatmap['countmiss']) 
+            total_unscale_score *=300
+            user_score = float(beatmap['count300']) * 300.0
+            user_score += float(beatmap['countgeki']) * 300.0
+            user_score += float(beatmap['countkatu']) * 200.0           
+            user_score += float(beatmap['count100']) * 100.0            
+            user_score += float(beatmap['count50']) * 50.0
 
         return (float(user_score)/float(total_unscale_score)) * 100.0
 
