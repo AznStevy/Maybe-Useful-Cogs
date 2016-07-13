@@ -234,7 +234,7 @@ class Osu:
             else:
                 await self.bot.say("Player not found :cry:")
         except:
-            # await self.bot.say(help_msg[0])
+            await self.bot.say(help_msg[0])
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def process_username(self, ctx, username):
@@ -420,7 +420,7 @@ class Osu:
             beatmap = json.loads(get_beatmap(key, beatmap_id=userbest[i]['beatmap_id']).decode("utf-8"))
             score = json.loads(get_scores(key, userbest[i]['beatmap_id'], user['user_id'], gamemode).decode("utf-8"))
             best_beatmaps.append(beatmap[0])
-            best_acc.append(self.calculate_acc(score[0]))
+            best_acc.append(self.calculate_acc(score[0],gamemode))
 
         # generate background and crops image to correct size
         # checks if user has stored background
@@ -608,17 +608,36 @@ class Osu:
             base_img.save(filename='data/osu/user_profile.png')
         bg.close()
 
-    def calculate_acc(self, beatmap):
-        total_unscale_score = float(beatmap['count300']) * 300.0
-        total_unscale_score += float(beatmap['count100']) * 300.0
-        total_unscale_score += float(beatmap['count50']) * 300.0
-        total_unscale_score += float(beatmap['countmiss']) * 300.0
-
-        user_score = float(beatmap['count300']) * 300.0
-        user_score += float(beatmap['count100']) * 100.0
-        user_score += float(beatmap['count50']) * 50.0
+    def calculate_acc(self, beatmap, gamemode:int):
+        if gamemode == 0 or  gamemode == 3:
+            total_unscale_score = float(beatmap['count300'])
+            total_unscale_score += float(beatmap['count100']) 
+            total_unscale_score += float(beatmap['count50']) 
+            total_unscale_score += float(beatmap['countmiss'])
+            total_unscale_score *=300
+            user_score = float(beatmap['count300']) * 300.0
+            user_score += float(beatmap['count100']) * 100.0
+            user_score += float(beatmap['count50']) * 50.0
+        elif gamemode == 1:
+            total_unscale_score = float(beatmap['count300'])
+            total_unscale_score += float(beatmap['count100'])
+            total_unscale_score += float(beatmap['countmiss'])
+            total_unscale_score *= 300
+            user_score = float(beatmap['count300']) * 1.0
+            user_score += float(beatmap['count100']) * 0.5
+            user_score *= 300
+        elif gamemode == 2:
+            total_unscale_score = float(beatmap['count300'])
+            total_unscale_score += float(beatmap['count100'])
+            total_unscale_score += float(beatmap['count50'])
+            total_unscale_score += float(beatmap['countmiss'])
+            total_unscale_score += float(beatmap['countkatu'])
+            user_score = float(beatmap['count300']) 
+            user_score += float(beatmap['count100']) 
+            user_score  += float(beatmap['count50'])
 
         return (float(user_score)/float(total_unscale_score)) * 100.0
+
     # Truncates the text because some titles/versions are too long
     def truncate_text(self, text):
         if len(text) > 20:
