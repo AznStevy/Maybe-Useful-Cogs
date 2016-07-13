@@ -216,25 +216,25 @@ class Osu:
         else:
             return
 
-        #try:
+        try:
             # get userinfo
-        userinfo = get_user(key, username, gamemode).decode("utf-8")
-        userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
+            userinfo = get_user(key, username, gamemode).decode("utf-8")
+            userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
 
-        if (len(json.loads(userinfo)) > 0):
-            if self.check_user_exists(user):
-                if username == self.user_settings[server.id][user.id]["osu_username"]:
-                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
+            if (len(json.loads(userinfo)) > 0):
+                if self.check_user_exists(user):
+                    if username == self.user_settings[server.id][user.id]["osu_username"]:
+                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
+                    else:
+                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
                 else:
                     self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+                await self.bot.send_typing(channel)
+                await self.bot.send_file(channel, 'data/osu/user_profile.png')
             else:
-                self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
-            await self.bot.send_typing(channel)
-            await self.bot.send_file(channel, 'data/osu/user_profile.png')
-        else:
-            await self.bot.say("Player not found :cry:")
-        #except:
-            #await self.bot.say(help_msg[0])
+                await self.bot.say("Player not found :cry:")
+        except:
+            await self.bot.say(help_msg[0])
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def process_username(self, ctx, username):
