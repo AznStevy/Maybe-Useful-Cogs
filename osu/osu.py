@@ -621,8 +621,8 @@ class Osu:
         return (float(user_score)/float(total_unscale_score)) * 100.0
     # Truncates the text because some titles/versions are too long
     def truncate_text(self, text):
-        if len(text) > 24:
-            text = text[0:21] + '...'
+        if len(text) > 20:
+            text = text[0:20] + '...'
         return text
 
     # gives a list of the ranked mods given a peppy number lol
@@ -672,11 +672,6 @@ class Osu:
     async def find_beatmap(self, message):
         if message.author.id == self.bot.user.id:
             return
-
-        user = message.author
-        test = message.content
-        channel = message.channel
-        server  = user.server
 
         if 'https://osu.ppy.sh/s/' in message.content or 'https://osu.ppy.sh/b/' in message.content:
             await self.process_beatmap(message)
