@@ -3,7 +3,7 @@ So far, only an osu! cog, a whoplays cog, and a stranger-talking-thingy for [Twe
 
 **Why...** 
 
-Because I wanted to make an them.
+Because I wanted to make them.
 
 **Do you suck?** 
 
