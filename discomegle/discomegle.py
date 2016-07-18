@@ -17,6 +17,22 @@ class Discomegle:
         self.pool = {} # queue of users.id -> user channel
         self.link = {} # userid -> {target id, target user channel}
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def discomegle(self, ctx):
+        """Chat with other discord people anonymously!"""
+        user = ctx.message.author
+        channel = ctx.message.channel
+        server = user.server
+
+        msg = "```x1\n"
+        msg += "joinpool: Joins the pool\n"   
+        msg += "next: Changes partners\n" 
+        msg += "leavepool: Leaves the pool or conversation\n"  
+        msg += "check: Checks who's there\n" 
+        msg += "```" 
+
+        await self.bot.say(msg)
+
     async def direct_message(self, message):
         msg = message.content
         user = message.author
