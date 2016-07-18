@@ -1,5 +1,5 @@
 # Maybe-Useful-Cogs
-So far, only an osu! cog and a whoplays cog for [Twentysix's Red-DiscordBot](https://github.com/Twentysix26/Red-DiscordBot).
+So far, only an osu! cog, a whoplays cog, and a stranger-talking-thingy for [Twentysix's Red-DiscordBot](https://github.com/Twentysix26/Red-DiscordBot).
 
 **Why...** 
 
