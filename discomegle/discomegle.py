@@ -41,7 +41,7 @@ class Discomegle:
         user = message.author
         channel = message.channel
 
-        if channel.is_private and not msg.startswith('!') and user.id in self.link:
+        if channel.is_private and not msg.startswith(prefix) and user.id in self.link:
             target_channel = self.link[user.id]["TARGET_CHANNEL"]
             await self.bot.send_message(target_channel, "**PARTNER: **{}".format(msg))
         else:
