@@ -91,7 +91,7 @@ class Discomegle:
             partner_id = self.link[user.id]["TARGET_ID"]
             partner_channel = self.link[user.id]["TARGET_CHANNEL"]
             self.pool[partner_id] = partner_channel
-            self.pool[user_id] = channel
+            self.pool[user.id] = channel
             
             self.link.pop(partner_id)
             self.link.pop(user.id)
