@@ -60,7 +60,7 @@ class Discomegle:
         channel =  message.channel
 
         self.pool[user.id] = channel
-        await self.bot.send_message(channel, "You have been added to the pool.")  
+        await self.bot.send_message(channel, "**You have been added to the pool.**")  
 
     async def remove_from_pool(self, message):
         user = message.author
@@ -68,7 +68,7 @@ class Discomegle:
 
         if user.id in self.pool.keys():
             self.pool.pop(user.id)
-            await self.bot.send_message(channel, "Leaving discomegle pool.")
+            await self.bot.send_message(channel, "**Leaving discomegle pool.**")
         elif user.id in self.link.keys():
             # put partner back into pool
             partner_id = self.link[user.id]["TARGET_ID"]
@@ -76,19 +76,17 @@ class Discomegle:
             self.pool[partner_id] = partner_channel
             self.link.pop(partner_id)
             self.link.pop(user.id)
-            await self.bot.send_message(partner_channel, "Your partner has disconnected.")
-            await self.bot.send_message(channel, "Leaving discomegle conversation and pool.")
+            await self.bot.send_message(partner_channel, "**Your partner has disconnected.**")
+            await self.bot.send_message(channel, "**Leaving discomegle conversation and pool.**")
         else:
-            await self.bot.send_message(channel, "You are not in the pool or a conversation.")            
+            await self.bot.send_message(channel, "**You are not in the pool or a conversation.**")            
 
     # puts both users back in the pool, but will go to same person if pool is small
     async def get_next_user(self, message):
         user = message.author
         channel =  message.channel
-
-        if user.id not in self.link.keys() and user.id not in self.pool.keys():
-            await self.bot.send_message(channel, "Please do {}joinpool.".format(prefix))            
-        elif user.id in self.link.keys():
+          
+        if user.id in self.link.keys():
             # get partner information
             partner_id = self.link[user.id]["TARGET_ID"]
             partner_channel = self.link[user.id]["TARGET_CHANNEL"]
@@ -97,8 +95,12 @@ class Discomegle:
             
             self.link.pop(partner_id)
             self.link.pop(user.id)
-            await self.bot.send_message(partner_channel, "Your partner has disconnected.")
-            await self.bot.send_message(channel, "Switching Users.")
+            await self.bot.send_message(partner_channel, "**Your partner has disconnected.**")
+            await self.bot.send_message(channel, "**Switching Users.**")
+        elif user.id in self.pool.keys():
+            await self.bot.send_message(channel, "**You're still in the pool. Please wait.**")
+        else:
+            await self.bot.send_message(channel, "**Your are not in the pool. Please do `{}joinpool`.**".format(prefix))                   
 
     async def get_info(self, message):
         channel =  message.channel
@@ -125,8 +127,8 @@ class Discomegle:
 
                 self.link[user_one_id] = {"TARGET_ID": user_two_id, "TARGET_CHANNEL": user_two_channel}
                 self.link[user_two_id] = {"TARGET_ID": user_one_id, "TARGET_CHANNEL": user_one_channel}
-                await self.bot.send_message(user_one_channel, "You have been paired. You can now start talking with your partner.")   
-                await self.bot.send_message(user_two_channel, "You have been paired. You can now start talking with your partner.")    
+                await self.bot.send_message(user_one_channel, "**You have been paired. You can now start talking with your partner.**")   
+                await self.bot.send_message(user_two_channel, "**You have been paired. You can now start talking with your partner.**")    
             await asyncio.sleep(5)
 
 def setup(bot):
