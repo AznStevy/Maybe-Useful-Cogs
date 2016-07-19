@@ -86,7 +86,7 @@ class Discomegle:
         user = message.author
         channel =  message.channel
 
-        if user.id not in self.list.keys() and user.id not in self.pool.keys():
+        if user.id not in self.link.keys() and user.id not in self.pool.keys():
             await self.bot.send_message(channel, "Please do {}joinpool.".format(prefix))            
         elif user.id in self.link.keys():
             # get partner information
