@@ -3,11 +3,9 @@ import discord
 from discord.ext import commands
 from discord.utils import find
 from __main__ import send_cmd_help
-import json, re, sys, urllib.request, urllib.parse, urllib.error
-import requests
 import random
-from urllib.request import urlopen
-from .utils.dataIO import dataIO, fileIO
+import aiohttp
+from .utils.dataIO import fileIO
 from wand.image import Image
 from wand.display import display
 from wand.drawing import Drawing
@@ -31,7 +29,7 @@ bgs = {
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
-            "That player either doesn't exist in the database, hasn't played enough, or you don't have an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **{}osuset key** to set your key".format(prefix),
+            "That player either doesn't exist in the database, hasn't played enough, or the owner hasn't set an osu api key (*it's required*). You can get one from https://osu.ppy.sh/p/api. If already have a key, do **{}osuset key** to set your key".format(prefix),
             "It doesn't seem that you have an account linked. Do **{}osuset user**.".format(prefix),
             "It doesn't seem that the discord user has an account linked."
             ]
@@ -132,7 +130,7 @@ class Osu:
 
         if not self.check_user_exists(user):
             try:
-                osu_user = json.loads(get_user(key, username, 1).decode("utf-8"))
+                osu_user = list(await get_user(key, username, 1))
                 newuser = {
                     "discord_username": user.name, 
                     "osu_username": username,
@@ -148,7 +146,7 @@ class Osu:
                 await self.bot.say("{} doesn't exist in the osu! database.".format(username))
         else:
             try:
-                osu_user = json.loads(get_user(key, username, 1).decode("utf-8"))
+                osu_user = list(await get_user(key, username, 1))
                 self.user_settings[server.id][user.id]["osu_username"] = username
                 self.user_settings[server.id][user.id]["osu_user_id"] = osu_user[0]["user_id"]
                 fileIO('data/osu/user_settings.json', "save", self.user_settings)
@@ -185,16 +183,15 @@ class Osu:
             return
 
         try: 
-            userinfo = get_user(key, username, gamemode).decode("utf-8")
-            if (len(json.loads(userinfo)) > 0):
-
+            userinfo = list(await get_user(key, username, gamemode))
+            if userinfo:
                 if self.check_user_exists(user):
                     if username == self.user_settings[server.id][user.id]["osu_username"]:
-                        self.draw_user_small(json.loads(userinfo)[0], gamemode, self.user_settings[server.id][user.id]["background"])
+                        await self.draw_user_small(userinfo[0], gamemode, self.user_settings[server.id][user.id]["background"])
                     else:
-                        self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background
+                        await self.draw_user_small(userinfo[0], gamemode, "") # random background
                 else:
-                    self.draw_user_small(json.loads(userinfo)[0], gamemode, "") # random background
+                    await self.draw_user_small(userinfo[0], gamemode, "") # random background
                 
                 await self.bot.send_typing(channel)            
                 await self.bot.send_file(channel, 'data/osu/user.png')
@@ -218,17 +215,16 @@ class Osu:
 
         try:
             # get userinfo
-            userinfo = get_user(key, username, gamemode).decode("utf-8")
-            userbest = get_user_best(key, username, gamemode, num_best_plays).decode("utf-8")
-
-            if (len(json.loads(userinfo)) > 0):
+            userinfo = list(await get_user(key, username, gamemode))
+            userbest = list(await get_user_best(key, username, gamemode, num_best_plays))
+            if userinfo:
                 if self.check_user_exists(user):
                     if username == self.user_settings[server.id][user.id]["osu_username"]:
-                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
+                        await self.draw_user_profile(userinfo[0], userbest, gamemode, self.user_settings[server.id][user.id]["background"]) # only takes the first one
                     else:
-                        self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+                        await self.draw_user_profile(userinfo[0],userbest, gamemode, "") # random background                            
                 else:
-                    self.draw_user_profile(json.loads(userinfo)[0],json.loads(userbest), gamemode, "") # random background                            
+                    await self.draw_user_profile(userinfo[0],userbest, gamemode, "") # random background                            
                 await self.bot.send_typing(channel)
                 await self.bot.send_file(channel, 'data/osu/user_profile.png')
             else:
@@ -258,7 +254,7 @@ class Osu:
                 self.check_user_exists(target)
                 username = self.user_settings[server.id][target.id]["osu_username"]
             except:
-                if json.loads(get_user(key, username, 0).decode("utf-8")):
+                if await get_user(key, username, 0):
                     username = str(target)
                 else:
                     await self.bot.say(help_msg[2])
@@ -287,129 +283,153 @@ class Osu:
         return True
 
     # Gives a small user profile image
-    def draw_user_small(self, user, gamemode: int, background:str):
+    async def draw_user_small(self, user, gamemode: int, background:str):
         font = 'Tahoma'
 
-        # checks if user has stored background
+        # get urls
         if background in bgs.keys() and background != 'random':
             bg_url = bgs[background]
         else:
             bg_url = random.choice(list(bgs.values()))  
+        profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
+        osu_logo_url = 'http://puu.sh/pT7JR/577b0cc30c.png'
+        icons_url=['http://puu.sh/pT2wd/4009301880.png','http://puu.sh/pT7XO/04a636cd31.png', 'http://puu.sh/pT6L5/3528ea348a.png','http://puu.sh/pT6Kl/f5781e085b.png']
+        gamemode_url = icons_url[gamemode]
+        flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
 
-        bg_req = urllib.request.Request(bg_url, headers={'User-Agent': 'Mozilla/5.0'})
-        bg = urlopen(bg_req)
-        with Image(file=bg) as base_img:
-            # background cropping as base image
-            base_img.resize(600,600)
-            base_img.crop(0,0,488,170)
+        try:
+            async with aiohttp.get(bg_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_bg.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(profile_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_profile.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(osu_logo_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_osu_logo.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(profile_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_profile.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(gamemode_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_gamemode.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(flag_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_flag.png','wb') as f:
+                f.write(image)
+            success = True
+        except Exception as e:
+            success = False
+            print(e)
 
-            # draw transparent black rectangle
-            with Drawing() as draw:
-                draw.fill_color = Color('#000000')
-                draw.fill_opacity = 0.6
-                draw.rectangle(left=10,top=10,right=478,bottom=160)
-                draw(base_img)
+        if success:
+            with Image(filename='data/osu/temp_bg.png') as base_img:
+                # background cropping as base image
+                base_img.resize(600,600)
+                base_img.crop(0,0,488,170)
 
-            # create level graphic
-            with Drawing() as draw:
-                level_int = int(float(user['level']))
-                level_percent = float(user['level']) - level_int
-                full_length = 458
-                level_length = full_length * level_percent
-                draw.fill_color = Color('#FFF')
-                draw.fill_opacity = 0.6
-                draw.rectangle(left=15,top=145, width=level_length, bottom=155)
-                draw(base_img)
-            with Drawing() as draw:
-                draw.fill_opacity = 1
-                draw.text_alignment = 'center'
-                draw.font_size = 13
-                draw.font_weight = 500
-                draw.fill_color = Color('#FFF')
-                draw.text(int(base_img.width/2), 155, "Lvl {}".format(str(level_int)))
-                draw(base_img)
+                # draw transparent black rectangle
+                with Drawing() as draw:
+                    draw.fill_color = Color('#000000')
+                    draw.fill_opacity = 0.6
+                    draw.rectangle(left=10,top=10,right=478,bottom=160)
+                    draw(base_img)
 
-            # grab user profile image
-            profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
-            profile_req = urllib.request.Request(profile_url, headers={'User-Agent': 'Mozilla/5.0'})
-            profile = urlopen(profile_req)
-            with Image(file=profile) as profile_img:
-                # user_profile image resizing
-                profile_img.resize(130,130)     
-                base_img.composite(profile_img, left=10, top=10)
-            profile.close()
+                # create level graphic
+                with Drawing() as draw:
+                    level_int = int(float(user['level']))
+                    level_percent = float(user['level']) - level_int
+                    full_length = 458
+                    level_length = full_length * level_percent
+                    draw.fill_color = Color('#FFF')
+                    draw.fill_opacity = 0.6
+                    draw.rectangle(left=15,top=145, width=level_length, bottom=155)
+                    draw(base_img)
+                with Drawing() as draw:
+                    draw.fill_opacity = 1
+                    draw.text_alignment = 'center'
+                    draw.font_size = 13
+                    draw.font_weight = 500
+                    draw.fill_color = Color('#FFF')
+                    draw.text(int(base_img.width/2), 155, "Lvl {}".format(str(level_int)))
+                    draw(base_img)
 
-            # writes lables
-            with Drawing() as draw:
-                draw.text_alignment = 'right'
-                draw.font_size = 20
-                draw.font_weight = 500
-                draw.font_family = font
-                draw.fill_color = Color('#FFFFFF')
-                x = 255 # x offset
-                draw.text(x, 60, "Rank: ")
-                draw.text(x, 85, "PP: ")
-                draw.text(x, 110, "Playcount: ")
-                draw.text(x, 135, "Accuracy: ")
-                draw(base_img)
+                # grab user profile image
+                with Image(filename='data/osu/temp_profile.png') as profile_img:
+                    # user_profile image resizing
+                    profile_img.resize(130,130)     
+                    base_img.composite(profile_img, left=10, top=10)
 
-            # write user information
-            with Drawing() as draw:
-                draw.font_size = 26
-                draw.font_weight = 500
-                draw.font_family = font
-                draw.text_alignment = 'center'
-                draw.fill_color = Color('#FFFFFF')
-                draw.text_decoration = 'underline'
-                draw.text(310, 35, user['username'])
-                draw(base_img)
-            with Drawing() as draw:                
-                draw.font_size = 20
-                draw.font_weight = 500
-                draw.font_family = font
-                draw.fill_color = Color('#FFFFFF')
-                draw.text_decoration = 'no'
-                x = 255 # x offset
-                draw.text(x, 60, "#{} (#{})".format(user['pp_rank'], user['pp_country_rank']))
-                draw.text(x, 85, "{}".format(user['pp_raw']))
-                draw.text(x, 110, "{}".format(user['playcount']))
-                draw.text(x, 135, "{}%".format(user['accuracy'][0:5]))
-                draw(base_img)
+                # writes lables
+                with Drawing() as draw:
+                    draw.text_alignment = 'right'
+                    draw.font_size = 20
+                    draw.font_weight = 500
+                    draw.font_family = font
+                    draw.fill_color = Color('#FFFFFF')
+                    x = 255 # x offset
+                    draw.text(x, 60, "Rank: ")
+                    draw.text(x, 85, "PP: ")
+                    draw.text(x, 110, "Playcount: ")
+                    draw.text(x, 135, "Accuracy: ")
+                    draw(base_img)
 
-            # draw osu with correct gamemode
-            osu_logo_url = 'http://puu.sh/pT7JR/577b0cc30c.png'
-            osu_req = urllib.request.Request(osu_logo_url, headers={'User-Agent': 'Mozilla/5.0'})
-            osu = urlopen(osu_req)
-            with Image(file=osu) as osu_icon:
-                osu_icon.resize(45,45)
-                base_img.composite(osu_icon, left=430, top=95)
-            osu.close()
+                # write user information
+                with Drawing() as draw:
+                    draw.font_size = 26
+                    draw.font_weight = 500
+                    draw.font_family = font
+                    draw.text_alignment = 'center'
+                    draw.fill_color = Color('#FFFFFF')
+                    draw.text_decoration = 'underline'
+                    draw.text(310, 35, user['username'])
+                    draw(base_img)
+                with Drawing() as draw:                
+                    draw.font_size = 20
+                    draw.font_weight = 500
+                    draw.font_family = font
+                    draw.fill_color = Color('#FFFFFF')
+                    draw.text_decoration = 'no'
+                    x = 255 # x offset
+                    draw.text(x, 60, "#{} (#{})".format(user['pp_rank'], user['pp_country_rank']))
+                    draw.text(x, 85, "{}".format(user['pp_raw']))
+                    draw.text(x, 110, "{}".format(user['playcount']))
+                    draw.text(x, 135, "{}%".format(user['accuracy'][0:5]))
+                    draw(base_img)
 
-            # puts on gamemode, yes, they are in order [standard, taiko, ctb, mania]
-            icons_url=['http://puu.sh/pT2wd/4009301880.png','http://puu.sh/pT7XO/04a636cd31.png', 'http://puu.sh/pT6L5/3528ea348a.png','http://puu.sh/pT6Kl/f5781e085b.png']
-            mode_url = icons_url[gamemode]
-            mode_req = urllib.request.Request(mode_url, headers={'User-Agent': 'Mozilla/5.0'})
-            mode = urlopen(mode_req)
-            with Image(file=mode) as mode_icon:
-                mode_icon.resize(43,43)
-                base_img.composite(mode_icon, left=385, top=95)
-            mode.close()
+                # draw osu with correct gamemode
+                with Image(filename='data/osu/temp_osu_logo.png') as osu_icon:
+                    osu_icon.resize(45,45)
+                    base_img.composite(osu_icon, left=430, top=95)
 
-            # puts on country flag
-            flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country'])
-            flag_req = urllib.request.Request(flag_url, headers={'User-Agent': 'Mozilla/5.0'})
-            flag = urlopen(flag_req)
-            with Image(file=flag) as flag_icon:
-                flag_icon.resize(30,20) # arbitrary flag size
-                base_img.composite(flag_icon, left=440, top=17)
-            flag.close()
+                # puts on gamemode, yes, they are in order [standard, taiko, ctb, mania]
+                with Image(filename='data/osu/temp_gamemode.png') as mode_icon:
+                    mode_icon.resize(43,43)
+                    base_img.composite(mode_icon, left=385, top=95)
 
-            # save the image
-            base_img.save(filename='data/osu/user.png')
-        bg.close()
+                # puts on country flag
+                with Image(filename='data/osu/temp_flag.png') as flag_icon:
+                    flag_icon.resize(30,20) # arbitrary flag size
+                    base_img.composite(flag_icon, left=440, top=17)
+
+                # save the image
+                base_img.save(filename='data/osu/user.png')
+
+            os.remove('data/osu/temp_bg.png')
+            os.remove('data/osu/temp_profile.png')
+            os.remove('data/osu/temp_osu_logo.png')     
+            os.remove('data/osu/temp_gamemode.png')
+            os.remove('data/osu/temp_flag.png')  
+        else:
+            await self.bot.say("Problem generating image.")            
 
     # Gives a user profile image with some information
-    def draw_user_profile(self, user, userbest, gamemode:int, background:str):
+    async def draw_user_profile(self, user, userbest, gamemode:int, background:str):
         font = 'Verdana, Geneva, sans-serif'
         key = self.osu_api_key["osu_api_key"]
 
@@ -417,196 +437,229 @@ class Osu:
         best_beatmaps = []
         best_acc = []
         for i in range(len(userbest)):
-            beatmap = json.loads(get_beatmap(key, beatmap_id=userbest[i]['beatmap_id']).decode("utf-8"))
-            score = json.loads(get_scores(key, userbest[i]['beatmap_id'], user['user_id'], gamemode).decode("utf-8"))
-            best_beatmaps.append(beatmap[0])
-            best_acc.append(self.calculate_acc(score[0],gamemode))
+            beatmap = list(await get_beatmap(key, beatmap_id=userbest[i]['beatmap_id']))[0]
+            score = list(await get_scores(key, userbest[i]['beatmap_id'], user['user_id'], gamemode))[0]
+            best_beatmaps.append(beatmap)
+            best_acc.append(self.calculate_acc(score,gamemode))
 
-        # generate background and crops image to correct size
-        # checks if user has stored background
-        if background in bgs.keys() and str(background) != 'random':
+        # get urls
+        if background in bgs.keys() and background != 'random':
             bg_url = bgs[background]
         else:
             bg_url = random.choice(list(bgs.values()))  
-        bg_req = urllib.request.Request(bg_url, headers={'User-Agent': 'Mozilla/5.0'})
-        bg = urlopen(bg_req)
-        with Image(file=bg) as base_img:
-            # background cropping
-            base_img.resize(600,600)
-            base_img.crop(0,0,488,488)
+        profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
+        osu_logo_url = 'http://puu.sh/pT7JR/577b0cc30c.png'
+        icons_url=['http://puu.sh/pT2wd/4009301880.png','http://puu.sh/pT7XO/04a636cd31.png', 'http://puu.sh/pT6L5/3528ea348a.png','http://puu.sh/pT6Kl/f5781e085b.png']
+        gamemode_url = icons_url[gamemode]
+        flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
 
-            # draw transparent black rectangle
-            with Drawing() as draw:
-                draw.fill_color = Color('#000000')
-                draw.fill_opacity = 0.6
-                draw.rectangle(left=10,top=10,right=478,bottom=160)
-                draw(base_img)
+        try:
+            async with aiohttp.get(bg_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_bg.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(profile_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_profile.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(osu_logo_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_osu_logo.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(profile_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_profile.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(gamemode_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_gamemode.png','wb') as f:
+                f.write(image)
+            async with aiohttp.get(flag_url) as r:
+                image = await r.content.read()
+            with open('data/osu/temp_flag.png','wb') as f:
+                f.write(image)
+            success = True
+        except Exception as e:
+            success = False
+            print(e)
 
-            # create level graphic
-            with Drawing() as draw:
-                level_int = int(float(user['level']))
-                level_percent = float(user['level']) - level_int
-                full_length = 458
-                level_length = full_length * level_percent
-                draw.fill_color = Color('#FFF')
-                draw.fill_opacity = 0.6
-                draw.rectangle(left=15,top=145, width=level_length, bottom=155)
-                draw(base_img)
-            with Drawing() as draw:
-                draw.fill_opacity = 1
-                draw.text_alignment = 'center'
-                draw.font_size = 13
-                draw.font_weight = 500
-                draw.fill_color = Color('#FFF')
-                draw.text(int(base_img.width/2), 155, "Lvl {}".format(str(level_int)))
-                draw(base_img)
+        if success:
+            with Image(filename='data/osu/temp_bg.png') as base_img:
+                # background cropping
+                base_img.resize(600,600)
+                base_img.crop(0,0,488,488)
 
-            # draw transparent white rectangle
-            with Drawing() as draw:
-                draw.fill_color = Color('#FFFFFF')
-                draw.fill_opacity = 0.6
-                draw.rectangle(left=10,top=160,right=478,bottom=478)
-                draw(base_img)
-
-            # grab user profile image
-            profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
-            profile_req = urllib.request.Request(profile_url, headers={'User-Agent': 'Mozilla/5.0'})
-            profile = urlopen(profile_req)
-            with Image(file=profile) as profile_img:
-                # user_profile image resizing
-                profile_img.resize(130,130)     
-                base_img.composite(profile_img, left=10, top=10)
-            profile.close()
-
-            # writes lables
-            with Drawing() as draw:
-                draw.text_alignment = 'right'
-                draw.font_size = 20
-                draw.font_weight = 500
-                draw.fill_color = Color('#FFFFFF')
-                x = 255 # x offset
-                draw.text(x, 60, "Rank: ")
-                draw.text(x, 85, "PP: ")
-                draw.text(x, 110, "Playcount: ")
-                draw.text(x, 135, "Accuracy: ")
-                draw(base_img)
-
-            # write user information
-            with Drawing() as draw:
-                draw.font_size = 26
-                draw.font_weight = 500
-                draw.font_family = font
-                draw.text_alignment = 'center'
-                draw.fill_color = Color('#FFFFFF')
-                draw.text_decoration = 'underline'
-                draw.text(310, 35, user['username'])
-                draw(base_img)
-            with Drawing() as draw:                
-                draw.font_size = 20
-                draw.font_weight = 500
-                draw.font_family = font
-                draw.fill_color = Color('#FFFFFF')
-                draw.text_decoration = 'no'
-                x = 255 # x offset
-                draw.text(x, 60, "#{} (#{})".format(user['pp_rank'], user['pp_country_rank']))
-                draw.text(x, 85, "{}".format(user['pp_raw']))
-                draw.text(x, 110, "{}".format(user['playcount']))
-                draw.text(x, 135, "{}%".format(user['accuracy'][0:5]))
-                draw(base_img)
-
-            # draw osu icon
-            osu_logo_url = 'http://puu.sh/pT7JR/577b0cc30c.png'
-            osu_req = urllib.request.Request(osu_logo_url, headers={'User-Agent': 'Mozilla/5.0'})
-            osu = urlopen(osu_req)
-            with Image(file=osu) as osu_icon:
-                osu_icon.resize(45,45)      
-                base_img.composite(osu_icon, left=430, top=95)
-            osu.close()
-
-            # puts on gamemode
-            # yes, they are in order [standard, taiko, ctb, mania]
-            icons_url=['http://puu.sh/pT2wd/4009301880.png','http://puu.sh/pT7XO/04a636cd31.png', 'http://puu.sh/pT6L5/3528ea348a.png','http://puu.sh/pT6Kl/f5781e085b.png']
-            mode_url = icons_url[gamemode]
-            mode_req = urllib.request.Request(mode_url, headers={'User-Agent': 'Mozilla/5.0'})
-            mode = urlopen(mode_req)
-            with Image(file=mode) as mode_icon:
-                mode_icon.resize(43,43)      
-                base_img.composite(mode_icon, left=385, top=95)
-            mode.close()
-
-            # puts on country flag
-            flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country'])
-            flag_req = urllib.request.Request(flag_url, headers={'User-Agent': 'Mozilla/5.0'})
-            flag = urlopen(flag_req)
-            with Image(file=flag) as flag_icon:
-                flag_icon.resize(30,20) # arbitrary flag size
-                base_img.composite(flag_icon, left=440, top=17)
-            flag.close()
-
-            # writes best performances
-            with Drawing() as draw:
-                draw.font_size = 28
-                draw.font_weight = 1000
-                draw.font_family = font
-                draw.text_alignment = 'center'
-                draw.fill_color = Color('#555')
-                draw.fill_opacity = 0.6
-                draw.text(244, 195, "{}".format('Best Performances'))
-                draw(base_img)            
-
-            # create tiles for best plays using top_play_beatmaps and userbest. Includes rank, title, diff, mods, pp, timestamp
-            left_align = 20
-            top_initial = 210
-            spacing = 53
-
-            # draw transparent white rectangles
-            for i in range(len(userbest)):
+                # draw transparent black rectangle
                 with Drawing() as draw:
-                    draw.fill_color = Color('#CCC')
+                    draw.fill_color = Color('#000000')
                     draw.fill_opacity = 0.6
-                    draw.rectangle(left=left_align + 2,top=top_initial + spacing * i - 2, width=445, height = 45)
+                    draw.rectangle(left=10,top=10,right=478,bottom=160)
                     draw(base_img)
 
-            for i in range(len(userbest)): 
+                # create level graphic
                 with Drawing() as draw:
-                    draw.font_size = 18
+                    level_int = int(float(user['level']))
+                    level_percent = float(user['level']) - level_int
+                    full_length = 458
+                    level_length = full_length * level_percent
+                    draw.fill_color = Color('#FFF')
+                    draw.fill_opacity = 0.6
+                    draw.rectangle(left=15,top=145, width=level_length, bottom=155)
+                    draw(base_img)
+                with Drawing() as draw:
+                    draw.fill_opacity = 1
+                    draw.text_alignment = 'center'
+                    draw.font_size = 13
                     draw.font_weight = 500
-
-                    # rank image
-                    rank_url = 'https://new.ppy.sh/images/badges/score-ranks/{}.png'.format(userbest[i]['rank'])
-                    rank_req = urllib.request.Request(rank_url, headers={'User-Agent': 'Mozilla/5.0'})
-                    rank = urlopen(rank_req)
-                    with Image(file=rank) as rank_icon:
-                        rank_icon.resize(45,45)      
-                        base_img.composite(rank_icon, left=left_align + 10, top=top_initial + (i) * spacing)
-                    rank.close() 
-
-                    left_text_margin = left_align + 62
-                    right_text_margin = 370
-                    first_line = 17
-                    second_line = first_line + 20
-                    draw.text(left_text_margin, top_initial + first_line + (i) * spacing, "{} ({:0.2f}%)".format(self.truncate_text(best_beatmaps[i]['title']), best_acc[i]))
-                    draw.text(left_text_margin, top_initial + second_line + (i) * spacing, "[{}]".format(self.truncate_text(best_beatmaps[i]['version'])))
-                    draw.text(right_text_margin, top_initial + first_line + (i) * spacing, "{:0.2f}pp".format(float(userbest[i]['pp'])))
-
-                    # handle mod images
-                    mods = self.mod_calculation(userbest[i]['enabled_mods'])
-                    if len(mods) > 0:
-                        for j in range(len(mods)):
-                            # puts on mod images
-                            mod_url = 'https://new.ppy.sh/images/badges/mods/{}.png'.format(mods[j])
-                            mod_req = urllib.request.Request(mod_url, headers={'User-Agent': 'Mozilla/5.0'})
-                            mod = urlopen(mod_req)
-                            with Image(file=mod) as mod_icon:
-                                mod_icon.resize(30, 22)
-                                side_ways_spacing = 32
-                                base_img.composite(mod_icon, left=right_text_margin + side_ways_spacing*(j), top=top_initial + first_line + 3 + (i) * spacing) # because image
-                            mod.close()
+                    draw.fill_color = Color('#FFF')
+                    draw.text(int(base_img.width/2), 155, "Lvl {}".format(str(level_int)))
                     draw(base_img)
 
-            # save the image
-            base_img.save(filename='data/osu/user_profile.png')
-        bg.close()
+                # draw transparent white rectangle
+                with Drawing() as draw:
+                    draw.fill_color = Color('#FFFFFF')
+                    draw.fill_opacity = 0.6
+                    draw.rectangle(left=10,top=160,right=478,bottom=478)
+                    draw(base_img)
+
+                with Image(filename='data/osu/temp_profile.png') as profile_img:
+                    # user_profile image resizing
+                    profile_img.resize(130,130)     
+                    base_img.composite(profile_img, left=10, top=10)
+
+                # writes lables
+                with Drawing() as draw:
+                    draw.text_alignment = 'right'
+                    draw.font_size = 20
+                    draw.font_weight = 500
+                    draw.fill_color = Color('#FFFFFF')
+                    x = 255 # x offset
+                    draw.text(x, 60, "Rank: ")
+                    draw.text(x, 85, "PP: ")
+                    draw.text(x, 110, "Playcount: ")
+                    draw.text(x, 135, "Accuracy: ")
+                    draw(base_img)
+
+                # write user information
+                with Drawing() as draw:
+                    draw.font_size = 26
+                    draw.font_weight = 500
+                    draw.font_family = font
+                    draw.text_alignment = 'center'
+                    draw.fill_color = Color('#FFFFFF')
+                    draw.text_decoration = 'underline'
+                    draw.text(310, 35, user['username'])
+                    draw(base_img)
+                with Drawing() as draw:                
+                    draw.font_size = 20
+                    draw.font_weight = 500
+                    draw.font_family = font
+                    draw.fill_color = Color('#FFFFFF')
+                    draw.text_decoration = 'no'
+                    x = 255 # x offset
+                    draw.text(x, 60, "#{} (#{})".format(user['pp_rank'], user['pp_country_rank']))
+                    draw.text(x, 85, "{}".format(user['pp_raw']))
+                    draw.text(x, 110, "{}".format(user['playcount']))
+                    draw.text(x, 135, "{}%".format(user['accuracy'][0:5]))
+                    draw(base_img)
+
+                # draw osu icon
+                with Image(filename='data/osu/temp_osu_logo.png') as osu_icon:
+                    osu_icon.resize(45,45)      
+                    base_img.composite(osu_icon, left=430, top=95)
+
+                # puts on gamemode
+                with Image(filename='data/osu/temp_gamemode.png') as mode_icon:
+                    mode_icon.resize(43,43)      
+                    base_img.composite(mode_icon, left=385, top=95)
+
+                # puts on country flag
+                with Image(filename='data/osu/temp_flag.png') as flag_icon:
+                    flag_icon.resize(30,20) # arbitrary flag size
+                    base_img.composite(flag_icon, left=440, top=17)
+
+                # writes best performances
+                with Drawing() as draw:
+                    draw.font_size = 28
+                    draw.font_weight = 1000
+                    draw.font_family = font
+                    draw.text_alignment = 'center'
+                    draw.fill_color = Color('#555')
+                    draw.fill_opacity = 0.6
+                    draw.text(244, 195, "{}".format('Best Performances'))
+                    draw(base_img)            
+
+                # create tiles for best plays using top_play_beatmaps and userbest. Includes rank, title, diff, mods, pp, timestamp
+                left_align = 20
+                top_initial = 210
+                spacing = 53
+
+                # draw transparent white rectangles
+                for i in range(len(userbest)):
+                    with Drawing() as draw:
+                        draw.fill_color = Color('#CCC')
+                        draw.fill_opacity = 0.6
+                        draw.rectangle(left=left_align + 2,top=top_initial + spacing * i - 2, width=445, height = 45)
+                        draw(base_img)
+
+                for i in range(len(userbest)): 
+                    with Drawing() as draw:
+                        draw.font_size = 18
+                        draw.font_weight = 500
+
+                        # rank image
+                        rank_url = 'https://new.ppy.sh/images/badges/score-ranks/{}.png'.format(userbest[i]['rank'])
+                        try:
+                            async with aiohttp.get(rank_url) as r:
+                                image = await r.content.read()
+                            with open('data/osu/temp_rank.png','wb') as f:
+                                f.write(image)
+                        except Exception as e:
+                            print(e)
+
+                        with Image(filename='data/osu/temp_rank.png') as rank_icon:
+                            rank_icon.resize(45,45)      
+                            base_img.composite(rank_icon, left=left_align + 10, top=top_initial + (i) * spacing)
+
+                        left_text_margin = left_align + 62
+                        right_text_margin = 370
+                        first_line = 17
+                        second_line = first_line + 20
+                        draw.text(left_text_margin, top_initial + first_line + (i) * spacing, "{} ({:0.2f}%)".format(self.truncate_text(best_beatmaps[i]['title']), best_acc[i]))
+                        draw.text(left_text_margin, top_initial + second_line + (i) * spacing, "[{}]".format(self.truncate_text(best_beatmaps[i]['version'])))
+                        draw.text(right_text_margin, top_initial + first_line + (i) * spacing, "{:0.2f}pp".format(float(userbest[i]['pp'])))
+
+                        # handle mod images
+                        mods = self.mod_calculation(userbest[i]['enabled_mods'])
+                        if len(mods) > 0:
+                            for j in range(len(mods)):
+                                # puts on mod images
+                                mod_url = 'https://new.ppy.sh/images/badges/mods/{}.png'.format(mods[j])
+                                try:
+                                    async with aiohttp.get(mod_url) as r:
+                                        image = await r.content.read()
+                                    with open('data/osu/temp_mod.png','wb') as f:
+                                        f.write(image)
+                                except Exception as e:
+                                    print('Issue grabbing mods.' + e)
+
+                                with Image(filename='data/osu/temp_mod.png') as mod_icon:
+                                    mod_icon.resize(30, 22)
+                                    side_ways_spacing = 32
+                                    base_img.composite(mod_icon, left=right_text_margin + side_ways_spacing*(j), top=top_initial + first_line + 3 + (i) * spacing) # because image
+                                os.remove('data/osu/temp_mod.png')
+                        draw(base_img)
+                        os.remove('data/osu/temp_rank.png')
+                # save the image
+                base_img.save(filename='data/osu/user_profile.png')
+
+            os.remove('data/osu/temp_bg.png')
+            os.remove('data/osu/temp_profile.png')
+            os.remove('data/osu/temp_osu_logo.png')     
+            os.remove('data/osu/temp_gamemode.png')
+            os.remove('data/osu/temp_flag.png')                  
+        else:
+            await self.bot.say("Problem generating image.")
 
     def calculate_acc(self, beatmap, gamemode:int):
         if gamemode == 0:
@@ -715,10 +768,10 @@ class Osu:
         url = re.search("(?P<url>https?://[^\s]+)", message.content).group("url")
         if url.find('https://osu.ppy.sh/s/') != -1:
             beatmap_id = url.replace('https://osu.ppy.sh/s/','')
-            beatmap_info = json.loads(get_beatmapset(key, beatmap_id).decode("utf-8"))
+            beatmap_info = await get_beatmapset(key, beatmap_id)
         elif url.find('https://osu.ppy.sh/b/') != -1:
             beatmap_id = url.replace('https://osu.ppy.sh/b/','')
-            beatmap_info = json.loads(get_beatmap(key, beatmap_id).decode("utf-8"))
+            beatmap_info = await get_beatmap(key, beatmap_id)
         await self.disp_beatmap(message, beatmap_info)
         '''
         except:
@@ -739,8 +792,8 @@ class Osu:
         beatmap_msg = ""               
         for i in range(num_disp):
             if i == 0:
-                beatmap_msg = "```python\n{} - {}```\n".format(beatmap[i]['title'],beatmap[i]['artist'])
-            beatmap_msg += "```python\n"
+                beatmap_msg = "```xl\n{} - {}```\n".format(beatmap[i]['title'],beatmap[i]['artist'])
+            beatmap_msg += "```xln\n"
             beatmap_msg += "Version: [{}] by {}\n".format(beatmap[i]['version'], beatmap[i]['creator'])
             m, s = divmod(int(beatmap[i]['total_length']), 60)
             beatmap_msg += "Difficulty: {:.2f}★ BPM: {} Length: {}m {}s \n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['bpm'], m, s)
@@ -751,35 +804,30 @@ class Osu:
 
 ###-------------------------Python wrapper for osu! api-------------------------
 
-# Returns the full API request URL using the provided base URL and parameters.
-def build_request(url_params, url):
-    for param in url_params:
-        url += str(param)
-        if (param != ""):
-            url += "&"
-    return url[:-1]
-
 # Gets the beatmap
-def get_beatmap(key, beatmap_id):
+async def get_beatmap(key, beatmap_id):
     url_params = []
 
     url_params.append(parameterize_key(key))
     url_params.append(parameterize_id("b", beatmap_id)) 
 
-    return urllib.request.urlopen(build_request(url_params, "https://osu.ppy.sh/api/get_beatmaps?")).read()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_beatmaps?")) as resp:
+            return await resp.json()
 
 # Gets the beatmap set
-def get_beatmapset(key, set_id):
+async def get_beatmapset(key, set_id):
     url_params = []
 
     url_params.append(parameterize_key(key))
     url_params.append(parameterize_id("s", set_id)) 
 
-    ## Build the request URLand return the response.
-    return urllib.request.urlopen(build_request(url_params, "https://osu.ppy.sh/api/get_beatmaps?")).read()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_beatmaps?")) as resp:
+            return await resp.json()
 
 # Grabs the scores
-def get_scores(key, beatmap_id, user_id, mode):
+async def get_scores(key, beatmap_id, user_id, mode):
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -787,18 +835,22 @@ def get_scores(key, beatmap_id, user_id, mode):
     url_params.append(parameterize_id("u", user_id))
     url_params.append(parameterize_mode(mode))
 
-    return urllib.request.urlopen(build_request(url_params, "https://osu.ppy.sh/api/get_scores?")).read()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_scores?")) as resp:
+            return await resp.json()
 
-def get_user(key, user_id, mode): 
+async def get_user(key, user_id, mode): 
     url_params = []
 
     url_params.append(parameterize_key(key))
     url_params.append(parameterize_id("u", user_id))
     url_params.append(parameterize_mode(mode))
 
-    return urllib.request.urlopen(build_request(url_params, "https://osu.ppy.sh/api/get_user?")).read()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_user?")) as resp:
+            return await resp.json()
 
-def get_user_best(key, user_id, mode, limit):
+async def get_user_best(key, user_id, mode, limit):
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -806,17 +858,29 @@ def get_user_best(key, user_id, mode, limit):
     url_params.append(parameterize_mode(mode))
     url_params.append(parameterize_limit(limit)) 
 
-    return urllib.request.urlopen(build_request(url_params, "https://osu.ppy.sh/api/get_user_best?")).read()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_user_best?")) as resp:
+            return await resp.json()
 
 # Returns the user's ten most recent plays.
-def get_user_recent(key, user_id, mode, type):
+async def get_user_recent(key, user_id, mode, type):
     url_params = []
 
     url_params.append(parameterize_key(key))
     url_params.append(parameterize_id("u", user_id))
     url_params.append(parameterize_mode(mode)) 
 
-    return urllib.request.urlopen(build_request(url_params, "https://osu.ppy.sh/api/get_user_recent?")).read()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_user_recent?")) as resp:
+            return await resp.json()
+
+# Returns the full API request URL using the provided base URL and parameters.
+def build_request(url_params, url):
+    for param in url_params:
+        url += str(param)
+        if (param != ""):
+            url += "&"
+    return url[:-1]
 
 def parameterize_event_days(event_days):
     if (event_days == ""):
