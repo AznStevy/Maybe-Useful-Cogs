@@ -793,7 +793,7 @@ class Osu:
         beatmap_msg = ""               
         for i in range(num_disp):
             if i == 0:
-                beatmap_msg = "```xl\n{} - {}```\n".format(beatmap[i]['title'],beatmap[i]['artist'])
+                beatmap_msg = "```xl\n{} - {}```".format(beatmap[i]['title'],beatmap[i]['artist'])
             beatmap_msg += "```xl\n"
             beatmap_msg += "Version: [{}] by {}\n".format(beatmap[i]['version'], beatmap[i]['creator'])
             m, s = divmod(int(beatmap[i]['total_length']), 60)
