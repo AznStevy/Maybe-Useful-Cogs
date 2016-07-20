@@ -5,6 +5,7 @@ from discord.utils import find
 from __main__ import send_cmd_help
 import random
 import aiohttp
+import re
 from .utils.dataIO import fileIO
 from wand.image import Image
 from wand.display import display
@@ -793,7 +794,7 @@ class Osu:
         for i in range(num_disp):
             if i == 0:
                 beatmap_msg = "```xl\n{} - {}```\n".format(beatmap[i]['title'],beatmap[i]['artist'])
-            beatmap_msg += "```xln\n"
+            beatmap_msg += "```xl\n"
             beatmap_msg += "Version: [{}] by {}\n".format(beatmap[i]['version'], beatmap[i]['creator'])
             m, s = divmod(int(beatmap[i]['total_length']), 60)
             beatmap_msg += "Difficulty: {:.2f}★ BPM: {} Length: {}m {}s \n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['bpm'], m, s)
