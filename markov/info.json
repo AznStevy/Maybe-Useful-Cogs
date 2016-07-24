@@ -1,0 +1,7 @@
+{
+    "AUTHOR" : "Stevy",
+    "INSTALL_MSG" : "Markov, wew.",
+    "NAME" : "markov",
+    "SHORT" : "Generates a markov chain based on your server's chat (doesn't look at history), do !markov",
+    "DESCRIPTION" : "Markov. Too lazy to describe."
+}
