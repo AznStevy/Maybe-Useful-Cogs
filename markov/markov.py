@@ -57,6 +57,12 @@ class Markov:
         fileIO('data/markov/model.json', "save", self.model)          
         await self.bot.say("Channel:`{}` data cleared.".format(channel.name))
 
+    @commands.command(no_pm=True)
+    async def size(self):
+        """Shows the size of the file."""
+        size = os.path.getsize('data/markov/model.json')
+        await self.bot.say("Current File Size: `{}` Bytes.".format(size))        
+
     # loads the new text into the model
     async def track_message(self, message):
         text = message.content
@@ -64,7 +70,7 @@ class Markov:
         channel = message.channel
         user = message.author
 
-        if not user.bot:
+        if not user.bot and not text.startwith("!"):
             words = text.split(" ")
 
             if server.id not in self.model:
@@ -73,8 +79,8 @@ class Markov:
                 self.model[server.id][channel.id] = {}
 
             for i in range(len(words) - 1):
-                if words[i] not in self.model:
-                    self.model[server.id][channel.id][words[i]] = []
+                if words[i] not in self.model[server.id][channel.id]:
+                    self.model[server.id][channel.id][words[i]] = list()
                 self.model[server.id][channel.id][words[i]].append(words[i+1])
 
             fileIO('data/markov/model.json', "save", self.model)
