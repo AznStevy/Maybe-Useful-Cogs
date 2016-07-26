@@ -13,7 +13,7 @@ class Markov:
         self.model = fileIO("data/markov/model.json", "load")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def markov(self,ctx):
+    async def markov(self,ctx, *, msg = None):
         """This isn't the text you want."""
 
         user = ctx.message.author
@@ -26,9 +26,14 @@ class Markov:
             self.model[server.id][channel.id] = {}
 
         # generates sentence
-        first_word = random.choice(list(self.model[server.id][channel.id].keys())) # first word
-        markov_text = first_word + " "
-        current_word = first_word
+        if msg == None:
+            first_word = random.choice(list(self.model[server.id][channel.id].keys())) # first word
+            markov_text = first_word + " "
+            current_word = first_word
+        else:
+            first_word = msg.split(" ")[-1] # first word
+            markov_text = msg + " "
+            current_word = first_word
 
         while '?' not in markov_text and '\r' not in markov_text and '.' not in markov_text and '!' not in markov_text and len(markov_text) < 200:
             try:
@@ -70,7 +75,7 @@ class Markov:
         channel = message.channel
         user = message.author
 
-        if not user.bot and not text.startwith("!"):
+        if not user.bot and not text.startswith("!"):
             words = text.split(" ")
 
             if server.id not in self.model:
