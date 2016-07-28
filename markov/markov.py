@@ -5,6 +5,8 @@ import os
 from .utils.dataIO import fileIO
 from cogs.utils import checks
 
+prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
+
 class Markov:
     """A cog that generates text based on what your users say."""
 
@@ -20,30 +22,31 @@ class Markov:
         channel = ctx.message.channel
         server = user.server
 
-        if server.id not in self.model:
-            self.model[server.id] = {}
-        if channel.id not in self.model[server.id]:
-            self.model[server.id][channel.id] = {}
+        if not user.bot:
+            if server.id not in self.model:
+                self.model[server.id] = {}
+            if channel.id not in self.model[server.id]:
+                self.model[server.id][channel.id] = {}
 
-        # generates sentence
-        if msg == None:
-            first_word = random.choice(list(self.model[server.id][channel.id].keys())) # first word
-            markov_text = first_word + " "
-            current_word = first_word
-        else:
-            first_word = msg.split(" ")[-1] # first word
-            markov_text = msg + " "
-            current_word = first_word
+            # generates sentence
+            if msg == None:
+                first_word = random.choice(list(self.model[server.id][channel.id].keys())) # first word
+                markov_text = first_word + " "
+                current_word = first_word
+            else:
+                first_word = msg.split(" ")[-1] # first word
+                markov_text = msg + " "
+                current_word = first_word
 
-        while '?' not in markov_text and '\r' not in markov_text and '.' not in markov_text and '!' not in markov_text and len(markov_text) < 200:
-            try:
-                new_word = random.choice(self.model[server.id][channel.id][current_word])
-                current_word = new_word
-                markov_text += new_word + " "
-            except:
-                break
+            while '?' not in markov_text and '\r' not in markov_text and '.' not in markov_text and prefix not in markov_text and len(markov_text) < 200:
+                try:
+                    new_word = random.choice(self.model[server.id][channel.id][current_word])
+                    current_word = new_word
+                    markov_text += new_word + " "
+                except:
+                    break
 
-        await self.bot.say("**Generated Text: **{} ".format(markov_text))
+            await self.bot.say("**Generated Text: **{} ".format(markov_text))
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
@@ -75,7 +78,7 @@ class Markov:
         channel = message.channel
         user = message.author
 
-        if not user.bot and not text.startswith("!"):
+        if not user.bot and not text.startswith(prefix):
             words = text.split(" ")
 
             if server.id not in self.model:
