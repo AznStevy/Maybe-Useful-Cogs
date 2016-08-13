@@ -454,7 +454,7 @@ class Leveler:
 
         # write label text
         draw.text((self.center(0, 85, "Level Up!", level_fnt2), 65), "Level Up!", font=level_fnt2, fill=(100,100,100,250)) # Level
-        lvl_text = "{}".format(userinfo["level"])
+        lvl_text = "LVL {}".format(userinfo["level"])
         draw.text((self.center(0, 85, lvl_text, level_fnt), 80), lvl_text, font=level_fnt, fill=(100,100,100,250)) # Level Number
 
         result = Image.alpha_composite(result, process)
