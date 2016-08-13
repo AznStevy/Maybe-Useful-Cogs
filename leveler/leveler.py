@@ -105,15 +105,16 @@ class Leveler:
             }
             fileIO('data/leveler/block.json', "save", self.block)
 
-        if float(curr_time) - float(self.block[server.id][user.id]["rep"]) >= 43200.0:
-            self.block[server.id][org_user.id]["rep"] = time.time()
+        delta = float(curr_time) - float(self.block[server.id][org_user.id]["rep"])
+        if delta >= 43200.0 and delta>0:
+            self.block[server.id][org_user.id]["rep"] = curr_time
             self.users[server.id][user.id]["rep"] += 1
             fileIO('data/leveler/block.json', "save", self.block)
             fileIO('data/leveler/users.json', "save", self.users)
             await self.bot.say("**You have just given {} a reputation point!**".format(user.mention))
         else:
             # calulate time left
-            seconds = 43200 - (curr_time - self.block[server.id][org_user.id]["rep"])
+            seconds = 43200 - delta
             m, s = divmod(seconds, 60)
             h, m = divmod(m, 60)
             await self.bot.say("**You need to wait {} hours, {} minutes, and {} seconds until you can give reputation again!**".format(int(h), int(m), int(s)))
