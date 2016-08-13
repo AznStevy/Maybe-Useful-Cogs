@@ -1,0 +1,7 @@
+{
+    "AUTHOR" : "Stevy",
+    "INSTALL_MSG" : "Have fun annoying people with mentions! (You must have the font folder with fonts in data/leveler)",
+    "NAME" : "leveler",
+    "SHORT" : "Level/Experience tracker",
+    "DESCRIPTION" : "Increase activity(or not) on your server with chat exp!"
+}
