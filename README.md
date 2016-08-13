@@ -1,5 +1,6 @@
 # Maybe-Useful-Cogs
-So far, only an osu! cog, a whoplays cog, and a stranger-talking-thingy for [Twentysix's Red-DiscordBot](https://github.com/Twentysix26/Red-DiscordBot).
+A few cogs for [Twentysix's Red-DiscordBot](https://github.com/Twentysix26/Red-DiscordBot).
+To add, do `[p]cog repo add stevy https://github.com/AznStevy/Maybe-Useful-Cogs/`
 
 **Why...** 
 
