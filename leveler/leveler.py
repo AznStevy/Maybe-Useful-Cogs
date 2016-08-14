@@ -275,8 +275,8 @@ class Leveler:
         "Add a profile background. Be sure to size it properly, otherwise it will look weird! (290px x 290px)"
         if name in self.backgrounds["profile"].keys():
             await self.bot.say("**That profile background name already exists!**")
-        elif not self._valid_image_url(url):
-            await self.bot.say("**That url is not valid!**")
+        elif not await self._valid_image_url(url):
+            return
         else:          
             self.backgrounds["profile"][name] = url
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)                          
@@ -288,8 +288,8 @@ class Leveler:
         "Add a rank background. Be sure to size it properly, otherwise it will look weird! (360px x 100px)"
         if name in self.backgrounds["rank"].keys():
             await self.bot.say("**That rank background name already exists!**")
-        elif not self._valid_image_url(url):
-            await self.bot.say("**That url is not valid!**")
+        elif not await self._valid_image_url(url):
+            return
         else:
             self.backgrounds["rank"][name] = url
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
@@ -301,8 +301,8 @@ class Leveler:
         "Add a level-up background. Be sure to size it properly, otherwise it will look weird! (85px x 105px)"
         if name in self.backgrounds["levelup"].keys():
             await self.bot.say("**That level-up background name already exists!**")
-        elif not self._valid_image_url(url):
-            await self.bot.say("**That url is not valid!**")
+        elif not await self._valid_image_url(url):
+            return
         else:
             self.backgrounds["levelup"][name] = url
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
@@ -351,10 +351,20 @@ class Leveler:
             await self.bot.say("**Background price set to: $`{}`!**".format(price))
             fileIO('data/leveler/settings.json', "save", self.settings)      
 
-    def _valid_image_url(self, url):
-        if ".jpg" or ".jpeg" or ".png" or ".gif" in url:
+    async def _valid_image_url(self, url):
+        max_byte = 1000
+
+        try:
+            async with aiohttp.get(url) as r:
+                image = await r.content.read()
+            with open('data/leveler/test.png','wb') as f:
+                f.write(image)
+            image = Image.open('data/leveler/test.png').convert('RGBA')
+            os.remove('data/leveler/test.png')
             return True
-        return False
+        except:
+            await self.bot.say("**That is not a valid image url!**")            
+            return False
 
     @commands.command(pass_context=True, no_pm=True)
     async def listbgs(self, ctx):
