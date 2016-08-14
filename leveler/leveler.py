@@ -750,7 +750,6 @@ class Leveler:
             self.block[server.id] = {}
             fileIO('data/leveler/block.json', "save", self.block)
         if user.id not in self.block[server.id]:
-            await self.bot.say("**Creating new block.**")
             self.block[server.id][user.id] = {
                 "chat": time.time(),
                 "rep" : time.time()
