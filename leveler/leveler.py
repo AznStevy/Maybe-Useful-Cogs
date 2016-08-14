@@ -310,7 +310,7 @@ class Leveler:
         for category in self.backgrounds.keys():
             msg += "**{}**".format(category.upper())
             msg += "```ruby\n"
-            msg += ", ".join(self.backgrounds[category].keys())
+            msg += ", ".join(sorted(self.backgrounds[category].keys()))
             msg += "```"
         await self.bot.say(msg) 
 
