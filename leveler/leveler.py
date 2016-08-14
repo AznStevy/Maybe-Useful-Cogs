@@ -501,6 +501,7 @@ class Leveler:
         result = Image.new('RGBA', (360, 100), bg_color)
         process = Image.new('RGBA', (360, 100), bg_color)
         # puts in background
+        bg_image = bg_image.resize((360, 100), Image.ANTIALIAS)
         bg_image = bg_image.crop((0,0, 360, 100))
         result.paste(bg_image, (0,0))
 
@@ -601,6 +602,7 @@ class Leveler:
         draw = ImageDraw.Draw(process)
 
         # puts in background
+        bg_image = bg_image.resize((85, 105), Image.ANTIALIAS)
         bg_image = bg_image.crop((0,0, 85, 105))
         result.paste(bg_image, (0,0))
 
