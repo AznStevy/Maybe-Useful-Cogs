@@ -15,6 +15,7 @@ except:
 import time
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
+default_avatar_url = "http://puu.sh/qB89K/c37cd0de38.jpg"
 
 # fonts
 name_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 18)
@@ -403,7 +404,7 @@ class Leveler:
         # get urls
         userinfo = self.users[server.id][user.id]
         bg_url = userinfo["profile_background"]
-        profile_url = user.avatar_url         
+        profile_url = user.avatar_url 
         discord_url = 'http://puu.sh/qxCqL/2d35aea5d6.png'
         info_icon_url = 'http://puu.sh/qxCsi/d649552d29.png'
 
@@ -417,8 +418,12 @@ class Leveler:
             image = await r.content.read()
         with open('data/leveler/temp_bg.png','wb') as f:
             f.write(image)
-        async with aiohttp.get(profile_url) as r:
-            image = await r.content.read()
+        try:
+            async with aiohttp.get(profile_url) as r:
+                image = await r.content.read()
+        except:
+            async with aiohttp.get(default_avatar_url) as r:
+                image = await r.content.read()
         with open('data/leveler/temp_profile.png','wb') as f:
             f.write(image)
         async with aiohttp.get(discord_url) as r:
@@ -539,8 +544,12 @@ class Leveler:
             image = await r.content.read()
         with open('data/leveler/temp_bg.png','wb') as f:
             f.write(image)
-        async with aiohttp.get(profile_url) as r:
-            image = await r.content.read()
+        try:
+            async with aiohttp.get(profile_url) as r:
+                image = await r.content.read()
+        except:
+            async with aiohttp.get(default_avatar_url) as r:
+                image = await r.content.read()
         with open('data/leveler/temp_profile.png','wb') as f:
             f.write(image)
 
@@ -622,8 +631,12 @@ class Leveler:
             image = await r.content.read()
         with open('data/leveler/temp_bg.png','wb') as f:
             f.write(image)
-        async with aiohttp.get(profile_url) as r:
-            image = await r.content.read()
+        try:
+            async with aiohttp.get(profile_url) as r:
+                image = await r.content.read()
+        except:
+            async with aiohttp.get(default_avatar_url) as r:
+                image = await r.content.read()
         with open('data/leveler/temp_profile.png','wb') as f:
             f.write(image)
 
