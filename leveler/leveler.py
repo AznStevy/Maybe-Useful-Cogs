@@ -33,6 +33,8 @@ class Leveler:
         self.bot = bot
         self.users = fileIO("data/leveler/users.json", "load")
         self.block = fileIO("data/leveler/block.json", "load")
+        self.backgrounds = fileIO("data/leveler/backgrounds.json", "load")
+        self.settings = fileIO("data/leveler/settings.json", "load")
 
     @commands.command(pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
@@ -41,6 +43,9 @@ class Leveler:
             user = ctx.message.author
         channel = ctx.message.channel
         server = user.server
+
+        if server.id in self.settings["disabled_servers"]:
+            return
 
         await self.draw_profile(user, server)
         await self.bot.send_typing(channel)         
@@ -54,6 +59,9 @@ class Leveler:
         channel = ctx.message.channel
         server = user.server
 
+        if server.id in self.settings["disabled_servers"]:
+            return
+
         # get urls
         await self.draw_rank(user, server)
         await self.bot.send_typing(channel)            
@@ -61,6 +69,7 @@ class Leveler:
 
     @commands.command(pass_context=True, no_pm=True)
     async def top10(self,ctx):
+        '''Displays the top 10 people in the server based on exp.'''
         server = ctx.message.server
         userinfo = self.users[server.id]
 
@@ -72,7 +81,7 @@ class Leveler:
 
         msg += "```ruby\n"
         rank = 1
-        labels = ["♚","⛊","✪", " ", " ", " ", " ", " ", " ", " "]
+        labels = ["♚","✪","⛊", " ", " ", " ", " ", " ", " ", " "]
         for user in sorted_list[:10]:
             msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank-1], "➤", user[1])
             msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[2]))
@@ -88,6 +97,8 @@ class Leveler:
         server = user.server
         curr_time = time.time()
 
+        if server.id in self.settings["disabled_servers"]:
+            return
         if user.id == org_user.id:
             await self.bot.say("**You can't give a rep to yourself!**")
             return
@@ -148,43 +159,167 @@ class Leveler:
             await self.bot.say("**Your description has too many characters! Must be <{}**".format(max_char))
 
     @commands.command(pass_context=True, no_pm=True)
-    async def setprofilebg(self, ctx, *, url):
-        """Grab the url from tatsumaki page"""
+    async def setprofilebg(self, ctx, *, image_name:str):
+        """Set your profile background"""
         user = ctx.message.author
         server = ctx.message.server
 
-        if "http://tatsumaki.xyz/images/backgrounds/profile/" in url:
-            self.users[server.id][user.id]["profile_background"] = url
-            fileIO('data/leveler/users.json', "save", self.users)
-            await self.bot.say("**Your new profile background has been succesfully set!**")
+        if image_name in self.backgrounds["profile"].keys():
+            if await self.process_purchase(ctx):
+                self.users[server.id][user.id]["profile_background"] = self.backgrounds["profile"][image_name]
+                fileIO('data/leveler/users.json', "save", self.users)
+                await self.bot.say("**Your new profile background has been succesfully set!**")
         else:
-            await self.bot.say("That's not a valid url. It should follow: http://tatsumaki.xyz/images/backgrounds/profile/")
+            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
     @commands.command(pass_context=True, no_pm=True)
-    async def setrankbg(self, ctx, *, url):
-        """Grab the url from tatsumaki page"""
+    async def setrankbg(self, ctx, *, image_name:str):
+        """Set your rank background"""
         user = ctx.message.author
         server = ctx.message.server
 
-        if "http://tatsumaki.xyz/images/backgrounds/rank/" in url:
-            self.users[server.id][user.id]["rank_background"] = url
-            fileIO('data/leveler/users.json', "save", self.users)
-            await self.bot.say("**Your new rank background has been succesfully set!**")
+        if image_name in self.backgrounds["rank"].keys():
+            if await self.process_purchase(ctx):
+                self.users[server.id][user.id]["rank_background"] = self.backgrounds["rank"][image_name]
+                fileIO('data/leveler/users.json', "save", self.users)
+                await self.bot.say("**Your new rank background has been succesfully set!**")
         else:
-            await self.bot.say("That's not a valid url. It should follow: http://tatsumaki.xyz/images/backgrounds/rank/")
+            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
     @commands.command(pass_context=True, no_pm=True)
-    async def setlevelbg(self, ctx, *, url):
-        """Grab the url from tatsumaki page"""
+    async def setlevelbg(self, ctx, *, image_name:str):
+        """Set your level background"""
         user = ctx.message.author
         server = ctx.message.server
 
-        if "http://tatsumaki.xyz/images/backgrounds/levelup/" in url:
-            self.users[server.id][user.id]["levelup_background"] = url
-            fileIO('data/leveler/users.json', "save", self.users)
-            await self.bot.say("**Your new level-up background has been succesfully set!**")
+        if image_name in self.backgrounds["levelup"].keys():
+            if await self.process_purchase(ctx):
+                self.users[server.id][user.id]["levelup_background"] = self.backgrounds["levelup"][image_name]
+                fileIO('data/leveler/users.json', "save", self.users)
+                await self.bot.say("**Your new level-up background has been succesfully set!**")
         else:
-            await self.bot.say("That's not a valid url. It should follow: http://tatsumaki.xyz/images/backgrounds/levelup/")
+            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
+
+    async def process_purchase(self, ctx):
+        user = ctx.message.author
+        server = ctx.message.server
+        bank = fileIO("data/economy/bank.json", "load")
+
+        try:
+            if bank[server.id][user.id]["balance"] < self.settings["bg_price"]:
+                await self.bot.say("**Insufficient funds.**")
+                return False
+            else:
+                bank[server.id][user.id]["balance"] -= self.settings["bg_price"]
+                fileIO('data/economy/bank.json', "save", bank)
+                return True
+        except:
+            await self.bot.say("**You don't have an account. Do {}bank register**".format(prefix))
+            return False
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def addprofilebg(self, name:str, url:str):
+        "Add a profile background. Be sure to size it properly, otherwise it will look weird! (290px x 290px)"
+        if name in self.backgrounds["profile"].keys():
+            await self.bot.say("**That profile background name already exists!**")
+        elif not self.valid_image_url(url):
+            await self.bot.say("**That url is not valid!**")
+        else:          
+            self.backgrounds["profile"][name] = url
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)                          
+            await self.bot.say("**New profile background(`{}`) added.**".format(name))
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def addrankbg(self, name:str, url:str):
+        "Add a rank background. Be sure to size it properly, otherwise it will look weird! (360px x 100px)"
+        if name in self.backgrounds["rank"].keys():
+            await self.bot.say("**That rank background name already exists!**")
+        elif not self.valid_image_url(url):
+            await self.bot.say("**That url is not valid!**")
+        else:
+            self.backgrounds["rank"][name] = url
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**New rank background(`{}`) added.**".format(name))
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def addlevelbg(self, name:str, url:str):
+        "Add a level-up background. Be sure to size it properly, otherwise it will look weird! (85px x 105px)"
+        if name in self.backgrounds["levelup"].keys():
+            await self.bot.say("**That level-up background name already exists!**")
+        elif not self.valid_image_url(url):
+            await self.bot.say("**That url is not valid!**")
+        else:
+            self.backgrounds["levelup"][name] = url
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**New level-up background(`{}`) added.**".format(name))
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def delprofilebg(self, name:str):
+        "Delete a profile background."
+        if name in self.backgrounds["profile"].keys():
+            del self.backgrounds["profile"][name]
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**The profile background(`{}`) has been deleted.**".format(name))
+        else:                                 
+            await self.bot.say("**That profile background name doesn't exist.**")
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def delrankbg(self, name:str):
+        "Delete a rank background."
+        if name in self.backgrounds["rank"].keys():
+            del self.backgrounds["rank"][name]
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**The rank background(`{}`) has been deleted.**".format(name))
+        else:                                 
+            await self.bot.say("**That rank background name doesn't exist.**")
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def dellevelbg(self, name:str):
+        "Delete a rank background."
+        if name in self.backgrounds["levelup"].keys():
+            del self.backgrounds["levelup"][name]
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**The level-up background(`{}`) has been deleted.**".format(name))
+        else:                                 
+            await self.bot.say("**That level-up background name doesn't exist.**")
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def setprice(self, price:int):
+        if price < 0:
+            await self.bot.say("**That is not a valid background price.**")
+        else:
+            self.settings["bg_price"] = price
+            await self.bot.say("**Background price set to: $`{}`!**".format(price))
+            fileIO('data/leveler/settings.json', "save", self.settings)      
+
+    def valid_image_url(self, url):
+        if ".jpg" or ".jpeg" or ".png" or ".gif" in url:
+            return True
+        return False
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def listbgs(self, ctx):
+        msg = ""
+        for category in self.backgrounds.keys():
+            msg += "**{}**".format(category.upper())
+            msg += "```ruby\n"
+            msg += ", ".join(self.backgrounds[category].keys())
+            msg += "```"
+        await self.bot.say(msg) 
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def disable(self, ctx):
+        """Disables level commands on the server."""
+        server = ctx.message.server
+        self.settings["disabled_servers"].append(server.id)
+        fileIO('data/leveler/settings.json', "save", self.settings)
 
     async def draw_profile(self, user, server):
         # get urls
@@ -339,6 +474,7 @@ class Leveler:
         result = Image.new('RGBA', (360, 100), bg_color)
         process = Image.new('RGBA', (360, 100), bg_color)
         # puts in background
+        bg_image = bg_image.crop((0,0, 360, 100))
         result.paste(bg_image, (0,0))
 
         # draw
@@ -438,6 +574,7 @@ class Leveler:
         draw = ImageDraw.Draw(process)
 
         # puts in background
+        bg_image = bg_image.crop((0,0, 85, 105))
         result.paste(bg_image, (0,0))
 
         # draw transparent overlay           
@@ -472,6 +609,10 @@ class Leveler:
         user = message.author
         curr_time = time.time()
 
+        if server.id in self.settings["disabled_servers"]:
+            return
+        if not self.settings["lvl_msg"]: # if lvl is disabled
+            return
         if user.bot:
             return
 
@@ -483,9 +624,9 @@ class Leveler:
                 "level": 0,
                 "current_exp": 0,
                 "total_exp": 0,
-                "profile_background": 'http://tatsumaki.xyz/images/backgrounds/profile/iceberg_prof_bg.png',
-                "rank_background": 'http://tatsumaki.xyz/images/backgrounds/rank/tri_rainbow_rank_bg.png',
-                "levelup_background": 'http://tatsumaki.xyz/images/backgrounds/levelup/default_lvlup_bg.png',
+                "profile_background": self.backgrounds["profile"]["default"],
+                "rank_background": self.backgrounds["rank"]["default"],
+                "levelup_background": self.backgrounds["levelup"]["default"],
                 "title": "",
                 "info": "I am a mysterious person.",
                 "rep": 0,
@@ -568,6 +709,73 @@ def check_files():
     if not fileIO(f, "check"):
         print("Creating block.json...")
         fileIO(f, "save", {})
+
+    default = {
+        "bg_price": 0,
+        "lvl_msg": True, 
+        "disabled_servers": []
+        }
+
+    settings_path = "data/leveler/settings.json"
+    if not os.path.isfile(settings_path):
+        print("Creating default leveler settings.json...")
+        fileIO(settings_path, "save", default)
+
+    bgs = {
+            "profile": {
+                "alice": "http://puu.sh/qAoLx/7335f697fb.png",
+                "blueskyclouds": "http://puu.sh/qAoNL/a4f43997dc.png",
+                "bluestairs": "http://puu.sh/qAqpi/5e64aa6804.png",
+                "cherryblossom": "http://puu.sh/qAqqs/fc35ca027b.png",
+                "coastline": "http://puu.sh/qAqrz/70b8bf8f28.png",
+                "default": "http://puu.sh/qAqsG/18e228f43f.png",
+                "gilgamesh": "http://puu.sh/qAqtX/715235660e.png",
+                "girloncomputer": "http://puu.sh/qAqv3/214bae3d23.png",
+                "graffiti": "http://puu.sh/qAqyU/e312c4100c.png",
+                "greenery": "http://puu.sh/qAqzy/4c520ea92a.png",
+                "hearts": "http://puu.sh/qAr52/5ec47e8ec2.png",
+                "iceberg": "http://puu.sh/qAr6p/1d4e031a9e.png",
+                "ishidamitsunari": "http://puu.sh/qAr89/1ce985cf7c.png",
+                "lambo": "http://puu.sh/qAr94/b45aa8a5f7.png",
+                "miraiglasses": "http://puu.sh/qArax/ce8a8bf12e.png",
+                "miraikuriyama": "http://puu.sh/qArbY/59b883fe71.png",
+                "mistyforest": "http://puu.sh/qArkT/c3e6dd80e9.png",
+                "mountaindawn": "http://puu.sh/qArmh/d88eb46ca2.png",
+                "nekoatsume_sassyfran": "http://puu.sh/qArnm/4dd317d64c.png",
+                "nekoatsume_tower": "http://puu.sh/qArJl/67ab438957.png",
+                "potatoes": "http://puu.sh/qArKm/78ad01fd9d.png",
+                "suikaibuki": "http://puu.sh/qArKK/8bd593a864.png",
+                "tri_rainbow": "http://puu.sh/qArLB/36c80c6e3c.png",
+                "utsuhoaim": "http://puu.sh/qArMh/f76be2c98c.png",
+                "utsuhoflight": "http://puu.sh/qArNG/9f0c30d3ce.png",
+                "waterlilies": "http://puu.sh/qArOJ/2172044e13.png",
+                "wolfsrain": "http://puu.sh/qArPc/e3e63a9525.png"
+            },
+            "rank": {
+                "aurora" : "http://puu.sh/qArYi/69ae5e9699.png",
+                "piano" : "http://puu.sh/qArYy/a0a7eeae18.png",
+                "default" : "http://puu.sh/qArYW/b746dfbf84.png",
+                "interstellar":"http://puu.sh/qArZt/e3369e4a95.png",
+                "nebula": "http://puu.sh/qArZU/52f1282ef7.png",
+                "nekoatsume_belly": "http://puu.sh/qAs0b/2270971d6d.png",
+                "nekoatsume_cyan": "http://puu.sh/qAs0q/eb5ae8b942.png",
+                "nekoatsume_neapolitan": "http://puu.sh/qAs0F/c9ee5ac9ff.png",
+                "potatoes" : "http://puu.sh/qAs1b/a2f4f9fcd1.png",
+                "tri_rainbow" : "http://puu.sh/qAs1u/f5b4843e96.png"
+            },
+            "levelup": {
+                "default" : "http://puu.sh/qAsht/22a4f6b0ac.png",
+                "interstellar" : "http://puu.sh/qAshP/d55efec3f6.png",
+                "metalpatch": "http://puu.sh/qAsi4/438b912088.png",
+                "navaho": "http://puu.sh/qAsiq/72cf67d37c.png",
+                "potatoes" : "http://puu.sh/qAsiM/a0e7321e8b.png"
+            },
+        }
+
+    bgs_path = "data/leveler/backgrounds.json"
+    if not os.path.isfile(bgs_path):
+        print("Creating default leveler backgrounds.json...")
+        fileIO(bgs_path, "save", bgs)
 
 def setup(bot):
     check_folders()
