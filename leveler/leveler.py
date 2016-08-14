@@ -224,6 +224,33 @@ class Leveler:
         else:
             await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def setchannellock(self, ctx):
+        '''Lock levelup messages to a SINGLE channel'''
+        channel = ctx.message.channel
+        server = ctx.message.server
+
+        if "lvl_msg_lock" not in self.settings.keys():
+            self.settings["lvl_msg_lock"] = {}
+
+        self.settings["lvl_msg_lock"][server.id] = channel.id
+        fileIO('data/leveler/settings.json', "save", self.settings)
+        await self.bot.say("**Level-up messages locked to #{}**".format(channel.name))
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def delchannellock(self, ctx):
+        '''Disables channel lock'''
+        channel = ctx.message.channel
+        server = ctx.message.server
+
+        if "lvl_msg_lock" not in self.settings.keys():
+            self.settings["lvl_msg_lock"] = {}
+
+        if server.id in self.settings["lvl_msg_lock"]:
+            del self.settings["lvl_msg_lock"][server.id]
+            fileIO('data/leveler/settings.json', "save", self.settings)
+        await self.bot.say("**Channel lock disabled.**".format(channel.name))
+
     async def _process_purchase(self, ctx):
         user = ctx.message.author
         server = ctx.message.server
@@ -672,7 +699,11 @@ class Leveler:
         if self.users[server.id][user.id]["current_exp"] + exp >= required:
             self.users[server.id][user.id]["level"] += 1
             self.users[server.id][user.id]["current_exp"] = self.users[server.id][user.id]["current_exp"] + exp - required
-            if self.settings["lvl_msg"]: # if lvl msg is enabled           
+            if self.settings["lvl_msg"]: # if lvl msg is enabled
+                try:
+                    channel = self.settings["lvl_msg_lock"][server.id]
+                except:
+                    pass    
                 await self.draw_levelup(user, server)
                 await self.bot.send_typing(channel)        
                 await self.bot.send_file(channel, 'data/leveler/level.png', content='**{} just gained a level!**'.format(user.mention)) 
