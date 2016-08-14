@@ -314,12 +314,39 @@ class Leveler:
             msg += "```"
         await self.bot.say(msg) 
 
+    @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
     async def disable(self, ctx):
-        """Disables level commands on the server."""
+        """Disables image generation commands on the server."""
         server = ctx.message.server
         self.settings["disabled_servers"].append(server.id)
         fileIO('data/leveler/settings.json', "save", self.settings)
+        await self.bot.say("**Image-gen commands disabled.**")
+
+    @checks.is_owner()
+    @commands.command(pass_context=True, no_pm=True)
+    async def enable(self, ctx):
+        """Enables image generation commands on the server."""
+        server = ctx.message.server
+        self.settings["disabled_servers"].remove(server.id)
+        fileIO('data/leveler/settings.json', "save", self.settings)
+        await self.bot.say("**Image-gen commands enabled.**")
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def disablelvl(self):
+        """Disables level-up messages on the server."""
+        self.settings["lvl_msg"] = False
+        fileIO('data/leveler/settings.json', "save", self.settings)
+        await self.bot.say("**Level-up messages disabled.**")
+
+    @checks.is_owner()
+    @commands.command(no_pm=True)
+    async def enablelvl(self):
+        """Enables level-up messages on the server."""
+        self.settings["lvl_msg"] = True
+        fileIO('data/leveler/settings.json', "save", self.settings)
+        await self.bot.say("**Level-up messages enabled.**")
 
     async def draw_profile(self, user, server):
         # get urls
