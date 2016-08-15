@@ -20,14 +20,16 @@ prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 default_avatar_url = "http://puu.sh/qB89K/c37cd0de38.jpg"
 
 # fonts
-name_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 18)
-title_fnt = ImageFont.truetype('data/leveler/fonts/font.ttf', 18)
-sub_header_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 14)
-exp_fnt = ImageFont.truetype('data/leveler/fonts/font.ttf', 14)
-level_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 30)
-level_label_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 20)
-rep_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 32)
-text_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 12)
+font_file = 'data/leveler/fonts/font.ttf'
+font_bold_file = 'data/leveler/fonts/font_bold.ttf'
+name_fnt = ImageFont.truetype(font_bold_file, 18)
+title_fnt = ImageFont.truetype(font_file, 18)
+sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
+exp_fnt = ImageFont.truetype(font_file, 14)
+level_fnt = ImageFont.truetype(font_bold_file, 30)
+level_label_fnt = ImageFont.truetype(font_bold_file, 20)
+rep_fnt = ImageFont.truetype(font_bold_file, 32)
+text_fnt = ImageFont.truetype(font_bold_file, 12)
 
 class Leveler:
     """A level up thing with image generation!"""
@@ -159,7 +161,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @commands.group(pass_context=True)
     async def ladmin(self, ctx):
-        """Set some things"""
+        """Set some admin things"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return    
@@ -378,9 +380,13 @@ class Leveler:
     @ladmin.command(pass_context=True, no_pm=True)
     async def setlevel(self, ctx, user : discord.Member, level:int):
         '''Sets a user's level. (What a cheater c:).'''
-        user = ctx.message.author
+        org_user = ctx.message.author
         server = user.server
 
+        if level < 0:
+            await self.bot.say("**Please enter a positive number.**")
+            return
+            
         # creates user if doesn't exist
         await self._create_user(user, server)
 
