@@ -398,8 +398,8 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def mention(self):
-        '''Toggle mentions messages.'''
-        if "mentions" not in self.settings.keys() or self.settings["mention"] == True:
+        '''Toggle mentions on messages.'''
+        if "mention" not in self.settings.keys() or self.settings["mention"] == True:
             self.settings["mention"] = False
             await self.bot.say("**Mentions disabled.**")
         else:
