@@ -39,8 +39,6 @@ class Leveler:
         self.backgrounds = fileIO("data/leveler/backgrounds.json", "load")
         self.settings = fileIO("data/leveler/settings.json", "load")
 
-
-
     @commands.command(pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
         """Displays a user profile."""
@@ -57,7 +55,7 @@ class Leveler:
 
         await self.draw_profile(user, server)
         await self.bot.send_typing(channel)         
-        await self.bot.send_file(channel, 'data/leveler/profile.png', content='**User profile for {}**'.format(user.mention)) 
+        await self.bot.send_file(channel, 'data/leveler/profile.png', content='**User profile for {}**'.format(self._is_mention(user))) 
 
     @commands.command(pass_context=True, no_pm=True)
     async def rank(self,ctx,user : discord.Member=None):
@@ -76,7 +74,14 @@ class Leveler:
         # get urls
         await self.draw_rank(user, server)
         await self.bot.send_typing(channel)            
-        await self.bot.send_file(channel, 'data/leveler/rank.png', content='**Ranking & Statistics for {}**'.format(user.mention))
+        await self.bot.send_file(channel, 'data/leveler/rank.png', content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
+
+    # should the user be mentioned based on settings?
+    def _is_mention(self,user):
+        if "mention" not in self.settings.keys() or self.settings["mention"]:
+            return user.mention
+        else:
+            return user.name
 
     @commands.command(pass_context=True, no_pm=True)
     async def top10(self,ctx):
@@ -136,7 +141,7 @@ class Leveler:
             self.users[server.id][user.id]["rep"] += 1
             fileIO('data/leveler/block.json', "save", self.block)
             fileIO('data/leveler/users.json', "save", self.users)
-            await self.bot.say("**You have just given {} a reputation point!**".format(user.mention))
+            await self.bot.say("**You have just given {} a reputation point!**".format(self._is_mention(user)))
         else:
             # calulate time left
             seconds = 43200 - delta
@@ -289,7 +294,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def addprofilebg(self, name:str, url:str):
-        """Add a profile background. Be sure to give it approximate propotions! (290px x 290px)"""
+        """Add a profile background. Give approximate propotions! (290px x 290px)"""
         if name in self.backgrounds["profile"].keys():
             await self.bot.say("**That profile background name already exists!**")
         elif not await self._valid_image_url(url):
@@ -302,7 +307,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def addrankbg(self, name:str, url:str):
-        """Add a rank background. Be sure to give it approximate propotions! (360px x 100px)"""
+        """Add a rank background. Give approximate propotions! (360px x 100px)"""
         if name in self.backgrounds["rank"].keys():
             await self.bot.say("**That rank background name already exists!**")
         elif not await self._valid_image_url(url):
@@ -315,7 +320,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def addlevelbg(self, name:str, url:str):
-        '''Add a level-up background. Be sure to give it approximate propotions! (85px x 105px)'''
+        '''Add a level-up background. Give approximate propotions! (85px x 105px)'''
         if name in self.backgrounds["levelup"].keys():
             await self.bot.say("**That level-up background name already exists!**")
         elif not await self._valid_image_url(url):
@@ -361,13 +366,46 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def setprice(self, price:int):
-        '''Set a price for background changes'''
+        '''Set a price for background changes.'''
         if price < 0:
             await self.bot.say("**That is not a valid background price.**")
         else:
             self.settings["bg_price"] = price
             await self.bot.say("**Background price set to: $`{}`!**".format(price))
-            fileIO('data/leveler/settings.json', "save", self.settings)      
+            fileIO('data/leveler/settings.json', "save", self.settings)
+
+    @checks.admin_or_permissions(manage_server=True)
+    @ladmin.command(pass_context=True, no_pm=True)
+    async def setlevel(self, ctx, user : discord.Member, level:int):
+        '''Sets a user's level. (What a cheater c:).'''
+        user = ctx.message.author
+        server = user.server
+
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
+        self.users[server.id][user.id]["current_exp"] = 0
+        self.users[server.id][user.id]["level"] = level
+
+        total_exp = 0
+        for i in range(level):
+            total_exp += self._required_exp(i)
+
+        self.users[server.id][user.id]["total_exp"] = total_exp
+        fileIO('data/leveler/users.json', "save", self.users)
+        await self.bot.say("**{}'s Level has been set to {}.**".format(self._is_mention(user), level))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @ladmin.command(no_pm=True)
+    async def mention(self):
+        '''Toggle mentions messages.'''
+        if "mentions" not in self.settings.keys() or self.settings["mention"] == True:
+            self.settings["mention"] = False
+            await self.bot.say("**Mentions disabled.**")
+        else:
+            self.settings["mention"] = True
+            await self.bot.say("**Mentions enabled.**")
+        fileIO('data/leveler/settings.json', "save", self.settings)
 
     async def _valid_image_url(self, url):
         max_byte = 1000
@@ -738,7 +776,7 @@ class Leveler:
                     channel = find(lambda m: m.id == channel_id, server.channels)
                 await self.draw_levelup(user, server)
                 await self.bot.send_typing(channel)        
-                await self.bot.send_file(channel, 'data/leveler/level.png', content='**{} just gained a level!**'.format(user.mention)) 
+                await self.bot.send_file(channel, 'data/leveler/level.png', content='**{} just gained a level!**'.format(self._is_mention(user))) 
         else:
             self.users[server.id][user.id]["current_exp"] += exp
         fileIO('data/leveler/users.json', "save", self.users)
