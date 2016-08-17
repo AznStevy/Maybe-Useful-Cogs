@@ -659,7 +659,7 @@ class Leveler:
         rep_text = "+{}rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 143), rep_text, font=rep_fnt, fill=white_color)
 
-        draw.text((self._center(5, 100, "Tags", sub_header_fnt), 175), "Tags", font=sub_header_fnt, fill=white_color) # Badges   
+        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 175), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
 
 
         exp_text = "Exp: {}/{}".format(userinfo["current_exp"],self._required_exp(userinfo["level"]))
