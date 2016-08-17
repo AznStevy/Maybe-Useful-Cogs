@@ -4,6 +4,7 @@ from discord.utils import find
 from __main__ import send_cmd_help
 import random
 import os
+import re
 from .utils.dataIO import fileIO
 from cogs.utils import checks
 import textwrap
@@ -11,7 +12,7 @@ import aiohttp
 import operator
 import string
 try:
-    from PIL import Image, ImageDraw, ImageFont, ImageColor
+    from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
     pil_available = True
 except:
     pil_available = False
@@ -359,7 +360,7 @@ class Leveler:
         if name in self.backgrounds["profile"].keys():
             await self.bot.say("**That profile background name already exists!**")
         elif not await self._valid_image_url(url):
-            return
+            await self.bot.say("**That is not a valid image url!**")  
         else:          
             self.backgrounds["profile"][name] = url
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)                          
@@ -372,7 +373,7 @@ class Leveler:
         if name in self.backgrounds["rank"].keys():
             await self.bot.say("**That rank background name already exists!**")
         elif not await self._valid_image_url(url):
-            return
+            await self.bot.say("**That is not a valid image url!**") 
         else:
             self.backgrounds["rank"][name] = url
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
@@ -385,7 +386,7 @@ class Leveler:
         if name in self.backgrounds["levelup"].keys():
             await self.bot.say("**That level-up background name already exists!**")
         elif not await self._valid_image_url(url):
-            return
+            await self.bot.say("**That is not a valid image url!**") 
         else:
             self.backgrounds["levelup"][name] = url
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
@@ -426,10 +427,22 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @leveladmin.command(no_pm=True)
-    async def addbadge(self, name:str, priority_num: int, text_color, bg_color, border_color = None):
+    async def addbadge(self, name:str, priority_num: int, text_color:str, bg_color:str, border_color:str = None):
         """Add a badge. Colors in hex, border color optional."""
 
         # TODO: add hex checker
+        if not self._is_hex(text_color):
+            await self.bot.say("**Text color hex is not valid!**")
+            return
+
+        if not self._is_hex(bg_color) and not await self._valid_image_url(bg_color):
+            await self.bot.say("**Backround is not valid. Enter hex or image url!**")
+            return
+
+        if not border_color and self._is_hex(border_color):
+            await self.bot.say("**Border color is not valid!**")
+            return
+
         if name in self.badges:
             await self.bot.say("**{} badge updated.**".format(name))
         else:
@@ -443,6 +456,23 @@ class Leveler:
         }
 
         fileIO('data/leveler/badges.json', "save", self.badges)
+
+    @checks.admin_or_permissions(manage_server=True)
+    @leveladmin.command(no_pm=True)
+    async def badgetype(self, name:str):
+        """Cirlces or Tags."""
+        if name.lower() != "circles" and name.lower() != "tags":
+            await self.bot.say("**That is not a valid badge type!**")
+            return 
+
+        self.settings["badge_type"] = name.lower()
+        await self.bot.say("**Badge type set to {}**".format(name.lower()))
+        fileIO('data/leveler/settings.json', "save", self.settings)
+
+    def _is_hex(self, color:str):
+        reg_ex = r'^#(?:[0-9a-fA-F]{3}){1,2}$'
+        return re.search(reg_ex, str(color))
+
 
     @checks.admin_or_permissions(manage_server=True)
     @leveladmin.command(pass_context = True, no_pm=True)
@@ -525,8 +555,7 @@ class Leveler:
             image = Image.open('data/leveler/test.png').convert('RGBA')
             os.remove('data/leveler/test.png')
             return True
-        except:
-            await self.bot.say("**That is not a valid image url!**")            
+        except:          
             return False
 
     @checks.admin_or_permissions(manage_server=True)
@@ -700,21 +729,82 @@ class Leveler:
             priority_badges.append((badge, priority_num))
         sorted_badges = sorted(priority_badges, key=operator.itemgetter(1), reverse=True)
 
-        vert_pos = 190
-        i = 0
-        for pair in sorted_badges[:6]:
-            badge = pair[0]
-            bg_color = self.badges[badge]["bg_color"]
-            text_color = self.badges[badge]["text_color"]
-            border_color = self.badges[badge]["border_color"]
-            if not border_color:
-                border_color = bg_color
-            text = badge
+        if "badge_type" not in self.settings.keys() or self.settings["badge_type"] == "circles":
+            # circles require antialiasing
+            right_shift = 6
+            left = 10 + right_shift
+            right = 52 + right_shift
+            coord = [(left, 190), (right, 190), (left, 223), (right, 223), (left, 256), (right, 256)]
+            i = 0
+            for pair in sorted_badges[:6]:
+                badge = pair[0]
+                bg_color = self.badges[badge]["bg_color"]
+                text_color = self.badges[badge]["text_color"]
+                border_color = self.badges[badge]["border_color"]
+                text = badge.replace("_", " ")
+                size = 32
+                multiplier = 6 # for antialiasing
+                raw_length = size * multiplier
+                # determine image or color for badge bg
+                if await self._valid_image_url(bg_color):
+                    # get image
+                    async with aiohttp.get(bg_color) as r:
+                        image = await r.content.read()
+                    with open('data/leveler/temp_badge.png','wb') as f:
+                        f.write(image)
+                    badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
+                    badge_image = badge_image.resize((raw_length, raw_length), Image.ANTIALIAS)
 
-            draw.rectangle([(10,vert_pos + i*10), (95, vert_pos + 12 + i*10)], fill = bg_color, outline = border_color) # badges
-            draw.text((self._center(10,95, text, badge_fnt), vert_pos + 2 + i*10), text,  font=badge_fnt, fill=text_color) # Credits
-            vert_pos += 6
-            i += 1
+                    # draw mask
+                    mask = Image.new('L', (raw_length , raw_length), 0)
+                    draw_thumb = ImageDraw.Draw(mask)
+                    draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
+                    mask = mask.resize((size, size), Image.ANTIALIAS)
+
+                    # put on ellipse/circle
+                    output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
+                    output = output.resize((size, size), Image.ANTIALIAS)
+                    process.paste(output, coord[i], mask)
+                else:
+                    square = Image.new('RGBA', (raw_length, raw_length), bg_color)
+
+                    border_color = (50,50,50,240)
+                    mask = Image.new('L', (raw_length, raw_length), 0)
+                    draw_thumb = ImageDraw.Draw(mask)
+                    draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
+                    mask = mask.resize((size, size), Image.ANTIALIAS)
+
+                    output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
+                    output = output.resize((size, size), Image.ANTIALIAS)
+                    process.paste(output, coord[i], mask)
+                    draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text
+                i += 1
+        elif self.settings["badge_type"] == "tags":
+            vert_pos = 190
+            i = 0
+            for pair in sorted_badges[:6]:
+                badge = pair[0]
+                bg_color = self.badges[badge]["bg_color"]
+                text_color = self.badges[badge]["text_color"]
+                border_color = self.badges[badge]["border_color"]
+                text = badge.replace("_", " ")
+
+                # determine image or color for badge bg
+                if await self._valid_image_url(bg_color):
+                    async with aiohttp.get(bg_color) as r:
+                        image = await r.content.read()
+                    with open('data/leveler/temp_badge.png','wb') as f:
+                        f.write(image)
+                    badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
+                    badge_image = badge_image.resize((85, 12), Image.ANTIALIAS)
+                    process.paste(badge_image, (10,vert_pos + i*10))
+                    os.remove('data/leveler/temp_badge.png')
+                else:
+                    draw.rectangle([(10,vert_pos + i*10), (95, vert_pos + 12 + i*10)], fill = bg_color, outline = border_color) # badges
+                
+                draw.text((self._center(10,95, text, badge_fnt), vert_pos + 2 + i*10), text,  font=badge_fnt, fill = text_color, outline = (0,0,0,255)) # Credits
+                vert_pos += 6
+                i += 1
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/profile.png','PNG', quality=100)
@@ -993,7 +1083,8 @@ def check_files():
     default = {
         "bg_price": 0,
         "lvl_msg": True, 
-        "disabled_servers": []
+        "disabled_servers": [],
+        "badge_type": "circles"
         }
 
     settings_path = "data/leveler/settings.json"
