@@ -476,7 +476,7 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @leveladmin.command(pass_context = True, no_pm=True)
-    async def delbadge(self, ctx, name:str, priority_num: int, text_color, bg_color, border_color = None):
+    async def delbadge(self, ctx, name:str):
         """Deletes a badge and removes from all users."""
         user = ctx.message.author
         channel = ctx.message.channel
@@ -491,10 +491,11 @@ class Leveler:
                     if name in self.users[serverid][userid]["badges"]:
                         self.users[serverid][userid]["badges"].remove(name)
 
+            await self.bot.say("**The {} badge has been removed.**".format(name))
             fileIO('data/leveler/users.json', "save", self.users)
             fileIO('data/leveler/badges.json', "save", self.badges)
         else:
-            await self.bot.say("**That badges does not exist**")
+            await self.bot.say("**That badges does not exist.**")
 
     @checks.admin_or_permissions(manage_server=True)
     @leveladmin.command(no_pm=True)
