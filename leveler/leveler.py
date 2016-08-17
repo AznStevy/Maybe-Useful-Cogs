@@ -285,7 +285,7 @@ class Leveler:
 
         try:
             if bank[server.id][user.id]["balance"] < self.settings["bg_price"]:
-                await self.bot.say("**Insufficient funds.**")
+                await self.bot.say("**Insufficient funds. Backgrounds changes cost: {}**".format(self.settings["bg_price"]))
                 return False
             else:
                 bank[server.id][user.id]["balance"] -= self.settings["bg_price"]
