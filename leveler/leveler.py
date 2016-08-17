@@ -9,6 +9,7 @@ from cogs.utils import checks
 import textwrap
 import aiohttp
 import operator
+import string
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor
     pil_available = True
@@ -22,7 +23,10 @@ default_avatar_url = "http://puu.sh/qB89K/c37cd0de38.jpg"
 # fonts
 font_file = 'data/leveler/fonts/font.ttf'
 font_bold_file = 'data/leveler/fonts/font_bold.ttf'
+font_unicode_file = 'data/leveler/fonts/unicode.ttf'
+
 name_fnt = ImageFont.truetype(font_bold_file, 18)
+header_u_fnt = ImageFont.truetype(font_unicode_file, 14)
 title_fnt = ImageFont.truetype(font_file, 18)
 sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
 exp_fnt = ImageFont.truetype(font_file, 14)
@@ -30,6 +34,7 @@ level_fnt = ImageFont.truetype(font_bold_file, 30)
 level_label_fnt = ImageFont.truetype(font_bold_file, 20)
 rep_fnt = ImageFont.truetype(font_bold_file, 32)
 text_fnt = ImageFont.truetype(font_bold_file, 12)
+text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
 
 class Leveler:
     """A level up thing with image generation!"""
@@ -253,7 +258,7 @@ class Leveler:
 
     @ladmin.command(pass_context=True, no_pm=True)
     async def lvlmsglock(self, ctx):
-        '''Toggles lock on levelup messages to a SINGLE channel. To disable, do command on locked channel.'''
+        '''Locks levelup messages to one channel. Disable command on locked channel.'''
         channel = ctx.message.channel
         server = ctx.message.server
 
@@ -296,7 +301,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def addprofilebg(self, name:str, url:str):
-        """Add a profile background. Give approximate propotions! (290px x 290px)"""
+        """Add a profile background. Proportions: (290px x 290px)"""
         if name in self.backgrounds["profile"].keys():
             await self.bot.say("**That profile background name already exists!**")
         elif not await self._valid_image_url(url):
@@ -309,7 +314,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def addrankbg(self, name:str, url:str):
-        """Add a rank background. Give approximate propotions! (360px x 100px)"""
+        """Add a rank background. Proportions: (360px x 100px)"""
         if name in self.backgrounds["rank"].keys():
             await self.bot.say("**That rank background name already exists!**")
         elif not await self._valid_image_url(url):
@@ -322,7 +327,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def addlevelbg(self, name:str, url:str):
-        '''Add a level-up background. Give approximate propotions! (85px x 105px)'''
+        '''Add a level-up background. Proportions: (85px x 105px)'''
         if name in self.backgrounds["levelup"].keys():
             await self.bot.say("**That level-up background name already exists!**")
         elif not await self._valid_image_url(url):
@@ -462,9 +467,21 @@ class Leveler:
         else:
             self.settings["lvl_msg"] = True
             await self.bot.say("**Level-up messages enabled.**") 
-        fileIO('data/leveler/settings.json', "save", self.settings)          
+        fileIO('data/leveler/settings.json', "save", self.settings)             
 
     async def draw_profile(self, user, server):
+
+        def _write_unicode(text, init_x, y, font, unicode_font, fill):
+            write_pos = init_x
+
+            for char in text:
+                if char.isalnum() or char in string.punctuation or char in string.whitespace:
+                    draw.text((write_pos, y), char, font=font, fill=fill)
+                    write_pos += font.getsize(char)[0] 
+                else:
+                    draw.text((write_pos, y), u"{}".format(char), font=unicode_font, fill=fill)
+                    write_pos += unicode_font.getsize(char)[0]
+
         # get urls
         userinfo = self.users[server.id][user.id]
         bg_url = userinfo["profile_background"]
@@ -547,8 +564,12 @@ class Leveler:
         # write label text
         white_color = (255,255,255,255)
         light_color = (100,100,100,255)
-        draw.text((110, 103), u"{}".format(userinfo["name"]),  font=name_fnt, fill=white_color) # Name
-        draw.text((110, 118), u"{}".format(userinfo["title"]), font=title_fnt, fill=white_color) # Title
+
+        head_align = 110
+        #draw.text((head_align, 103), u"{}".format(userinfo["name"]),  font=name_fnt, fill=white_color) # Name
+        _write_unicode(userinfo["name"], head_align, 103, name_fnt, header_u_fnt, white_color)
+        #draw.text((head_align, 118), u"{}".format(userinfo["title"]), font=title_fnt, fill=white_color) # Title
+        _write_unicode(userinfo["title"], head_align, 118, title_fnt, header_u_fnt, white_color)
 
         rep_text = "+{}rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 143), rep_text, font=rep_fnt, fill=white_color)
@@ -583,7 +604,8 @@ class Leveler:
         margin = 105
         offset = 238
         for line in textwrap.wrap(userinfo["info"], width=40):
-            draw.text((margin, offset), line, font=text_fnt, fill=(70,70,70,255))
+            # draw.text((margin, offset), line, font=text_fnt, fill=(70,70,70,255))
+            _write_unicode(line, margin, offset, text_fnt, text_u_fnt, (70,70,70,255))            
             offset += text_fnt.getsize(line)[1] + 2
 
         result = Image.alpha_composite(result, process)
@@ -593,6 +615,7 @@ class Leveler:
         os.remove('data/leveler/temp_profile.png')     
         os.remove('data/leveler/temp_discord_logo.png')
         os.remove('data/leveler/temp_info.png') 
+
 
     async def draw_rank(self, user, server):
         userinfo = self.users[server.id][user.id]
