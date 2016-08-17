@@ -29,6 +29,7 @@ name_fnt = ImageFont.truetype(font_bold_file, 18)
 header_u_fnt = ImageFont.truetype(font_unicode_file, 14)
 title_fnt = ImageFont.truetype(font_file, 18)
 sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
+badge_fnt = ImageFont.truetype(font_bold_file, 12)
 exp_fnt = ImageFont.truetype(font_file, 14)
 level_fnt = ImageFont.truetype(font_bold_file, 30)
 level_label_fnt = ImageFont.truetype(font_bold_file, 20)
@@ -44,6 +45,7 @@ class Leveler:
         self.users = fileIO("data/leveler/users.json", "load")
         self.block = fileIO("data/leveler/block.json", "load")
         self.backgrounds = fileIO("data/leveler/backgrounds.json", "load")
+        self.badges = fileIO("data/leveler/badges.json", "load")
         self.settings = fileIO("data/leveler/settings.json", "load")
 
     @commands.command(pass_context=True, no_pm=True)
@@ -110,7 +112,27 @@ class Leveler:
             msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[2]))
             rank += 1
         msg +="```"
-        await self.bot.say(msg)        
+        await self.bot.say(msg)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def listbgs(self, ctx):
+        '''Gives a list of backgrounds.'''
+        msg = ""
+        for category in self.backgrounds.keys():
+            msg += "**{}**".format(category.upper())
+            msg += "```ruby\n"
+            msg += ", ".join(sorted(self.backgrounds[category].keys()))
+            msg += "```"
+        await self.bot.say(msg)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def listbadges(self, ctx):
+        '''Gives a list of badges.'''
+        msg = "```xl\n"
+        for badge in self.badges.keys():
+            msg += "+ {}\n".format(badge)
+        msg += "```"
+        await self.bot.say(msg)         
 
     @commands.command(pass_context=True, no_pm=True)
     async def rep(self, ctx, user : discord.Member):
@@ -256,6 +278,38 @@ class Leveler:
         else:
             await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
+    @checks.admin_or_permissions(manage_server=True)
+    @lset.command(pass_context = True, no_pm=True)
+    async def givebadge(self, ctx, user : discord.Member, badge_name: str):
+        """Gives a user a badge."""
+        org_user = ctx.message.author
+        server = org_user.server
+
+        if badge_name not in self.badges:
+            await self.bot.say("**That badge doesn't exist!**")
+        elif badge_name in self.users[server.id][user.id]["badges"]:
+            await self.bot.say("**{} already has that badge!**".format(self._is_mention(user)))
+        else:     
+            self.users[server.id][user.id]["badges"].append(badge_name)
+            fileIO('data/leveler/users.json', "save", self.users)
+            await self.bot.say("**{} has just given {} the {} badge!**".format(self._is_mention(org_user), self._is_mention(user), badge_name))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lset.command(pass_context = True, no_pm=True)
+    async def takebadge(self, ctx, user : discord.Member, badge_name: str):
+        """Takes a user's badge."""
+        org_user = ctx.message.author
+        server = org_user.server
+
+        if badge_name not in self.badges:
+            await self.bot.say("**That badge doesn't exist!**")
+        elif badge_name not in self.users[server.id][user.id]["badges"]:
+            await self.bot.say("**{} does not have that badge!**".format(self._is_mention(user)))
+        else:
+            self.users[server.id][user.id]["badges"].remove(badge_name)
+            fileIO('data/leveler/users.json', "save", self.users)
+            await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), badge_name, self._is_mention(user)))
+
     @ladmin.command(pass_context=True, no_pm=True)
     async def lvlmsglock(self, ctx):
         '''Locks levelup messages to one channel. Disable command on locked channel.'''
@@ -362,13 +416,55 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
     async def dellevelbg(self, name:str):
-        '''Delete a rank background.'''
+        '''Delete a level background.'''
         if name in self.backgrounds["levelup"].keys():
             del self.backgrounds["levelup"][name]
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
             await self.bot.say("**The level-up background(`{}`) has been deleted.**".format(name))
         else:                                 
             await self.bot.say("**That level-up background name doesn't exist.**")
+
+    @checks.admin_or_permissions(manage_server=True)
+    @ladmin.command(no_pm=True)
+    async def addbadge(self, name:str, priority_num: int, text_color, bg_color, border_color = None):
+        """Add a badge. Colors in hex, border color optional."""
+
+        # TODO: add hex checker
+        if name in self.badges:
+            await self.bot.say("**{} badge updated.**".format(name))
+        else:
+            await self.bot.say("**{} badge added.**".format(name))
+
+        self.badges[name] = {
+            "priority_num": priority_num,
+            "text_color" : text_color,
+            "bg_color": bg_color,
+            "border_color": border_color
+        }
+
+        fileIO('data/leveler/badges.json', "save", self.badges)
+
+    @checks.admin_or_permissions(manage_server=True)
+    @ladmin.command(pass_context = True, no_pm=True)
+    async def delbadge(self, ctx, name:str, priority_num: int, text_color, bg_color, border_color = None):
+        """Deletes a badge and removes from all users."""
+        user = ctx.message.author
+        channel = ctx.message.channel
+        server = user.server
+
+        if name in self.badges:
+            del self.badges[name]
+
+            # remove the badge if there
+            for serverid in self.users.keys():
+                for userid in self.users[serverid].keys():
+                    if name in self.users[serverid][userid]["badges"]:
+                        self.users[serverid][userid]["badges"].remove(name)
+
+            fileIO('data/leveler/users.json', "save", self.users)
+            fileIO('data/leveler/badges.json', "save", self.badges)
+        else:
+            await self.bot.say("**That badges does not exist**")
 
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(no_pm=True)
@@ -432,17 +528,6 @@ class Leveler:
         except:
             await self.bot.say("**That is not a valid image url!**")            
             return False
-
-    @commands.command(pass_context=True, no_pm=True)
-    async def listbgs(self, ctx):
-        '''Gives a list of backgrounds.'''
-        msg = ""
-        for category in self.backgrounds.keys():
-            msg += "**{}**".format(category.upper())
-            msg += "```ruby\n"
-            msg += ", ".join(sorted(self.backgrounds[category].keys()))
-            msg += "```"
-        await self.bot.say(msg) 
 
     @checks.admin_or_permissions(manage_server=True)
     @ladmin.command(pass_context=True, no_pm=True)
@@ -574,7 +659,7 @@ class Leveler:
         rep_text = "+{}rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 143), rep_text, font=rep_fnt, fill=white_color)
 
-        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 175), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
+        draw.text((self._center(5, 100, "Tags", sub_header_fnt), 175), "Tags", font=sub_header_fnt, fill=white_color) # Badges   
 
 
         exp_text = "Exp: {}/{}".format(userinfo["current_exp"],self._required_exp(userinfo["level"]))
@@ -607,6 +692,29 @@ class Leveler:
             # draw.text((margin, offset), line, font=text_fnt, fill=(70,70,70,255))
             _write_unicode(line, margin, offset, text_fnt, text_u_fnt, (70,70,70,255))            
             offset += text_fnt.getsize(line)[1] + 2
+
+        # sort badges
+        priority_badges = []
+        for badge in userinfo["badges"]:
+            priority_num = self.badges[badge]["priority_num"]
+            priority_badges.append((badge, priority_num))
+        sorted_badges = sorted(priority_badges, key=operator.itemgetter(1), reverse=True)
+
+        vert_pos = 190
+        i = 0
+        for pair in sorted_badges[:6]:
+            badge = pair[0]
+            bg_color = self.badges[badge]["bg_color"]
+            text_color = self.badges[badge]["text_color"]
+            border_color = self.badges[badge]["border_color"]
+            if not border_color:
+                border_color = bg_color
+            text = badge
+
+            draw.rectangle([(10,vert_pos + i*10), (95, vert_pos + 12 + i*10)], fill = bg_color, outline = border_color) # badges
+            draw.text((self._center(10,95, text, badge_fnt), vert_pos + 2 + i*10), text,  font=badge_fnt, fill=text_color) # Credits
+            vert_pos += 6
+            i += 1
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/profile.png','PNG', quality=100)
@@ -948,6 +1056,11 @@ def check_files():
     if not os.path.isfile(bgs_path):
         print("Creating default leveler backgrounds.json...")
         fileIO(bgs_path, "save", bgs)
+
+    f = "data/leveler/badges.json"
+    if not fileIO(f, "check"):
+        print("Creating badges.json...")
+        fileIO(f, "save", {})
 
 def setup(bot):
     check_folders()
