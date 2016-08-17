@@ -179,7 +179,7 @@ class Leveler:
             await self.bot.say("**You need to wait {} hours, {} minutes, and {} seconds until you can give reputation again!**".format(int(h), int(m), int(s)))
     
     @commands.group(pass_context=True)
-    async def lset(self, ctx):
+    async def levelset(self, ctx):
         """Set some things"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
@@ -187,13 +187,13 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @commands.group(pass_context=True)
-    async def ladmin(self, ctx):
+    async def leveladmin(self, ctx):
         """Set some admin things"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return    
 
-    @lset.command(pass_context=True, no_pm=True)
+    @levelset.command(pass_context=True, no_pm=True)
     async def title(self, ctx, *, title):
         """Set your title."""
         user = ctx.message.author
@@ -210,7 +210,7 @@ class Leveler:
         else:
             await self.bot.say("**Your title has too many characters! Must be <{}**".format(max_char))
 
-    @lset.command(pass_context=True, no_pm=True)
+    @levelset.command(pass_context=True, no_pm=True)
     async def info(self, ctx, *, info):
         """Set your user info."""
         user = ctx.message.author
@@ -227,7 +227,7 @@ class Leveler:
         else:
             await self.bot.say("**Your description has too many characters! Must be <{}**".format(max_char))
 
-    @lset.command(pass_context=True, no_pm=True)
+    @levelset.command(pass_context=True, no_pm=True)
     async def profilebg(self, ctx, *, image_name:str):
         """Set your profile background"""
         user = ctx.message.author
@@ -244,7 +244,7 @@ class Leveler:
         else:
             await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
-    @lset.command(pass_context=True, no_pm=True)
+    @levelset.command(pass_context=True, no_pm=True)
     async def rankbg(self, ctx, *, image_name:str):
         """Set your rank background"""
         user = ctx.message.author
@@ -261,7 +261,7 @@ class Leveler:
         else:
             await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
-    @lset.command(pass_context=True, no_pm=True)
+    @levelset.command(pass_context=True, no_pm=True)
     async def levelbg(self, ctx, *, image_name:str):
         """Set your level background"""
         user = ctx.message.author
@@ -279,7 +279,7 @@ class Leveler:
             await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
     @checks.admin_or_permissions(manage_server=True)
-    @lset.command(pass_context = True, no_pm=True)
+    @levelset.command(pass_context = True, no_pm=True)
     async def givebadge(self, ctx, user : discord.Member, badge_name: str):
         """Gives a user a badge."""
         org_user = ctx.message.author
@@ -295,7 +295,7 @@ class Leveler:
             await self.bot.say("**{} has just given {} the {} badge!**".format(self._is_mention(org_user), self._is_mention(user), badge_name))
 
     @checks.admin_or_permissions(manage_server=True)
-    @lset.command(pass_context = True, no_pm=True)
+    @levelset.command(pass_context = True, no_pm=True)
     async def takebadge(self, ctx, user : discord.Member, badge_name: str):
         """Takes a user's badge."""
         org_user = ctx.message.author
@@ -310,7 +310,7 @@ class Leveler:
             fileIO('data/leveler/users.json', "save", self.users)
             await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), badge_name, self._is_mention(user)))
 
-    @ladmin.command(pass_context=True, no_pm=True)
+    @leveladmin.command(pass_context=True, no_pm=True)
     async def lvlmsglock(self, ctx):
         '''Locks levelup messages to one channel. Disable command on locked channel.'''
         channel = ctx.message.channel
@@ -353,7 +353,7 @@ class Leveler:
                 return False
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def addprofilebg(self, name:str, url:str):
         """Add a profile background. Proportions: (290px x 290px)"""
         if name in self.backgrounds["profile"].keys():
@@ -366,7 +366,7 @@ class Leveler:
             await self.bot.say("**New profile background(`{}`) added.**".format(name))
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def addrankbg(self, name:str, url:str):
         """Add a rank background. Proportions: (360px x 100px)"""
         if name in self.backgrounds["rank"].keys():
@@ -379,7 +379,7 @@ class Leveler:
             await self.bot.say("**New rank background(`{}`) added.**".format(name))
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def addlevelbg(self, name:str, url:str):
         '''Add a level-up background. Proportions: (85px x 105px)'''
         if name in self.backgrounds["levelup"].keys():
@@ -392,7 +392,7 @@ class Leveler:
             await self.bot.say("**New level-up background(`{}`) added.**".format(name))
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def delprofilebg(self, name:str):
         '''Delete a profile background.'''
         if name in self.backgrounds["profile"].keys():
@@ -403,7 +403,7 @@ class Leveler:
             await self.bot.say("**That profile background name doesn't exist.**")
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def delrankbg(self, name:str):
         '''Delete a rank background.'''
         if name in self.backgrounds["rank"].keys():
@@ -414,7 +414,7 @@ class Leveler:
             await self.bot.say("**That rank background name doesn't exist.**")
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def dellevelbg(self, name:str):
         '''Delete a level background.'''
         if name in self.backgrounds["levelup"].keys():
@@ -425,7 +425,7 @@ class Leveler:
             await self.bot.say("**That level-up background name doesn't exist.**")
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def addbadge(self, name:str, priority_num: int, text_color, bg_color, border_color = None):
         """Add a badge. Colors in hex, border color optional."""
 
@@ -445,7 +445,7 @@ class Leveler:
         fileIO('data/leveler/badges.json', "save", self.badges)
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(pass_context = True, no_pm=True)
+    @leveladmin.command(pass_context = True, no_pm=True)
     async def delbadge(self, ctx, name:str, priority_num: int, text_color, bg_color, border_color = None):
         """Deletes a badge and removes from all users."""
         user = ctx.message.author
@@ -467,7 +467,7 @@ class Leveler:
             await self.bot.say("**That badges does not exist**")
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def setprice(self, price:int):
         '''Set a price for background changes.'''
         if price < 0:
@@ -478,7 +478,7 @@ class Leveler:
             fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(pass_context=True, no_pm=True)
+    @leveladmin.command(pass_context=True, no_pm=True)
     async def setlevel(self, ctx, user : discord.Member, level:int):
         '''Sets a user's level. (What a cheater c:).'''
         org_user = ctx.message.author
@@ -503,7 +503,7 @@ class Leveler:
         await self.bot.say("**{}'s Level has been set to {}.**".format(self._is_mention(user), level))
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def mention(self):
         '''Toggle mentions on messages.'''
         if "mention" not in self.settings.keys() or self.settings["mention"] == True:
@@ -530,7 +530,7 @@ class Leveler:
             return False
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(pass_context=True, no_pm=True)
+    @leveladmin.command(pass_context=True, no_pm=True)
     async def imggen(self, ctx):
         """Toggles image generation commands on the server."""
         server = ctx.message.server
@@ -543,7 +543,7 @@ class Leveler:
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
-    @ladmin.command(no_pm=True)
+    @leveladmin.command(no_pm=True)
     async def lvlalert(self):
         """Toggles level-up messages on the server."""
         if self.settings["lvl_msg"]:
