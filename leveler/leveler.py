@@ -436,9 +436,9 @@ class Leveler:
     async def _process_purchase(self, ctx):
         user = ctx.message.author
         server = ctx.message.server
-        bank = fileIO("data/economy/bank.json", "load")
 
         try:
+            bank = fileIO("data/economy/bank.json", "load")
             if bank[server.id][user.id]["balance"] < self.settings["bg_price"]:
                 await self.bot.say("**Insufficient funds. Backgrounds changes cost: {}**".format(self.settings["bg_price"]))
                 return False
