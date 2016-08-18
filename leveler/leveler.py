@@ -11,15 +11,16 @@ import textwrap
 import aiohttp
 import operator
 import string
-import scipy
-import scipy.misc
-import scipy.cluster
+try:
+    import scipy
+    import scipy.misc
+    import scipy.cluster
+except:
+    raise RuntimeError("Run 'pip3 install scipy' and try again.")
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
-    pil_available = True
 except:
-    pil_available = False
-    raise RuntimeError("You don't have Pillow installed, run\n```pip3 install pillow```And try again")
+    raise RuntimeError("You don't have pillow installed. run 'pip3 install pillow' and try again")
 import time
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
@@ -1353,10 +1354,6 @@ def check_files():
 def setup(bot):
     check_folders()
     check_files()
-
-    if pil_available is False:
-        raise RuntimeError("You don't have Pillow installed, run\n```pip3 install pillow```And try again")
-        return
 
     n = Leveler(bot)
     bot.add_listener(n.on_message,"on_message")
