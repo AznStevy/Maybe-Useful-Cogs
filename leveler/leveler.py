@@ -771,7 +771,7 @@ class Leveler:
             rep_fill = tuple(userinfo["rep_color"])
         draw.rectangle([(5,135), (100, 170)], fill= rep_fill) # reps
         if "badge_col_color" not in userinfo.keys():
-            badge_fill = (92,130,203,230)
+            badge_fill = (128,151,165,230)
         else:
             badge_fill = tuple(userinfo["badge_col_color"])
         draw.rectangle([(5,170), (100, 285)], fill= badge_fill) # badges
