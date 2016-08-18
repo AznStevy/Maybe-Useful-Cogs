@@ -601,7 +601,7 @@ class Leveler:
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     def _is_hex(self, color:str):
-        if len(color) != 4 and len(color) != 7:
+        if color != None and len(color) != 4 and len(color) != 7:
             return False
 
         reg_ex = r'^#(?:[0-9a-fA-F]{3}){1,2}$'
