@@ -192,9 +192,9 @@ class Leveler:
         auto = None
 
         if rep_color == "auto":
-            hex_color = await self._auto_color(self.users[server.id][user.id]["profile_background"], default_rep, 8)
+            hex_color = await self._auto_color(self.users[server.id][user.id]["profile_background"], default_rep, 3)
             color = self._hex_to_rgb(hex_color, default_a)
-            color = self._moderate_color(color, default_a, 10)
+            color = self._moderate_color(color, default_a, 5)
             self.users[server.id][user.id]["rep_color"] = color                 
         elif rep_color == "default":
             self.users[server.id][user.id]["rep_color"] = default_rep
@@ -206,7 +206,7 @@ class Leveler:
         if badge_col_color == "auto":
             hex_color = await self._auto_color(self.users[server.id][user.id]["profile_background"], default_rep, 0)
             color = self._hex_to_rgb(hex_color, default_a)
-            color = self._moderate_color(color, default_a, 30)
+            color = self._moderate_color(color, default_a, 15)
             self.users[server.id][user.id]["badge_col_color"] = color
         elif badge_col_color == "default":
             self.users[server.id][user.id]["badge_col_color"] = default_badge_col
