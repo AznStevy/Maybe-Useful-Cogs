@@ -161,7 +161,42 @@ class Leveler:
             m, s = divmod(seconds, 60)
             h, m = divmod(m, 60)
             await self.bot.say("**You need to wait {} hours, {} minutes, and {} seconds until you can give reputation again!**".format(int(h), int(m), int(s)))
- 
+    
+    @commands.command(pass_context=True, no_pm=True)
+    async def profileinfo(self, ctx, user : discord.Member = None):
+        """Gives more specific details about user profile image."""
+        if not user:
+            user = ctx.message.author
+        server = ctx.message.server
+        userinfo = self.users[server.id][user.id]
+
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
+        msg = "```xl\n"
+        msg += "Name: {}\n".format(user.name)
+        msg += "Title: {}\n".format(userinfo["title"])
+        msg += "Level: {}\n".format(userinfo["level"])
+        msg += "Reps: {}\n".format(userinfo["rep"])
+        msg += "Current Exp: {}\n".format(userinfo["current_exp"])
+        msg += "Total Exp: {}\n".format(userinfo["total_exp"])
+        msg += "Info: {}\n".format(userinfo["info"])
+        msg += "Profile background: {}\n".format(userinfo["profile_background"])
+        msg += "Rank background: {}\n".format(userinfo["rank_background"])
+        msg += "Levelup background: {}\n".format(userinfo["levelup_background"])
+        if "rep_color" in userinfo.keys():
+            msg += "Rep section color: {}\n".format(self._rgb_to_hex(userinfo["rep_color"]))
+        if "badge_col_color" in userinfo.keys():
+            msg += "Badge section color: {}\n".format(self._rgb_to_hex(userinfo["badge_col_color"]))
+        msg += "Badges: "
+        msg += ", ".join(userinfo["badges"])
+        msg += "```"
+        await self.bot.say(msg)
+
+    def _rgb_to_hex(self, rgb):
+        rgb = tuple(rgb[:3])
+        return '#%02x%02x%02x' % rgb
+
     @commands.group(pass_context=True)
     async def lvlset(self, ctx):
         """Profile Configuration Options"""
@@ -803,7 +838,7 @@ class Leveler:
 
         head_align = 110
         #draw.text((head_align, 103), u"{}".format(userinfo["name"]),  font=name_fnt, fill=white_color) # Name
-        _write_unicode(userinfo["name"], head_align, 103, name_fnt, header_u_fnt, white_color)
+        _write_unicode(user.name, head_align, 103, name_fnt, header_u_fnt, white_color)
         #draw.text((head_align, 118), u"{}".format(userinfo["title"]), font=title_fnt, fill=white_color) # Title
         _write_unicode(userinfo["title"], head_align, 118, title_fnt, header_u_fnt, white_color)
 
@@ -1022,7 +1057,7 @@ class Leveler:
         draw.rectangle([(init_pos,30), (init_pos+level_length, 43)], fill=(200,200,200,250)) # box    
 
         # write label text    
-        draw.text((140, 10), u"{}".format(userinfo["name"]),  font=name_fnt, fill=(110,110,110,255)) # Name
+        draw.text((140, 10), u"{}".format(user.name),  font=name_fnt, fill=(110,110,110,255)) # Name
         exp_text = "Exp: {}/{}".format(userinfo["current_exp"],self._required_exp(userinfo["level"]))
         draw.text((self._center(140, 330, exp_text, exp_fnt), 31), exp_text,  font=exp_fnt, fill=(70,70,70,230)) # Exp Bar
         
