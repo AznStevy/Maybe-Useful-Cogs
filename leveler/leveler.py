@@ -11,6 +11,9 @@ import textwrap
 import aiohttp
 import operator
 import string
+import scipy
+import scipy.misc
+import scipy.cluster
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
     pil_available = True
@@ -178,6 +181,98 @@ class Leveler:
         await self.bot.say(msg)
 
     @lvlset.command(pass_context=True, no_pm=True)
+    async def sidebar(self, ctx, rep_color:str, badge_col_color:str):
+        """Set sidebar colors and accents. Auto: according to current bg."""
+        user = ctx.message.author
+        server = ctx.message.server
+        options = ["default", "auto"]
+        default_rep = (92,130,203,230)
+        default_badge_col = (128,151,165,230)
+        default_a = 230
+        auto = None
+
+        if rep_color == "auto":
+            hex_color = await self._auto_color(self.users[server.id][user.id]["profile_background"], default_rep, 2)
+            color = self._hex_to_rgb(hex_color, default_a)
+            color = self._moderate_color(color, default_a)
+            self.users[server.id][user.id]["rep_color"] = color                 
+        elif rep_color == "default":
+            self.users[server.id][user.id]["rep_color"] = default_rep
+        elif self._is_hex(rep_color):
+            self.users[server.id][user.id]["rep_color"] = self._hex_to_rgb(rep_color, default_a)
+        else: 
+            await self.bot.say("**That's not a valid rep color!**")
+
+        if badge_col_color == "auto":
+            hex_color = await self._auto_color(self.users[server.id][user.id]["profile_background"], default_rep, 0)
+            color = self._hex_to_rgb(hex_color, default_a)
+            color = self._moderate_color(color, default_a)
+            self.users[server.id][user.id]["badge_col_color"] = color
+        elif badge_col_color == "default":
+            self.users[server.id][user.id]["badge_col_color"] = default_badge_col
+        elif self._is_hex(badge_col_color):
+            self.users[server.id][user.id]["badge_col_color"] = self._hex_to_rgb(badge_col_color, default_a)
+        else: 
+            await self.bot.say("**That's not a valid badge column color!**") 
+
+        await self.bot.say("**Sidebar colors set!**") 
+        fileIO('data/leveler/users.json', "save", self.users)
+
+    # uses k-means algorithm to find color from bg, rank is abundance of color, descending
+    async def _auto_color(self, url:str, default, rank:int):
+        clusters = 10
+
+        async with aiohttp.get(url) as r:
+            image = await r.content.read()
+        with open('data/leveler/temp_auto.png','wb') as f:
+            f.write(image)
+
+        im = Image.open('data/leveler/temp_auto.png').convert('RGBA')            
+        im = im.resize((150, 150)) # resized to reduce time
+        ar = scipy.misc.fromimage(im)
+        shape = ar.shape
+        ar = ar.reshape(scipy.product(shape[:2]), shape[2])
+
+        codes, dist = scipy.cluster.vq.kmeans(ar.astype(float), clusters)
+        vecs, dist = scipy.cluster.vq.vq(ar, codes)         # assign codes
+        counts, bins = scipy.histogram(vecs, len(codes))    # count occurrences
+
+        # sort counts
+        freq_index = []
+        index = 0
+        for count in counts:
+            freq_index.append((index, count))
+            index += 1
+        sorted_list = sorted(freq_index, key=operator.itemgetter(1), reverse=True)
+
+        peak = codes[sorted_list[rank][0]] # gets the original index
+        peak = peak.astype(int)
+
+        color = ''.join(format(c, '02x') for c in peak)[-6:]       
+        return color        
+
+
+    def _hex_to_rgb(self, hex: str, a:int):
+        h = hex.lstrip('#')
+        colors = [int(h[i:i+2], 16) for i in (0, 2 ,4)]
+        colors.append(a)
+        return tuple(colors)
+
+    def _moderate_color(self, rgb, a):
+        moderate_num = 15
+        new_colors = []
+        for color in rgb[:3]:
+            if color > 128:
+                color -= moderate_num
+            else:
+                color += moderate_num
+            new_colors.append(color)
+        new_colors.append(230)
+
+        return tuple(new_colors)
+
+
+    @lvlset.command(pass_context=True, no_pm=True)
     async def info(self, ctx, *, info):
         """Set your user info."""
         user = ctx.message.author
@@ -209,7 +304,7 @@ class Leveler:
                 fileIO('data/leveler/users.json', "save", self.users)
                 await self.bot.say("**Your new level-up background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def profilebg(self, ctx, *, image_name:str):
@@ -226,7 +321,7 @@ class Leveler:
                 fileIO('data/leveler/users.json', "save", self.users)
                 await self.bot.say("**Your new profile background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def rankbg(self, ctx, *, image_name:str):
@@ -243,7 +338,7 @@ class Leveler:
                 fileIO('data/leveler/users.json', "save", self.users)
                 await self.bot.say("**Your new rank background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def title(self, ctx, *, title):
@@ -669,8 +764,18 @@ class Leveler:
         # draw transparent overlay           
         draw.rectangle([(5,100), (285, 135)], fill=(50,50,50,200)) # header
         draw.rectangle([(100,135), (285, 285)], fill=(200,200,200,230)) # main content
-        draw.rectangle([(5,135), (100, 170)], fill=(92,130,203,230)) # reps
-        draw.rectangle([(5,170), (100, 285)], fill=(128,151,165,230)) # badges
+
+        if "rep_color" not in userinfo.keys():
+            rep_fill = (92,130,203,230)
+        else:
+            rep_fill = tuple(userinfo["rep_color"])
+        draw.rectangle([(5,135), (100, 170)], fill= rep_fill) # reps
+        if "badge_col_color" not in userinfo.keys():
+            badge_fill = (92,130,203,230)
+        else:
+            badge_fill = tuple(userinfo["badge_col_color"])
+        draw.rectangle([(5,170), (100, 285)], fill= badge_fill) # badges
+
         draw.rectangle([(12,60), (92,140)], fill=(255,255,255, 160), outline=(255, 255, 255, 160)) # profile square
 
         # put in profile picture
@@ -1025,7 +1130,7 @@ class Leveler:
         if user.bot:
             return
 
-        if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 60 and prefix not in text:
+        if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and prefix not in text:
             await self._process_exp(message, random.randint(15, 20))
             self.block[server.id][user.id]["chat"] = time.time()
             fileIO('data/leveler/block.json', "save", self.block)
