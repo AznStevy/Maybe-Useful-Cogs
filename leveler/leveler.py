@@ -220,36 +220,39 @@ class Leveler:
 
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
     async def _auto_color(self, url:str, default, rank:int):
-        clusters = 10
+        try:
+            clusters = 10
 
-        async with aiohttp.get(url) as r:
-            image = await r.content.read()
-        with open('data/leveler/temp_auto.png','wb') as f:
-            f.write(image)
+            async with aiohttp.get(url) as r:
+                image = await r.content.read()
+            with open('data/leveler/temp_auto.png','wb') as f:
+                f.write(image)
 
-        im = Image.open('data/leveler/temp_auto.png').convert('RGBA')            
-        im = im.resize((150, 150)) # resized to reduce time
-        ar = scipy.misc.fromimage(im)
-        shape = ar.shape
-        ar = ar.reshape(scipy.product(shape[:2]), shape[2])
+            im = Image.open('data/leveler/temp_auto.png').convert('RGBA')            
+            im = im.resize((290, 290)) # resized to reduce time
+            ar = scipy.misc.fromimage(im)
+            shape = ar.shape
+            ar = ar.reshape(scipy.product(shape[:2]), shape[2])
 
-        codes, dist = scipy.cluster.vq.kmeans(ar.astype(float), clusters)
-        vecs, dist = scipy.cluster.vq.vq(ar, codes)         # assign codes
-        counts, bins = scipy.histogram(vecs, len(codes))    # count occurrences
+            codes, dist = scipy.cluster.vq.kmeans(ar.astype(float), clusters)
+            vecs, dist = scipy.cluster.vq.vq(ar, codes)         # assign codes
+            counts, bins = scipy.histogram(vecs, len(codes))    # count occurrences
 
-        # sort counts
-        freq_index = []
-        index = 0
-        for count in counts:
-            freq_index.append((index, count))
-            index += 1
-        sorted_list = sorted(freq_index, key=operator.itemgetter(1), reverse=True)
+            # sort counts
+            freq_index = []
+            index = 0
+            for count in counts:
+                freq_index.append((index, count))
+                index += 1
+            sorted_list = sorted(freq_index, key=operator.itemgetter(1), reverse=True)
 
-        peak = codes[sorted_list[rank][0]] # gets the original index
-        peak = peak.astype(int)
+            peak = codes[sorted_list[rank][0]] # gets the original index
+            peak = peak.astype(int)
 
-        color = ''.join(format(c, '02x') for c in peak)[-6:]       
-        return color        
+            color = ''.join(format(c, '02x') for c in peak)          
+            return color
+        except:
+            await self.bot.say("**Please install scipy: `pip3 install scipy`**")                 
 
 
     def _hex_to_rgb(self, hex: str, a:int):
