@@ -113,16 +113,7 @@ class Leveler:
             msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[2]))
             rank += 1
         msg +="```"
-        await self.bot.say(msg)
-
-    @commands.command(pass_context=True, no_pm=True)
-    async def listbadges(self, ctx):
-        '''Gives a list of badges.'''
-        msg = "```xl\n"
-        for badge in self.badges.keys():
-            msg += "+ {}\n".format(badge)
-        msg += "```"
-        await self.bot.say(msg)         
+        await self.bot.say(msg)       
 
     @commands.command(pass_context=True, no_pm=True)
     async def rep(self, ctx, user : discord.Member):
@@ -415,6 +406,15 @@ class Leveler:
             await send_cmd_help(ctx)
             return
 
+    @lvlbadge.command(pass_context=True, no_pm=True)
+    async def listbadges(self, ctx):
+        '''Gives a list of badges.'''
+        msg = "```xl\n"
+        for badge in self.badges.keys():
+            msg += "+ {}\n".format(badge)
+        msg += "```"
+        await self.bot.say(msg)  
+
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(no_pm=True)
     async def addbadge(self, name:str, priority_num: int, text_color:str, bg_color:str, border_color:str = None):
@@ -451,7 +451,8 @@ class Leveler:
     @lvlbadge.command(no_pm=True)
     async def badgetype(self, name:str):
         """Cirlces or Tags."""
-        if name.lower() != "circles" and name.lower() != "tags":
+        valid_types = ["circles", "bars", "squares"]
+        if name.lower() not in valid_types:
             await self.bot.say("**That is not a valid badge type!**")
             return 
 
@@ -702,7 +703,7 @@ class Leveler:
         rep_text = "+{}rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 143), rep_text, font=rep_fnt, fill=white_color)
 
-        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 175), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
+        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
 
 
         exp_text = "Exp: {}/{}".format(userinfo["current_exp"],self._required_exp(userinfo["level"]))
@@ -789,7 +790,40 @@ class Leveler:
                     process.paste(output, coord[i], mask)
                     draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text
                 i += 1
-        elif self.settings["badge_type"] == "tags":
+        elif self.settings["badge_type"] == "squares":
+            # squares, cause eslyium.
+            vert_pos = 188
+            right_shift = 6
+            left = 10 + right_shift
+            right = 52 + right_shift
+            coord = [(left, vert_pos), (right, vert_pos), (left, vert_pos + 33), (right, vert_pos + 33), (left, vert_pos + 66), (right, vert_pos + 66)]
+            i = 0
+            for pair in sorted_badges[:6]:
+                badge = pair[0]
+                bg_color = self.badges[badge]["bg_color"]
+                text_color = self.badges[badge]["text_color"]
+                border_color = self.badges[badge]["border_color"]
+                text = badge.replace("_", " ")
+                size = 32
+
+                # determine image or color for badge bg
+                if await self._valid_image_url(bg_color):
+                    # get image
+                    async with aiohttp.get(bg_color) as r:
+                        image = await r.content.read()
+                    with open('data/leveler/temp_badge.png','wb') as f:
+                        f.write(image)
+                    badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
+                    badge_image = badge_image.resize((size, size), Image.ANTIALIAS)
+                    process.paste(badge_image, coord[i])
+                else:
+                    square = Image.new('RGBA', (size, size), bg_color)
+                    draw_square = ImageDraw.Draw(square)
+                    draw_square.rectangle((0,0), (size, size), fill = bg_color, outline = border_color)
+                    square = Image.alpha_composite(square, draw_square)
+                    process.paste(square, coord[i])
+                    draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text            
+        elif self.settings["badge_type"] == "tags" or self.settings["badge_type"] == "bars":
             vert_pos = 190
             i = 0
             for pair in sorted_badges[:5]:
