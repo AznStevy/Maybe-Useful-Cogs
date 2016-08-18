@@ -161,7 +161,7 @@ class Leveler:
  
     @commands.group(pass_context=True)
     async def lvlset(self, ctx):
-        """Set some things"""
+        """Profile Configuration Options"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
@@ -265,7 +265,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @commands.group(pass_context=True)
     async def lvladmin(self, ctx):
-        """Set some admin things"""
+        """Admin Toggle Features"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
@@ -401,7 +401,7 @@ class Leveler:
 
     @commands.group(pass_context=True)
     async def lvlbadge(self, ctx):
-        """Set some things"""
+        """Badge Configuration Options"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
@@ -521,7 +521,7 @@ class Leveler:
 
     @commands.group(pass_context=True)
     async def lvladminbg(self, ctx):
-        """Set some things"""
+        """Admin Background Configuration"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
