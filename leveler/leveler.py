@@ -212,7 +212,7 @@ class Leveler:
             msg += "**{}**".format(category.upper())
             msg += "```ruby\n"
             msg += ", ".join(sorted(self.backgrounds[category].keys()))
-            msg += "```"
+            msg += "```\n"
         await self.bot.say(msg)
 
     @lvlset.command(pass_context=True, no_pm=True)
@@ -289,13 +289,20 @@ class Leveler:
         except:
             await self.bot.say("**Please install scipy: `pip3 install scipy`**")                 
 
+    # converts hex to rgb
+    def _hex_to_rgb(self, hex_num: str, a:int):
+        h = hex_num.lstrip('#')
 
-    def _hex_to_rgb(self, hex: str, a:int):
-        h = hex.lstrip('#')
+        # if only 3 characters are given
+        if len(str(h)) == 3:
+            expand = ''.join([x*2 for x in str(h)])
+            h = expand
+
         colors = [int(h[i:i+2], 16) for i in (0, 2 ,4)]
         colors.append(a)
         return tuple(colors)
 
+    # dampens the color given a parameter
     def _moderate_color(self, rgb, a, moderate_num):
         new_colors = []
         for color in rgb[:3]:
@@ -593,6 +600,9 @@ class Leveler:
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     def _is_hex(self, color:str):
+        if len(color) != 4 and len(color) != 7:
+            return False
+
         reg_ex = r'^#(?:[0-9a-fA-F]{3}){1,2}$'
         return re.search(reg_ex, str(color))
 
