@@ -107,23 +107,12 @@ class Leveler:
 
         msg += "```ruby\n"
         rank = 1
-        labels = ["♚","✪","⛊", " ", " ", " ", " ", " ", " ", " "]
+        labels = ["♔", "♕", "♖", "♗", "♘", "♙", " ", " ", " ", " "]
         for user in sorted_list[:10]:
-            msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank-1], "➤", user[1])
+            msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank-1], u"➤", user[1])
             msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[2]))
             rank += 1
         msg +="```"
-        await self.bot.say(msg)
-
-    @commands.command(pass_context=True, no_pm=True)
-    async def listbgs(self, ctx):
-        '''Gives a list of backgrounds.'''
-        msg = ""
-        for category in self.backgrounds.keys():
-            msg += "**{}**".format(category.upper())
-            msg += "```ruby\n"
-            msg += ", ".join(sorted(self.backgrounds[category].keys()))
-            msg += "```"
         await self.bot.say(msg)
 
     @commands.command(pass_context=True, no_pm=True)
@@ -178,40 +167,26 @@ class Leveler:
             m, s = divmod(seconds, 60)
             h, m = divmod(m, 60)
             await self.bot.say("**You need to wait {} hours, {} minutes, and {} seconds until you can give reputation again!**".format(int(h), int(m), int(s)))
-    
+ 
     @commands.group(pass_context=True)
-    async def levelset(self, ctx):
+    async def lvlset(self, ctx):
         """Set some things"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
+            
+    @lvlset.command(pass_context=True, no_pm=True)
+    async def listbgs(self, ctx):
+        '''Gives a list of backgrounds.'''
+        msg = ""
+        for category in self.backgrounds.keys():
+            msg += "**{}**".format(category.upper())
+            msg += "```ruby\n"
+            msg += ", ".join(sorted(self.backgrounds[category].keys()))
+            msg += "```"
+        await self.bot.say(msg)
 
-    @checks.admin_or_permissions(manage_server=True)
-    @commands.group(pass_context=True)
-    async def leveladmin(self, ctx):
-        """Set some admin things"""
-        if ctx.invoked_subcommand is None:
-            await send_cmd_help(ctx)
-            return    
-
-    @levelset.command(pass_context=True, no_pm=True)
-    async def title(self, ctx, *, title):
-        """Set your title."""
-        user = ctx.message.author
-        server = ctx.message.server
-        max_char = 20
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        if len(title) < max_char:
-            self.users[server.id][user.id]["title"] = title
-            fileIO('data/leveler/users.json', "save", self.users)
-            await self.bot.say("**Your title has been succesfully set!**")
-        else:
-            await self.bot.say("**Your title has too many characters! Must be <{}**".format(max_char))
-
-    @levelset.command(pass_context=True, no_pm=True)
+    @lvlset.command(pass_context=True, no_pm=True)
     async def info(self, ctx, *, info):
         """Set your user info."""
         user = ctx.message.author
@@ -228,41 +203,7 @@ class Leveler:
         else:
             await self.bot.say("**Your description has too many characters! Must be <{}**".format(max_char))
 
-    @levelset.command(pass_context=True, no_pm=True)
-    async def profilebg(self, ctx, *, image_name:str):
-        """Set your profile background"""
-        user = ctx.message.author
-        server = ctx.message.server
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        if image_name in self.backgrounds["profile"].keys():
-            if await self._process_purchase(ctx):
-                self.users[server.id][user.id]["profile_background"] = self.backgrounds["profile"][image_name]
-                fileIO('data/leveler/users.json', "save", self.users)
-                await self.bot.say("**Your new profile background has been succesfully set!**")
-        else:
-            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
-
-    @levelset.command(pass_context=True, no_pm=True)
-    async def rankbg(self, ctx, *, image_name:str):
-        """Set your rank background"""
-        user = ctx.message.author
-        server = ctx.message.server
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        if image_name in self.backgrounds["rank"].keys():
-            if await self._process_purchase(ctx):
-                self.users[server.id][user.id]["rank_background"] = self.backgrounds["rank"][image_name]
-                fileIO('data/leveler/users.json', "save", self.users)
-                await self.bot.say("**Your new rank background has been succesfully set!**")
-        else:
-            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
-
-    @levelset.command(pass_context=True, no_pm=True)
+    @lvlset.command(pass_context=True, no_pm=True)
     async def levelbg(self, ctx, *, image_name:str):
         """Set your level background"""
         user = ctx.message.author
@@ -279,39 +220,66 @@ class Leveler:
         else:
             await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
-    @checks.admin_or_permissions(manage_server=True)
-    @levelset.command(pass_context = True, no_pm=True)
-    async def givebadge(self, ctx, user : discord.Member, badge_name: str):
-        """Gives a user a badge."""
-        org_user = ctx.message.author
-        server = org_user.server
+    @lvlset.command(pass_context=True, no_pm=True)
+    async def profilebg(self, ctx, *, image_name:str):
+        """Set your profile background"""
+        user = ctx.message.author
+        server = ctx.message.server
 
-        if badge_name not in self.badges:
-            await self.bot.say("**That badge doesn't exist!**")
-        elif badge_name in self.users[server.id][user.id]["badges"]:
-            await self.bot.say("**{} already has that badge!**".format(self._is_mention(user)))
-        else:     
-            self.users[server.id][user.id]["badges"].append(badge_name)
-            fileIO('data/leveler/users.json', "save", self.users)
-            await self.bot.say("**{} has just given {} the {} badge!**".format(self._is_mention(org_user), self._is_mention(user), badge_name))
+        # creates user if doesn't exist
+        await self._create_user(user, server)
 
-    @checks.admin_or_permissions(manage_server=True)
-    @levelset.command(pass_context = True, no_pm=True)
-    async def takebadge(self, ctx, user : discord.Member, badge_name: str):
-        """Takes a user's badge."""
-        org_user = ctx.message.author
-        server = org_user.server
-
-        if badge_name not in self.badges:
-            await self.bot.say("**That badge doesn't exist!**")
-        elif badge_name not in self.users[server.id][user.id]["badges"]:
-            await self.bot.say("**{} does not have that badge!**".format(self._is_mention(user)))
+        if image_name in self.backgrounds["profile"].keys():
+            if await self._process_purchase(ctx):
+                self.users[server.id][user.id]["profile_background"] = self.backgrounds["profile"][image_name]
+                fileIO('data/leveler/users.json', "save", self.users)
+                await self.bot.say("**Your new profile background has been succesfully set!**")
         else:
-            self.users[server.id][user.id]["badges"].remove(badge_name)
-            fileIO('data/leveler/users.json', "save", self.users)
-            await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), badge_name, self._is_mention(user)))
+            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
 
-    @leveladmin.command(pass_context=True, no_pm=True)
+    @lvlset.command(pass_context=True, no_pm=True)
+    async def rankbg(self, ctx, *, image_name:str):
+        """Set your rank background"""
+        user = ctx.message.author
+        server = ctx.message.server
+
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
+        if image_name in self.backgrounds["rank"].keys():
+            if await self._process_purchase(ctx):
+                self.users[server.id][user.id]["rank_background"] = self.backgrounds["rank"][image_name]
+                fileIO('data/leveler/users.json', "save", self.users)
+                await self.bot.say("**Your new rank background has been succesfully set!**")
+        else:
+            await self.bot.say("That is not a valid bg. See available bgs at {}listbgs".format(prefix))
+
+    @lvlset.command(pass_context=True, no_pm=True)
+    async def title(self, ctx, *, title):
+        """Set your title."""
+        user = ctx.message.author
+        server = ctx.message.server
+        max_char = 20
+
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
+        if len(title) < max_char:
+            self.users[server.id][user.id]["title"] = title
+            fileIO('data/leveler/users.json', "save", self.users)
+            await self.bot.say("**Your title has been succesfully set!**")
+        else:
+            await self.bot.say("**Your title has too many characters! Must be <{}**".format(max_char))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @commands.group(pass_context=True)
+    async def lvladmin(self, ctx):
+        """Set some admin things"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+            return
+
+    @lvladmin.command(pass_context=True, no_pm=True)
     async def lvlmsglock(self, ctx):
         '''Locks levelup messages to one channel. Disable command on locked channel.'''
         channel = ctx.message.channel
@@ -354,79 +322,101 @@ class Leveler:
                 return False
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def addprofilebg(self, name:str, url:str):
-        """Add a profile background. Proportions: (290px x 290px)"""
-        if name in self.backgrounds["profile"].keys():
-            await self.bot.say("**That profile background name already exists!**")
-        elif not await self._valid_image_url(url):
-            await self.bot.say("**That is not a valid image url!**")  
-        else:          
-            self.backgrounds["profile"][name] = url
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)                          
-            await self.bot.say("**New profile background(`{}`) added.**".format(name))
-
-    @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def addrankbg(self, name:str, url:str):
-        """Add a rank background. Proportions: (360px x 100px)"""
-        if name in self.backgrounds["rank"].keys():
-            await self.bot.say("**That rank background name already exists!**")
-        elif not await self._valid_image_url(url):
-            await self.bot.say("**That is not a valid image url!**") 
+    @lvladmin.command(no_pm=True)
+    async def setprice(self, price:int):
+        '''Set a price for background changes.'''
+        if price < 0:
+            await self.bot.say("**That is not a valid background price.**")
         else:
-            self.backgrounds["rank"][name] = url
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
-            await self.bot.say("**New rank background(`{}`) added.**".format(name))
+            self.settings["bg_price"] = price
+            await self.bot.say("**Background price set to: $`{}`!**".format(price))
+            fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def addlevelbg(self, name:str, url:str):
-        '''Add a level-up background. Proportions: (85px x 105px)'''
-        if name in self.backgrounds["levelup"].keys():
-            await self.bot.say("**That level-up background name already exists!**")
-        elif not await self._valid_image_url(url):
-            await self.bot.say("**That is not a valid image url!**") 
+    @lvladmin.command(pass_context=True, no_pm=True)
+    async def setlevel(self, ctx, user : discord.Member, level:int):
+        '''Sets a user's level. (What a cheater c:).'''
+        org_user = ctx.message.author
+        server = user.server
+
+        if level < 0:
+            await self.bot.say("**Please enter a positive number.**")
+            return
+            
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
+        self.users[server.id][user.id]["current_exp"] = 0
+        self.users[server.id][user.id]["level"] = level
+
+        total_exp = 0
+        for i in range(level):
+            total_exp += self._required_exp(i)
+
+        self.users[server.id][user.id]["total_exp"] = total_exp
+        fileIO('data/leveler/users.json', "save", self.users)
+        await self.bot.say("**{}'s Level has been set to {}.**".format(self._is_mention(user), level))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvladmin.command(no_pm=True)
+    async def mention(self):
+        '''Toggle mentions on messages.'''
+        if "mention" not in self.settings.keys() or self.settings["mention"] == True:
+            self.settings["mention"] = False
+            await self.bot.say("**Mentions disabled.**")
         else:
-            self.backgrounds["levelup"][name] = url
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
-            await self.bot.say("**New level-up background(`{}`) added.**".format(name))
+            self.settings["mention"] = True
+            await self.bot.say("**Mentions enabled.**")
+        fileIO('data/leveler/settings.json', "save", self.settings)
+
+    async def _valid_image_url(self, url):
+        max_byte = 1000
+
+        try:
+            async with aiohttp.get(url) as r:
+                image = await r.content.read()
+            with open('data/leveler/test.png','wb') as f:
+                f.write(image)
+            image = Image.open('data/leveler/test.png').convert('RGBA')
+            os.remove('data/leveler/test.png')
+            return True
+        except:          
+            return False
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def delprofilebg(self, name:str):
-        '''Delete a profile background.'''
-        if name in self.backgrounds["profile"].keys():
-            del self.backgrounds["profile"][name]
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
-            await self.bot.say("**The profile background(`{}`) has been deleted.**".format(name))
-        else:                                 
-            await self.bot.say("**That profile background name doesn't exist.**")
+    @lvladmin.command(pass_context=True, no_pm=True)
+    async def imggen(self, ctx):
+        """Toggles image generation commands on the server."""
+        server = ctx.message.server
+        if server.id in self.settings["disabled_servers"]:
+            self.settings["disabled_servers"].remove(server.id)
+            await self.bot.say("**Image-gen commands enabled.**")
+        else:
+            self.settings["disabled_servers"].append(server.id)
+            await self.bot.say("**Image-gen commands disabled.**")
+        fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def delrankbg(self, name:str):
-        '''Delete a rank background.'''
-        if name in self.backgrounds["rank"].keys():
-            del self.backgrounds["rank"][name]
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
-            await self.bot.say("**The rank background(`{}`) has been deleted.**".format(name))
-        else:                                 
-            await self.bot.say("**That rank background name doesn't exist.**")
+    @lvladmin.command(no_pm=True)
+    async def lvlalert(self):
+        """Toggles level-up messages on the server."""
+        if self.settings["lvl_msg"]:
+            self.settings["lvl_msg"] = False
+            await self.bot.say("**Level-up messages disabled.**")
+        else:
+            self.settings["lvl_msg"] = True
+            await self.bot.say("**Level-up messages enabled.**") 
+        fileIO('data/leveler/settings.json', "save", self.settings)             
+
+    @commands.group(pass_context=True)
+    async def lvlbadge(self, ctx):
+        """Set some things"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+            return
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def dellevelbg(self, name:str):
-        '''Delete a level background.'''
-        if name in self.backgrounds["levelup"].keys():
-            del self.backgrounds["levelup"][name]
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
-            await self.bot.say("**The level-up background(`{}`) has been deleted.**".format(name))
-        else:                                 
-            await self.bot.say("**That level-up background name doesn't exist.**")
-
-    @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
+    @lvlbadge.command(no_pm=True)
     async def addbadge(self, name:str, priority_num: int, text_color:str, bg_color:str, border_color:str = None):
         """Add a badge. Colors in hex, border color optional."""
 
@@ -458,7 +448,7 @@ class Leveler:
         fileIO('data/leveler/badges.json', "save", self.badges)
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
+    @lvlbadge.command(no_pm=True)
     async def badgetype(self, name:str):
         """Cirlces or Tags."""
         if name.lower() != "circles" and name.lower() != "tags":
@@ -473,9 +463,8 @@ class Leveler:
         reg_ex = r'^#(?:[0-9a-fA-F]{3}){1,2}$'
         return re.search(reg_ex, str(color))
 
-
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(pass_context = True, no_pm=True)
+    @lvlbadge.command(pass_context = True, no_pm=True)
     async def delbadge(self, ctx, name:str):
         """Deletes a badge and removes from all users."""
         user = ctx.message.author
@@ -498,91 +487,115 @@ class Leveler:
             await self.bot.say("**That badges does not exist.**")
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def setprice(self, price:int):
-        '''Set a price for background changes.'''
-        if price < 0:
-            await self.bot.say("**That is not a valid background price.**")
-        else:
-            self.settings["bg_price"] = price
-            await self.bot.say("**Background price set to: $`{}`!**".format(price))
-            fileIO('data/leveler/settings.json', "save", self.settings)
-
-    @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(pass_context=True, no_pm=True)
-    async def setlevel(self, ctx, user : discord.Member, level:int):
-        '''Sets a user's level. (What a cheater c:).'''
+    @lvlbadge.command(pass_context = True, no_pm=True)
+    async def givebadge(self, ctx, user : discord.Member, badge_name: str):
+        """Gives a user a badge."""
         org_user = ctx.message.author
-        server = user.server
+        server = org_user.server
 
-        if level < 0:
-            await self.bot.say("**Please enter a positive number.**")
+        if badge_name not in self.badges:
+            await self.bot.say("**That badge doesn't exist!**")
+        elif badge_name in self.users[server.id][user.id]["badges"]:
+            await self.bot.say("**{} already has that badge!**".format(self._is_mention(user)))
+        else:     
+            self.users[server.id][user.id]["badges"].append(badge_name)
+            fileIO('data/leveler/users.json', "save", self.users)
+            await self.bot.say("**{} has just given {} the {} badge!**".format(self._is_mention(org_user), self._is_mention(user), badge_name))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvlbadge.command(pass_context = True, no_pm=True)
+    async def takebadge(self, ctx, user : discord.Member, badge_name: str):
+        """Takes a user's badge."""
+        org_user = ctx.message.author
+        server = org_user.server
+
+        if badge_name not in self.badges:
+            await self.bot.say("**That badge doesn't exist!**")
+        elif badge_name not in self.users[server.id][user.id]["badges"]:
+            await self.bot.say("**{} does not have that badge!**".format(self._is_mention(user)))
+        else:
+            self.users[server.id][user.id]["badges"].remove(badge_name)
+            fileIO('data/leveler/users.json', "save", self.users)
+            await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), badge_name, self._is_mention(user)))
+
+    @commands.group(pass_context=True)
+    async def lvladminbg(self, ctx):
+        """Set some things"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
             return
-            
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        self.users[server.id][user.id]["current_exp"] = 0
-        self.users[server.id][user.id]["level"] = level
-
-        total_exp = 0
-        for i in range(level):
-            total_exp += self._required_exp(i)
-
-        self.users[server.id][user.id]["total_exp"] = total_exp
-        fileIO('data/leveler/users.json', "save", self.users)
-        await self.bot.say("**{}'s Level has been set to {}.**".format(self._is_mention(user), level))
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def mention(self):
-        '''Toggle mentions on messages.'''
-        if "mention" not in self.settings.keys() or self.settings["mention"] == True:
-            self.settings["mention"] = False
-            await self.bot.say("**Mentions disabled.**")
-        else:
-            self.settings["mention"] = True
-            await self.bot.say("**Mentions enabled.**")
-        fileIO('data/leveler/settings.json', "save", self.settings)
-
-    async def _valid_image_url(self, url):
-        max_byte = 1000
-
-        try:
-            async with aiohttp.get(url) as r:
-                image = await r.content.read()
-            with open('data/leveler/test.png','wb') as f:
-                f.write(image)
-            image = Image.open('data/leveler/test.png').convert('RGBA')
-            os.remove('data/leveler/test.png')
-            return True
-        except:          
-            return False
+    @lvladminbg.command(no_pm=True)
+    async def addprofilebg(self, name:str, url:str):
+        """Add a profile background. Proportions: (290px x 290px)"""
+        if name in self.backgrounds["profile"].keys():
+            await self.bot.say("**That profile background name already exists!**")
+        elif not await self._valid_image_url(url):
+            await self.bot.say("**That is not a valid image url!**")  
+        else:          
+            self.backgrounds["profile"][name] = url
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)                          
+            await self.bot.say("**New profile background(`{}`) added.**".format(name))
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(pass_context=True, no_pm=True)
-    async def imggen(self, ctx):
-        """Toggles image generation commands on the server."""
-        server = ctx.message.server
-        if server.id in self.settings["disabled_servers"]:
-            self.settings["disabled_servers"].remove(server.id)
-            await self.bot.say("**Image-gen commands enabled.**")
+    @lvladminbg.command(no_pm=True)
+    async def addrankbg(self, name:str, url:str):
+        """Add a rank background. Proportions: (360px x 100px)"""
+        if name in self.backgrounds["rank"].keys():
+            await self.bot.say("**That rank background name already exists!**")
+        elif not await self._valid_image_url(url):
+            await self.bot.say("**That is not a valid image url!**") 
         else:
-            self.settings["disabled_servers"].append(server.id)
-            await self.bot.say("**Image-gen commands disabled.**")
-        fileIO('data/leveler/settings.json', "save", self.settings)
+            self.backgrounds["rank"][name] = url
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**New rank background(`{}`) added.**".format(name))
 
     @checks.admin_or_permissions(manage_server=True)
-    @leveladmin.command(no_pm=True)
-    async def lvlalert(self):
-        """Toggles level-up messages on the server."""
-        if self.settings["lvl_msg"]:
-            self.settings["lvl_msg"] = False
-            await self.bot.say("**Level-up messages disabled.**")
+    @lvladminbg.command(no_pm=True)
+    async def addlevelbg(self, name:str, url:str):
+        '''Add a level-up background. Proportions: (85px x 105px)'''
+        if name in self.backgrounds["levelup"].keys():
+            await self.bot.say("**That level-up background name already exists!**")
+        elif not await self._valid_image_url(url):
+            await self.bot.say("**That is not a valid image url!**") 
         else:
-            self.settings["lvl_msg"] = True
-            await self.bot.say("**Level-up messages enabled.**") 
-        fileIO('data/leveler/settings.json', "save", self.settings)             
+            self.backgrounds["levelup"][name] = url
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**New level-up background(`{}`) added.**".format(name))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvladminbg.command(no_pm=True)
+    async def delprofilebg(self, name:str):
+        '''Delete a profile background.'''
+        if name in self.backgrounds["profile"].keys():
+            del self.backgrounds["profile"][name]
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**The profile background(`{}`) has been deleted.**".format(name))
+        else:                                 
+            await self.bot.say("**That profile background name doesn't exist.**")
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvladminbg.command(no_pm=True)
+    async def delrankbg(self, name:str):
+        '''Delete a rank background.'''
+        if name in self.backgrounds["rank"].keys():
+            del self.backgrounds["rank"][name]
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**The rank background(`{}`) has been deleted.**".format(name))
+        else:                                 
+            await self.bot.say("**That rank background name doesn't exist.**")
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvladminbg.command(no_pm=True)
+    async def dellevelbg(self, name:str):
+        '''Delete a level background.'''
+        if name in self.backgrounds["levelup"].keys():
+            del self.backgrounds["levelup"][name]
+            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            await self.bot.say("**The level-up background(`{}`) has been deleted.**".format(name))
+        else:                                 
+            await self.bot.say("**That level-up background name doesn't exist.**")
 
     async def draw_profile(self, user, server):
 
@@ -732,10 +745,11 @@ class Leveler:
 
         if "badge_type" not in self.settings.keys() or self.settings["badge_type"] == "circles":
             # circles require antialiasing
+            vert_pos = 187
             right_shift = 6
             left = 10 + right_shift
             right = 52 + right_shift
-            coord = [(left, 190), (right, 190), (left, 223), (right, 223), (left, 256), (right, 256)]
+            coord = [(left, vert_pos), (right, vert_pos), (left, vert_pos + 33), (right, vert_pos + 33), (left, vert_pos + 66), (right, vert_pos + 66)]
             i = 0
             for pair in sorted_badges[:6]:
                 badge = pair[0]
@@ -746,6 +760,13 @@ class Leveler:
                 size = 32
                 multiplier = 6 # for antialiasing
                 raw_length = size * multiplier
+
+                # draw mask
+                mask = Image.new('L', (raw_length, raw_length), 0)
+                draw_thumb = ImageDraw.Draw(mask)
+                draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
+                mask = mask.resize((size, size), Image.ANTIALIAS)
+
                 # determine image or color for badge bg
                 if await self._valid_image_url(bg_color):
                     # get image
@@ -756,24 +777,12 @@ class Leveler:
                     badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
                     badge_image = badge_image.resize((raw_length, raw_length), Image.ANTIALIAS)
 
-                    # draw mask
-                    mask = Image.new('L', (raw_length , raw_length), 0)
-                    draw_thumb = ImageDraw.Draw(mask)
-                    draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
-                    mask = mask.resize((size, size), Image.ANTIALIAS)
-
                     # put on ellipse/circle
                     output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
                     output = output.resize((size, size), Image.ANTIALIAS)
                     process.paste(output, coord[i], mask)
                 else:
                     square = Image.new('RGBA', (raw_length, raw_length), bg_color)
-
-                    border_color = (50,50,50,240)
-                    mask = Image.new('L', (raw_length, raw_length), 0)
-                    draw_thumb = ImageDraw.Draw(mask)
-                    draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
-                    mask = mask.resize((size, size), Image.ANTIALIAS)
 
                     output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
                     output = output.resize((size, size), Image.ANTIALIAS)
@@ -783,7 +792,7 @@ class Leveler:
         elif self.settings["badge_type"] == "tags":
             vert_pos = 190
             i = 0
-            for pair in sorted_badges[:6]:
+            for pair in sorted_badges[:5]:
                 badge = pair[0]
                 bg_color = self.badges[badge]["bg_color"]
                 text_color = self.badges[badge]["text_color"]
@@ -797,14 +806,14 @@ class Leveler:
                     with open('data/leveler/temp_badge.png','wb') as f:
                         f.write(image)
                     badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
-                    badge_image = badge_image.resize((85, 12), Image.ANTIALIAS)
-                    process.paste(badge_image, (10,vert_pos + i*10))
+                    badge_image = badge_image.resize((85, 15), Image.ANTIALIAS)
+                    process.paste(badge_image, (10,vert_pos + i*17))
                     os.remove('data/leveler/temp_badge.png')
                 else:
-                    draw.rectangle([(10,vert_pos + i*10), (95, vert_pos + 12 + i*10)], fill = bg_color, outline = border_color) # badges
-                
-                draw.text((self._center(10,95, text, badge_fnt), vert_pos + 2 + i*10), text,  font=badge_fnt, fill = text_color, outline = (0,0,0,255)) # Credits
-                vert_pos += 6
+                    draw.rectangle([(10,vert_pos + i*17), (95, vert_pos + 15 + i*17)], fill = bg_color, outline = border_color) # badges
+                bar_fnt = ImageFont.truetype(font_bold_file, 14)
+                draw.text((self._center(10,95, text, bar_fnt), vert_pos + 2 + i*17), text,  font=bar_fnt, fill = text_color, outline = (0,0,0,255)) # Credits
+                vert_pos += 2
                 i += 1
 
         result = Image.alpha_composite(result, process)
