@@ -19,6 +19,7 @@ try:
     pil_available = True
 except:
     pil_available = False
+    raise RuntimeError("You don't have Pillow installed, run\n```pip3 install pillow```And try again")
 import time
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
