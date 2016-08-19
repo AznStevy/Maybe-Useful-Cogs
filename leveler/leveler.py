@@ -690,7 +690,7 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(pass_context = True, no_pm=True)
-    async def givebadge(self, ctx, user : discord.Member, badge_name: str):
+    async def give(self, ctx, user : discord.Member, badge_name: str):
         """Give a user a badge."""
         org_user = ctx.message.author
         server = org_user.server
@@ -709,7 +709,7 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(pass_context = True, no_pm=True)
-    async def takebadge(self, ctx, user : discord.Member, badge_name: str):
+    async def take(self, ctx, user : discord.Member, badge_name: str):
         """Take a user's badge."""
         org_user = ctx.message.author
         server = org_user.server
