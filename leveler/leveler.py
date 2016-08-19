@@ -99,23 +99,37 @@ class Leveler:
             return user.name
 
     @commands.command(pass_context=True, no_pm=True)
-    async def top10(self,ctx):
-        '''Displays the top 10 people in the server based on exp.'''
+    async def top10(self,ctx, global_rank:str = None):
+        '''Displays leaderboard. Add "global" parameter for global'''
         server = ctx.message.server
-        userinfo = self.users[server.id]
 
-        msg = "**Leaderboard for {}**\n".format(server.name)
         users = []
-        for userkey in userinfo.keys():
-            users.append((userkey, userinfo[userkey]["name"], userinfo[userkey]["total_exp"]))
-        sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
+        if global_rank == "global":
+            # this is also terrible...
+            for userid in self.users.keys():
+                for server in self.bot.servers:
+                    temp_user = find(lambda m: m.id == userid, server.members)
+                    if temp_user != None:
+                        break
+                if temp_user != None:
+                    users.append((userid, temp_user.name, self.users[userid]["total_exp"]))
+            sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
+        else:
+            msg = "**Leaderboard for {}**\n".format(server.name)
+            for userid in self.users.keys():
+                if server.id in self.users[userid]["servers"]:
+                    temp_user = find(lambda m: m.id == userid, server.members)
+                    server_exp = self._required_exp(self.users[userid]["servers"][server.id]["level"] - 1)
+                    server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
+                    users.append((temp_user.name, server_exp))
+            sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
         msg += "```ruby\n"
         rank = 1
         labels = ["♔", "♕", "♖", "♗", "♘", "♙", " ", " ", " ", " "]
         for user in sorted_list[:10]:
-            msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank-1], u"➤", user[1])
-            msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[2]))
+            msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank-1], u"➤", user[0])
+            msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[1]))
             rank += 1
         msg +="```"
         await self.bot.say(msg)       
@@ -153,7 +167,7 @@ class Leveler:
         delta = float(curr_time) - float(self.block[server.id][org_user.id]["rep"])
         if delta >= 43200.0 and delta>0:
             self.block[server.id][org_user.id]["rep"] = curr_time
-            self.users[server.id][user.id]["rep"] += 1
+            self.users[user.id]["rep"] += 1
             fileIO('data/leveler/block.json', "save", self.block)
             fileIO('data/leveler/users.json', "save", self.users)
             await self.bot.say("**You have just given {} a reputation point!**".format(self._is_mention(user)))
@@ -170,7 +184,7 @@ class Leveler:
         if not user:
             user = ctx.message.author
         server = ctx.message.server
-        userinfo = self.users[server.id][user.id]
+        userinfo = self.users[user.id]
 
         # creates user if doesn't exist
         await self._create_user(user, server)
@@ -178,17 +192,17 @@ class Leveler:
         msg = "```xl\n"
         msg += "Name: {}\n".format(user.name)
         msg += "Title: {}\n".format(userinfo["title"])
-        msg += "Level: {}\n".format(userinfo["level"])
+        msg += "Server Level: {}\n".format(userinfo["servers"][server.id]["level"])
         msg += "Reps: {}\n".format(userinfo["rep"])
-        msg += "Current Exp: {}\n".format(userinfo["current_exp"])
+        msg += "Current Server Exp: {}\n".format(userinfo["servers"][server.id]["current_exp"])
         msg += "Total Exp: {}\n".format(userinfo["total_exp"])
         msg += "Info: {}\n".format(userinfo["info"])
         msg += "Profile background: {}\n".format(userinfo["profile_background"])
         msg += "Rank background: {}\n".format(userinfo["rank_background"])
         msg += "Levelup background: {}\n".format(userinfo["levelup_background"])
-        if "rep_color" in userinfo.keys():
+        if "rep_color" in userinfo.keys() and userinfo["rep_color"]:
             msg += "Rep section color: {}\n".format(self._rgb_to_hex(userinfo["rep_color"]))
-        if "badge_col_color" in userinfo.keys():
+        if "badge_col_color" in userinfo.keys() and userinfo["badge_col_color"]:
             msg += "Badge section color: {}\n".format(self._rgb_to_hex(userinfo["badge_col_color"]))
         msg += "Badges: "
         msg += ", ".join(userinfo["badges"])
@@ -227,28 +241,31 @@ class Leveler:
         default_badge_col = (128,151,165,230)
         default_a = 230
         auto = None
+        
+        # creates user if doesn't exist
+        await self._create_user(user, server)
 
         if rep_color == "auto":
-            hex_color = await self._auto_color(self.users[server.id][user.id]["profile_background"], default_rep, 3)
+            hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, 3)
             color = self._hex_to_rgb(hex_color, default_a)
             color = self._moderate_color(color, default_a, 5)
-            self.users[server.id][user.id]["rep_color"] = color                 
+            self.users[user.id]["rep_color"] = color                 
         elif rep_color == "default":
-            self.users[server.id][user.id]["rep_color"] = default_rep
+            self.users[user.id]["rep_color"] = default_rep
         elif self._is_hex(rep_color):
-            self.users[server.id][user.id]["rep_color"] = self._hex_to_rgb(rep_color, default_a)
+            self.users[user.id]["rep_color"] = self._hex_to_rgb(rep_color, default_a)
         else: 
             await self.bot.say("**That's not a valid rep color!**")
 
         if badge_col_color == "auto":
-            hex_color = await self._auto_color(self.users[server.id][user.id]["profile_background"], default_rep, 0)
+            hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, 0)
             color = self._hex_to_rgb(hex_color, default_a)
             color = self._moderate_color(color, default_a, 15)
-            self.users[server.id][user.id]["badge_col_color"] = color
+            self.users[user.id]["badge_col_color"] = color
         elif badge_col_color == "default":
-            self.users[server.id][user.id]["badge_col_color"] = default_badge_col
+            self.users[user.id]["badge_col_color"] = default_badge_col
         elif self._is_hex(badge_col_color):
-            self.users[server.id][user.id]["badge_col_color"] = self._hex_to_rgb(badge_col_color, default_a)
+            self.users[user.id]["badge_col_color"] = self._hex_to_rgb(badge_col_color, default_a)
         else: 
             await self.bot.say("**That's not a valid badge column color!**") 
 
@@ -329,7 +346,7 @@ class Leveler:
         await self._create_user(user, server)
 
         if len(info) < max_char:
-            self.users[server.id][user.id]["info"] = info
+            self.users[user.id]["info"] = info
             fileIO('data/leveler/users.json', "save", self.users)
             await self.bot.say("**Your info section has been succesfully set!**")
         else:
@@ -346,7 +363,7 @@ class Leveler:
 
         if image_name in self.backgrounds["levelup"].keys():
             if await self._process_purchase(ctx):
-                self.users[server.id][user.id]["levelup_background"] = self.backgrounds["levelup"][image_name]
+                self.users[user.id]["levelup_background"] = self.backgrounds["levelup"][image_name]
                 fileIO('data/leveler/users.json', "save", self.users)
                 await self.bot.say("**Your new level-up background has been succesfully set!**")
         else:
@@ -363,7 +380,7 @@ class Leveler:
 
         if image_name in self.backgrounds["profile"].keys():
             if await self._process_purchase(ctx):
-                self.users[server.id][user.id]["profile_background"] = self.backgrounds["profile"][image_name]
+                self.users[user.id]["profile_background"] = self.backgrounds["profile"][image_name]
                 fileIO('data/leveler/users.json', "save", self.users)
                 await self.bot.say("**Your new profile background has been succesfully set!**")
         else:
@@ -380,7 +397,7 @@ class Leveler:
 
         if image_name in self.backgrounds["rank"].keys():
             if await self._process_purchase(ctx):
-                self.users[server.id][user.id]["rank_background"] = self.backgrounds["rank"][image_name]
+                self.users[user.id]["rank_background"] = self.backgrounds["rank"][image_name]
                 fileIO('data/leveler/users.json', "save", self.users)
                 await self.bot.say("**Your new rank background has been succesfully set!**")
         else:
@@ -397,7 +414,7 @@ class Leveler:
         await self._create_user(user, server)
 
         if len(title) < max_char:
-            self.users[server.id][user.id]["title"] = title
+            self.users[user.id]["title"] = title
             fileIO('data/leveler/users.json', "save", self.users)
             await self.bot.say("**Your title has been succesfully set!**")
         else:
@@ -478,14 +495,21 @@ class Leveler:
         # creates user if doesn't exist
         await self._create_user(user, server)
 
-        self.users[server.id][user.id]["current_exp"] = 0
-        self.users[server.id][user.id]["level"] = level
+        # get rid of old level exp
+        old_server_exp = 0
+        for i in range(self.users[user.id]["servers"][server.id]["level"]):
+            old_server_exp += self._required_exp(i)
+        self.users[user.id]["total_exp"] -= old_server_exp
+        self.users[user.id]["total_exp"] -= self.users[user.id]["servers"][server.id]["current_exp"]
 
+        # add in new exp
         total_exp = 0
         for i in range(level):
             total_exp += self._required_exp(i)
+        self.users[user.id]["servers"][server.id]["current_exp"] = 0
+        self.users[user.id]["servers"][server.id]["level"] = level
+        self.users[user.id]["total_exp"] += total_exp
 
-        self.users[server.id][user.id]["total_exp"] = total_exp
         fileIO('data/leveler/users.json', "save", self.users)
         await self.bot.say("**{}'s Level has been set to {}.**".format(self._is_mention(user), level))
 
@@ -591,7 +615,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(no_pm=True)
     async def badgetype(self, name:str):
-        """Cirlces or Tags."""
+        """circles, bars, or squares. All lowercase."""
         valid_types = ["circles", "bars", "squares"]
         if name.lower() not in valid_types:
             await self.bot.say("**That is not a valid badge type!**")
@@ -620,10 +644,9 @@ class Leveler:
             del self.badges[name]
 
             # remove the badge if there
-            for serverid in self.users.keys():
-                for userid in self.users[serverid].keys():
-                    if name in self.users[serverid][userid]["badges"]:
-                        self.users[serverid][userid]["badges"].remove(name)
+            for userid in self.users.keys():
+                if name in self.users[userid]["badges"]:
+                    self.users[userid]["badges"].remove(name)
 
             await self.bot.say("**The {} badge has been removed.**".format(name))
             fileIO('data/leveler/users.json', "save", self.users)
@@ -638,12 +661,15 @@ class Leveler:
         org_user = ctx.message.author
         server = org_user.server
 
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
         if badge_name not in self.badges:
             await self.bot.say("**That badge doesn't exist!**")
-        elif badge_name in self.users[server.id][user.id]["badges"]:
+        elif badge_name in self.users[user.id]["badges"]:
             await self.bot.say("**{} already has that badge!**".format(self._is_mention(user)))
         else:     
-            self.users[server.id][user.id]["badges"].append(badge_name)
+            self.users[user.id]["badges"].append(badge_name)
             fileIO('data/leveler/users.json', "save", self.users)
             await self.bot.say("**{} has just given {} the {} badge!**".format(self._is_mention(org_user), self._is_mention(user), badge_name))
 
@@ -654,12 +680,15 @@ class Leveler:
         org_user = ctx.message.author
         server = org_user.server
 
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
         if badge_name not in self.badges:
             await self.bot.say("**That badge doesn't exist!**")
-        elif badge_name not in self.users[server.id][user.id]["badges"]:
+        elif badge_name not in self.users[user.id]["badges"]:
             await self.bot.say("**{} does not have that badge!**".format(self._is_mention(user)))
         else:
-            self.users[server.id][user.id]["badges"].remove(badge_name)
+            self.users[user.id]["badges"].remove(badge_name)
             fileIO('data/leveler/users.json', "save", self.users)
             await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), badge_name, self._is_mention(user)))
 
@@ -756,17 +785,13 @@ class Leveler:
                     write_pos += unicode_font.getsize(char)[0]
 
         # get urls
-        userinfo = self.users[server.id][user.id]
+        userinfo = self.users[user.id]
         bg_url = userinfo["profile_background"]
         profile_url = user.avatar_url 
-        discord_url = 'http://puu.sh/qxCqL/2d35aea5d6.png'
-        info_icon_url = 'http://puu.sh/qxCsi/d649552d29.png'
 
         # create image objects
         bg_image = Image
-        profile_image = Image
-        discord_image = Image
-        info_image = Image       
+        profile_image = Image   
     
         async with aiohttp.get(bg_url) as r:
             image = await r.content.read()
@@ -780,19 +805,9 @@ class Leveler:
                 image = await r.content.read()
         with open('data/leveler/temp_profile.png','wb') as f:
             f.write(image)
-        async with aiohttp.get(discord_url) as r:
-            image = await r.content.read()
-        with open('data/leveler/temp_discord_logo.png','wb') as f:
-            f.write(image)
-        async with aiohttp.get(info_icon_url) as r:
-            image = await r.content.read()
-        with open('data/leveler/temp_info.png','wb') as f:
-            f.write(image)
 
         bg_image = Image.open('data/leveler/temp_bg.png').convert('RGBA')            
         profile_image = Image.open('data/leveler/temp_profile.png').convert('RGBA')
-        discord_image = Image.open('data/leveler/temp_discord_logo.png').convert('RGBA')
-        info_image = Image.open('data/leveler/temp_info.png').convert('RGBA') 
 
         # set canvas
         bg_color = (255,255,255,0)
@@ -814,12 +829,15 @@ class Leveler:
         draw.rectangle([(5,100), (285, 135)], fill=(50,50,50,200)) # header
         draw.rectangle([(100,135), (285, 285)], fill=(200,200,200,230)) # main content
 
-        if "rep_color" not in userinfo.keys():
+        # determines rep section color
+        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
             rep_fill = (92,130,203,230)
         else:
             rep_fill = tuple(userinfo["rep_color"])
-        draw.rectangle([(5,135), (100, 170)], fill= rep_fill) # reps
-        if "badge_col_color" not in userinfo.keys():
+        draw.rectangle([(5,135), (100, 170)], fill = rep_fill) # reps
+
+        # determines badge section color
+        if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
             badge_fill = (128,151,165,230)
         else:
             badge_fill = tuple(userinfo["badge_col_color"])
@@ -838,7 +856,7 @@ class Leveler:
         # bar
         full_length = 278-107
         init_pos = 107
-        level_length = int(full_length * (userinfo["current_exp"]/self._required_exp(userinfo["level"])))
+        level_length = int(full_length * (userinfo["servers"][server.id]["current_exp"]/self._required_exp(userinfo["servers"][server.id]["level"])))
         draw.rectangle([(init_pos, 142), (init_pos+level_length, 158)], fill=(150,150,150,255)) # box
 
         #divider bar
@@ -860,23 +878,23 @@ class Leveler:
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
 
 
-        exp_text = "Exp: {}/{}".format(userinfo["current_exp"],self._required_exp(userinfo["level"]))
+        exp_text = "Exp: {}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"]))
         draw.text((self._center(init_pos, 278, exp_text, exp_fnt), 145), exp_text,  font=exp_fnt, fill=(40,40,40,250)) # Exp Bar
         
         lvl_left = 106
         draw.text((lvl_left, 165), "Level",  font=level_label_fnt, fill=light_color) # Level Label
         lvl_label_width = level_label_fnt.getsize("Level")[0]
-        lvl_txt = "{}".format(userinfo["level"])
+        lvl_txt = "{}".format(userinfo["servers"][server.id]["level"])
         draw.text((self._center(lvl_left, lvl_left+lvl_label_width, lvl_txt, level_fnt), 183), lvl_txt,  font=level_fnt, fill=light_color) # Level #
 
         label_align = 150
         draw.text((label_align, 165), "Total Exp:",  font=sub_header_fnt, fill=light_color) # Exp
-        draw.text((label_align, 180), "Server Rank:", font=sub_header_fnt, fill=light_color) # Server Rank
+        draw.text((label_align, 180), "Global Rank:", font=sub_header_fnt, fill=light_color) # Server Rank
         draw.text((label_align, 195), "Credits:",  font=sub_header_fnt, fill=light_color) # Credits
 
         num_align = 230
         draw.text((num_align, 165), "{}".format(userinfo["total_exp"]),  font=sub_header_fnt, fill=light_color) # Exp
-        draw.text((num_align, 180), "#{}".format(await self._find_rank(user, server)), font=sub_header_fnt, fill=light_color) # Server Rank
+        draw.text((num_align, 180), "#{}".format(await self._find_global_rank(user, server)), font=sub_header_fnt, fill=light_color) # Server Rank
         try:
             credits = fileIO("data/economy/bank.json", "load")[server.id][user.id]["balance"]
         except:
@@ -1009,12 +1027,9 @@ class Leveler:
 
         os.remove('data/leveler/temp_bg.png')
         os.remove('data/leveler/temp_profile.png')     
-        os.remove('data/leveler/temp_discord_logo.png')
-        os.remove('data/leveler/temp_info.png') 
-
 
     async def draw_rank(self, user, server):
-        userinfo = self.users[server.id][user.id]
+        userinfo = self.users[user.id]
         # get urls
         bg_url = userinfo["rank_background"]
         profile_url = user.avatar_url         
@@ -1065,18 +1080,18 @@ class Leveler:
         # actual bar
         full_length = 328 - 142
         init_pos = 142
-        level_length = int(full_length * (userinfo["current_exp"]/self._required_exp(userinfo["level"])))    
+        level_length = int(full_length * (userinfo["servers"][server.id]["current_exp"]/self._required_exp(userinfo["servers"][server.id]["level"])))    
         draw.rectangle([(init_pos,30), (init_pos+level_length, 43)], fill=(200,200,200,250)) # box    
 
         # write label text    
         draw.text((140, 10), u"{}".format(user.name),  font=name_fnt, fill=(110,110,110,255)) # Name
-        exp_text = "Exp: {}/{}".format(userinfo["current_exp"],self._required_exp(userinfo["level"]))
+        exp_text = "Exp: {}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"]))
         draw.text((self._center(140, 330, exp_text, exp_fnt), 31), exp_text,  font=exp_fnt, fill=(70,70,70,230)) # Exp Bar
         
         lvl_align = 142
         draw.text((lvl_align, 50), "Level",  font=level_label_fnt, fill=(110,110,110,255)) # Level Label
         lvl_label_width = level_label_fnt.getsize("Level")[0]
-        lvl_text = "{}".format(userinfo["level"])
+        lvl_text = "{}".format(userinfo["servers"][server.id]["level"])
         draw.text((self._center(lvl_align, lvl_align + lvl_label_width, lvl_text, level_fnt), 68), lvl_text,  font=level_fnt, fill=(110,110,110,255)) # Level #
 
         # divider bar
@@ -1087,7 +1102,7 @@ class Leveler:
         draw.text((label_align, 75), "Credits:",  font=sub_header_fnt, fill=(110,110,110,255)) # Credits
 
         text_align = 290
-        draw.text((text_align, 55), "#{}".format(await self._find_rank(user, server)), font=sub_header_fnt, fill=(110,110,110,255)) # Server Rank
+        draw.text((text_align, 55), "#{}".format(await self._find_server_rank(user, server)), font=sub_header_fnt, fill=(110,110,110,255)) # Server Rank
         try:
             credits = fileIO("data/economy/bank.json", "load")[server.id][user.id]["balance"]
         except:
@@ -1154,7 +1169,7 @@ class Leveler:
 
         # write label text
         draw.text((self._center(0, 85, "Level Up!", level_fnt2), 65), "Level Up!", font=level_fnt2, fill=(100,100,100,250)) # Level
-        lvl_text = "LVL {}".format(userinfo["level"])
+        lvl_text = "LVL {}".format(userinfo["servers"][server.id]["level"])
         draw.text((self._center(0, 85, lvl_text, level_fnt), 80), lvl_text, font=level_fnt, fill=(100,100,100,250)) # Level Number
 
         result = Image.alpha_composite(result, process)
@@ -1189,13 +1204,16 @@ class Leveler:
         channel = message.channel
         user = message.author
 
-        required = self._required_exp(self.users[server.id][user.id]["level"])
+        required = self._required_exp(self.users[user.id]["servers"][server.id]["level"])
 
-        self.users[server.id][user.id]["total_exp"] += exp
-        if self.users[server.id][user.id]["current_exp"] + exp >= required:
-            self.users[server.id][user.id]["level"] += 1
-            self.users[server.id][user.id]["current_exp"] = self.users[server.id][user.id]["current_exp"] + exp - required
+        # add to total exp
+        self.users[user.id]["total_exp"] += exp
+
+        if self.users[user.id]["servers"][server.id]["current_exp"] + exp >= required:
+            self.users[user.id]["servers"][server.id]["level"] += 1
+            self.users[user.id]["servers"][server.id]["current_exp"] = self.users[user.id]["servers"][server.id]["current_exp"] + exp - required
             if self.settings["lvl_msg"]: # if lvl msg is enabled
+                # channel lock implementation
                 if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
                     channel_id = self.settings["lvl_msg_lock"][server.id]
                     channel = find(lambda m: m.id == channel_id, server.channels)
@@ -1203,16 +1221,20 @@ class Leveler:
                 await self.bot.send_typing(channel)        
                 await self.bot.send_file(channel, 'data/leveler/level.png', content='**{} just gained a level!**'.format(self._is_mention(user))) 
         else:
-            self.users[server.id][user.id]["current_exp"] += exp
+            self.users[user.id]["servers"][server.id]["current_exp"] += exp
         fileIO('data/leveler/users.json', "save", self.users)
 
-    async def _find_rank(self, user, server):
-        userinfo = self.users[server.id]
+    async def _find_server_rank(self, user, server):
         targetid = user.id
 
         users = []
-        for userkey in userinfo.keys():
-            users.append((userkey, userinfo[userkey]["name"], userinfo[userkey]["total_exp"]))
+        for userid in self.users.keys():
+            if server.id in self.users[userid]["servers"]:
+                temp_user = find(lambda m: m.id == userid, server.members)
+                server_exp = self._required_exp(self.users[userid]["servers"][server.id]["level"] - 1)
+                server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
+
+                users.append((userid, temp_user.name, server_exp))
         sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
 
         rank = 1
@@ -1221,14 +1243,29 @@ class Leveler:
                 return rank
             rank+=1
 
+    async def _find_global_rank(self, user, server):
+        users = []
+        # this is also terrible...
+        for userid in self.users.keys():
+            for server in self.bot.servers:
+                temp_user = find(lambda m: m.id == userid, server.members)
+                if temp_user != None:
+                    break
+            if temp_user != None:
+                users.append((userid, temp_user.name, self.users[userid]["total_exp"]))
+        sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
+
+        rank = 1
+        for stats in sorted_list:
+            if stats[0] == user.id:
+                return rank
+            rank+=1
+
+    # handles user creation, adding new server, blocking
     async def _create_user(self, user, server):
-        if server.id not in self.users:
-            self.users[server.id] = {}
-        if user.id not in self.users[server.id]:          
+        if user.id not in self.users:     
             new_account = {
-                "name": user.name,
-                "level": 0,
-                "current_exp": 0,
+                "servers": {},
                 "total_exp": 0,
                 "profile_background": self.backgrounds["profile"]["default"],
                 "rank_background": self.backgrounds["rank"]["default"],
@@ -1236,10 +1273,18 @@ class Leveler:
                 "title": "",
                 "info": "I am a mysterious person.",
                 "rep": 0,
-                "badges":[]
+                "badges":[],
+                "rep_color": [],
+                "badge_col_color": []
             }
-            self.users[server.id][user.id] = new_account
-            fileIO('data/leveler/users.json', "save", self.users)
+            self.users[user.id] = new_account
+
+        if server.id not in self.users[user.id]["servers"]:
+            self.users[user.id]["servers"][server.id] = {
+                "level": 0,
+                "current_exp": 0
+            }
+        fileIO('data/leveler/users.json', "save", self.users)
 
         if server.id not in self.block:
             self.block[server.id] = {}
@@ -1249,7 +1294,7 @@ class Leveler:
                 "chat": time.time(),
                 "rep" : time.time()
             }
-            fileIO('data/leveler/block.json', "save", self.block)
+        fileIO('data/leveler/block.json', "save", self.block)
 
     # finds the the pixel to center the text
     def _center(self, start, end, text, font):
