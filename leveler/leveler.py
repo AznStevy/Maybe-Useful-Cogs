@@ -262,12 +262,15 @@ class Leveler:
         default_a = 230
         auto = None
         valid = True
+        color_ranks = [3,0] # gets the first and fourth(arbitrary) most prominent colors
+        hex_color = None
         # creates user if doesn't exist
         await self._create_user(user, server)
 
+        # still ugly, might fix later
         if rep_color == "auto":
-            hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, 3)
-            color = self._hex_to_rgb(hex_color, default_a)
+            hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, color_ranks)
+            color = self._hex_to_rgb(hex_color[0], default_a)
             color = self._moderate_color(color, default_a, 5)
             self.users[user.id]["rep_color"] = color                 
         elif rep_color == "default":
@@ -279,7 +282,11 @@ class Leveler:
             valid = False
 
         if badge_col_color == "auto":
-            hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, 0)
+            if hex_color != None:
+                hex_color = hex_color[1] # grabs the other color
+            else:
+                hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, [0])
+                hex_color = hex_color[0]
             color = self._hex_to_rgb(hex_color, default_a)
             color = self._moderate_color(color, default_a, 15)
             self.users[user.id]["badge_col_color"] = color
@@ -296,7 +303,7 @@ class Leveler:
         fileIO('data/leveler/users.json', "save", self.users)
 
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
-    async def _auto_color(self, url:str, default, rank:int):
+    async def _auto_color(self, url:str, default, ranks):
         phrases = ["Calculating colors..."] # in case I want more
         try:
             await self.bot.say("**{}**".format(random.choice(phrases)))   
@@ -325,11 +332,13 @@ class Leveler:
                 index += 1
             sorted_list = sorted(freq_index, key=operator.itemgetter(1), reverse=True)
 
-            peak = codes[sorted_list[rank][0]] # gets the original index
-            peak = peak.astype(int)
+            colors = []
+            for rank in ranks:
+                peak = codes[sorted_list[rank][0]] # gets the original index
+                peak = peak.astype(int)
 
-            color = ''.join(format(c, '02x') for c in peak)          
-            return color
+                colors.append(''.join(format(c, '02x') for c in peak))    
+            return colors # returns array
         except:
             await self.bot.say("**Please install scipy: `pip3 install scipy`**")                 
 
