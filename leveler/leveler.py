@@ -1232,7 +1232,7 @@ class Leveler:
 
         users = []
         for userid in self.users.keys():
-            if server.id in self.users[userid]["servers"]:
+            if "servers" in self.users[userid] and server.id in self.users[userid]["servers"]:
                 temp_user = find(lambda m: m.id == userid, server.members)
                 server_exp = self._required_exp(self.users[userid]["servers"][server.id]["level"] - 1)
                 server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
@@ -1295,7 +1295,7 @@ class Leveler:
         if user.id not in self.block[server.id]:
             self.block[server.id][user.id] = {
                 "chat": time.time(),
-                "rep" : time.time()
+                "rep" : 0.0
             }
         fileIO('data/leveler/block.json', "save", self.block)
 
