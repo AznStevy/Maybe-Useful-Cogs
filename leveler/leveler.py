@@ -105,6 +105,7 @@ class Leveler:
 
         users = []
         if global_rank == "global":
+            msg = "**Global Leaderboard for {}**\n".format(self.bot.user.name)
             # this is also terrible...
             for userid in self.users.keys():
                 for server in self.bot.servers:
@@ -112,12 +113,12 @@ class Leveler:
                     if temp_user != None:
                         break
                 if temp_user != None:
-                    users.append((userid, temp_user.name, self.users[userid]["total_exp"]))
-            sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
+                    users.append((temp_user.name, self.users[userid]["total_exp"]))
+            sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
         else:
             msg = "**Leaderboard for {}**\n".format(server.name)
             for userid in self.users.keys():
-                if server.id in self.users[userid]["servers"]:
+                if "servers" in self.users[userid] and server.id in self.users[userid]["servers"]:
                     temp_user = find(lambda m: m.id == userid, server.members)
                     server_exp = self._required_exp(self.users[userid]["servers"][server.id]["level"] - 1)
                     server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
@@ -1305,6 +1306,8 @@ class Leveler:
 
     # calculates required exp for next level
     def _required_exp(self, level:int):
+        if level < 0:
+            return 0
         return 139*level+65
 # ------------------------------ setup ----------------------------------------    
 def check_folders():
