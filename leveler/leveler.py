@@ -23,6 +23,22 @@ except:
     raise RuntimeError("You don't have pillow installed. run 'pip3 install pillow' and try again")
 import time
 
+# Thanks Tatsumaki (http://tatsumaki.xyz/) and others for design and bgs!
+bg_credits = {
+        "http://puu.sh/qAqqs/fc35ca027b.png" : "Tachit",
+        "http://puu.sh/qArJl/67ab438957.png" : "Hit-Point Ent",
+        "http://puu.sh/qArnm/4dd317d64c.png" : "Hit-Point Ent",
+        "http://puu.sh/qArKm/78ad01fd9d.png" : "Roadcrosser",
+        "http://puu.sh/qArYy/a0a7eeae18.png" : "Galaxy",
+        "http://puu.sh/qArZU/52f1282ef7.png" : "JAW3L",
+        "http://puu.sh/qArZt/e3369e4a95.png" : "Roadcrosser",
+        "http://puu.sh/qAs0b/2270971d6d.png" : "Hit-Point Ent",
+        "http://puu.sh/qAs0F/c9ee5ac9ff.png" : "Hit-Point Ent",
+        "http://puu.sh/qAs0q/eb5ae8b942.png" : "Hit-Point Ent",
+        "http://puu.sh/qAs1b/a2f4f9fcd1.png" : "Roadcrosser",
+        "http://puu.sh/qAsiM/a0e7321e8b.png" : "Roadcrosser"
+}
+
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 default_avatar_url = "http://puu.sh/qB89K/c37cd0de38.jpg"
 
@@ -42,6 +58,7 @@ level_label_fnt = ImageFont.truetype(font_bold_file, 20)
 rep_fnt = ImageFont.truetype(font_bold_file, 32)
 text_fnt = ImageFont.truetype(font_bold_file, 12)
 text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
+credit_fnt = ImageFont.truetype(font_bold_file, 10)
 
 class Leveler:
     """A level up thing with image generation!"""
@@ -122,7 +139,8 @@ class Leveler:
                     temp_user = find(lambda m: m.id == userid, server.members)
                     server_exp = self._required_exp(self.users[userid]["servers"][server.id]["level"] - 1)
                     server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
-                    users.append((temp_user.name, server_exp))
+                    if temp_user != None:
+                        users.append((temp_user.name, server_exp))
             sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
         msg += "```ruby\n"
@@ -835,6 +853,12 @@ class Leveler:
         draw.rectangle([(5,100), (285, 135)], fill=(50,50,50,200)) # header
         draw.rectangle([(100,135), (285, 285)], fill=(200,200,200,230)) # main content
 
+        # stick in credits if needed
+        if bg_url in bg_credits.keys():
+            credit_text = "  ".join("Background by {}".format(bg_credits[bg_url]))
+            credit_init = 290 - credit_fnt.getsize(credit_text)[0]
+            draw.text((credit_init, 0), credit_text,  font=credit_fnt, fill=(0,0,0,100))
+
         # determines rep section color
         if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
             rep_fill = (92,130,203,230)
@@ -1074,7 +1098,11 @@ class Leveler:
 
         # draw transparent overlay           
         draw.rectangle([(77,5), (355, 95)], fill=(200,200,200,230)) # box
-        draw.rectangle([(37,12), (113,89)], fill=(255,255,255, 160), outline=(100, 100, 100, 100)) # profile square
+        # stick in credits if needed
+        if bg_url in bg_credits.keys():
+            credit_text = " ".join("{}".format(bg_credits[bg_url]))
+            draw.text((2, 92), credit_text,  font=credit_fnt, fill=(0,0,0,190))
+        draw.rectangle([(37,12), (114,89)], fill=(255,255,255, 160), outline=(100, 100, 100, 200)) # profile square
 
         # put in profile picture
         profile_size = (74, 74)
@@ -1239,8 +1267,8 @@ class Leveler:
                 temp_user = find(lambda m: m.id == userid, server.members)
                 server_exp = self._required_exp(self.users[userid]["servers"][server.id]["level"] - 1)
                 server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
-
-                users.append((userid, temp_user.name, server_exp))
+                if temp_user != None:
+                    users.append((userid, temp_user.name, server_exp))
         sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
 
         rank = 1
@@ -1389,7 +1417,6 @@ def check_files():
                 "default" : "http://puu.sh/qAsht/22a4f6b0ac.png",
                 "interstellar" : "http://puu.sh/qAshP/d55efec3f6.png",
                 "metalpatch": "http://puu.sh/qAsi4/438b912088.png",
-                "navaho": "http://puu.sh/qAsiq/72cf67d37c.png",
                 "potatoes" : "http://puu.sh/qAsiM/a0e7321e8b.png"
             },
         }
