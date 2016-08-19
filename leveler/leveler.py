@@ -54,7 +54,7 @@ sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
 badge_fnt = ImageFont.truetype(font_bold_file, 12)
 exp_fnt = ImageFont.truetype(font_file, 14)
 level_fnt = ImageFont.truetype(font_bold_file, 32)
-level_label_fnt = ImageFont.truetype(font_bold_file, 20)
+level_label_fnt = ImageFont.truetype(font_bold_file, 22)
 general_info_fnt = ImageFont.truetype(font_bold_file, 13)
 rep_fnt = ImageFont.truetype(font_bold_file, 30)
 text_fnt = ImageFont.truetype(font_bold_file, 12)
@@ -212,8 +212,8 @@ class Leveler:
         msg = "```xl\n"
         msg += "Name: {}\n".format(user.name)
         msg += "Title: {}\n".format(userinfo["title"])
-        msg += "Server Level: {}\n".format(userinfo["servers"][server.id]["level"])
         msg += "Reps: {}\n".format(userinfo["rep"])
+        msg += "Server Level: {}\n".format(userinfo["servers"][server.id]["level"])
         msg += "Current Server Exp: {}\n".format(userinfo["servers"][server.id]["current_exp"])
         msg += "Total Exp: {}\n".format(userinfo["total_exp"])
         msg += "Info: {}\n".format(userinfo["info"])
@@ -919,10 +919,11 @@ class Leveler:
         
         lvl_left = 100
         label_align = 150
-        draw.text((self._center(lvl_left, label_align, "Level", level_label_fnt), 165), "Level",  font=level_label_fnt, fill=light_color) # Level Label
+        label_start = self._center(lvl_left, label_align, "Level", level_label_fnt)
+        draw.text((label_start, 165), "Level",  font=level_label_fnt, fill=light_color) # Level Label
         lvl_label_width = level_label_fnt.getsize("Level")[0]
         lvl_txt = "{}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(lvl_left, label_align, lvl_txt, level_fnt), 183), lvl_txt,  font=level_fnt, fill=light_color) # Level #
+        draw.text((self._center(label_start, label_start + lvl_label_width, lvl_txt, level_fnt), 185), lvl_txt,  font=level_fnt, fill=light_color) # Level #
 
         draw.text((label_align, 165), "Total Exp:",  font=general_info_fnt, fill=light_color) # Exp
         draw.text((label_align, 177), "Global Rank:", font=general_info_fnt, fill=light_color) # Global Rank
@@ -1134,7 +1135,7 @@ class Leveler:
         draw.text((lvl_align, 49), "Level",  font=level_label_fnt, fill=(110,110,110,255)) # Level Label
         lvl_label_width = level_label_fnt.getsize("Level")[0]
         lvl_text = "{}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(lvl_align, lvl_align + lvl_label_width, lvl_text, level_fnt), 65), lvl_text,  font=level_fnt, fill=(110,110,110,255)) # Level #
+        draw.text((self._center(lvl_align, lvl_align + lvl_label_width, lvl_text, level_fnt), 67), lvl_text,  font=level_fnt, fill=(110,110,110,255)) # Level #
 
         # divider bar
         draw.rectangle([(190,50), (191, 90)], fill=(110,110,110,240))      
