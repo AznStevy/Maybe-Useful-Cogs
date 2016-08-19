@@ -1119,7 +1119,7 @@ class Leveler:
         os.remove('data/leveler/temp_profile.png')
 
     async def draw_levelup(self, user, server):
-        userinfo = self.users[server.id][user.id]
+        userinfo = self.users[user.id]
         # get urls
         bg_url = userinfo["levelup_background"]
         profile_url = user.avatar_url         
