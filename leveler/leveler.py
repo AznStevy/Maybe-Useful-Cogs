@@ -251,6 +251,7 @@ class Leveler:
             msg += "```\n"
         await self.bot.say(msg)
 
+    @commands.cooldown(rate = '1', per = '3')
     @lvlset.command(pass_context=True, no_pm=True)
     async def sidebar(self, ctx, rep_color:str, badge_col_color:str):
         """Set sidebar colors and accents. 'auto': according to current bg."""
@@ -299,7 +300,7 @@ class Leveler:
             valid = False
 
         if valid:
-            await self.bot.say("**Sidebar colors set!**") 
+            await self.bot.say("**{}, your sidebar colors have been set!**".format(self._is_mention(user)))
         fileIO('data/leveler/users.json', "save", self.users)
 
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
