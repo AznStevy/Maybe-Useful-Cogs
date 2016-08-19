@@ -56,7 +56,7 @@ exp_fnt = ImageFont.truetype(font_file, 14)
 level_fnt = ImageFont.truetype(font_bold_file, 32)
 level_label_fnt = ImageFont.truetype(font_bold_file, 20)
 general_info_fnt = ImageFont.truetype(font_bold_file, 13)
-rep_fnt = ImageFont.truetype(font_bold_file, 32)
+rep_fnt = ImageFont.truetype(font_bold_file, 30)
 text_fnt = ImageFont.truetype(font_bold_file, 12)
 text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
 credit_fnt = ImageFont.truetype(font_bold_file, 10)
@@ -797,7 +797,6 @@ class Leveler:
             await self.bot.say("**That level-up background name doesn't exist.**")
 
     async def draw_profile(self, user, server):
-
         def _write_unicode(text, init_x, y, font, unicode_font, fill):
             write_pos = init_x
 
@@ -865,14 +864,14 @@ class Leveler:
             rep_fill = (92,130,203,230)
         else:
             rep_fill = tuple(userinfo["rep_color"])
-        draw.rectangle([(5,135), (100, 170)], fill = rep_fill) # reps
+        draw.rectangle([(5,135), (100, 168)], fill = rep_fill) # reps
 
         # determines badge section color
         if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
             badge_fill = (128,151,165,230)
         else:
             badge_fill = tuple(userinfo["badge_col_color"])
-        draw.rectangle([(5,170), (100, 285)], fill= badge_fill) # badges
+        draw.rectangle([(5,168), (100, 285)], fill= badge_fill) # badges
 
         draw.rectangle([(12,60), (92,140)], fill=(255,255,255, 160), outline=(255, 255, 255, 160)) # profile square
 
@@ -898,16 +897,13 @@ class Leveler:
         light_color = (100,100,100,255)
 
         head_align = 110
-        #draw.text((head_align, 103), u"{}".format(userinfo["name"]),  font=name_fnt, fill=white_color) # Name
         _write_unicode(user.name, head_align, 103, name_fnt, header_u_fnt, white_color)
-        #draw.text((head_align, 118), u"{}".format(userinfo["title"]), font=title_fnt, fill=white_color) # Title
         _write_unicode(userinfo["title"], head_align, 118, title_fnt, header_u_fnt, white_color)
 
         rep_text = "+{}rep".format(userinfo["rep"])
-        draw.text((self._center(5, 100, rep_text, rep_fnt), 143), rep_text, font=rep_fnt, fill=white_color)
+        draw.text((self._center(5, 100, rep_text, rep_fnt), 141), rep_text, font=rep_fnt, fill=white_color)
 
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
-
 
         exp_text = "Exp: {}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"]))
         draw.text((self._center(init_pos, 278, exp_text, exp_fnt), 145), exp_text,  font=exp_fnt, fill=(40,40,40,250)) # Exp Bar
@@ -1126,10 +1122,10 @@ class Leveler:
         draw.text((self._center(140, 330, exp_text, exp_fnt), 31), exp_text,  font=exp_fnt, fill=(70,70,70,230)) # Exp Bar
         
         lvl_align = 142
-        draw.text((lvl_align, 50), "Level",  font=level_label_fnt, fill=(110,110,110,255)) # Level Label
+        draw.text((lvl_align, 49), "Level",  font=level_label_fnt, fill=(110,110,110,255)) # Level Label
         lvl_label_width = level_label_fnt.getsize("Level")[0]
         lvl_text = "{}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(lvl_align, lvl_align + lvl_label_width, lvl_text, level_fnt), 68), lvl_text,  font=level_fnt, fill=(110,110,110,255)) # Level #
+        draw.text((self._center(lvl_align, lvl_align + lvl_label_width, lvl_text, level_fnt), 65), lvl_text,  font=level_fnt, fill=(110,110,110,255)) # Level #
 
         # divider bar
         draw.rectangle([(190,50), (191, 90)], fill=(110,110,110,240))      
