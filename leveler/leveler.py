@@ -275,7 +275,9 @@ class Leveler:
 
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
     async def _auto_color(self, url:str, default, rank:int):
+        phrases = ["Calculating colors..."] # in case I want more
         try:
+            await self.bot.say("**{}**".format(random.choice(phrases)))   
             clusters = 10
 
             async with aiohttp.get(url) as r:
