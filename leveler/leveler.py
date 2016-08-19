@@ -242,7 +242,7 @@ class Leveler:
         default_badge_col = (128,151,165,230)
         default_a = 230
         auto = None
-        
+        valid = True
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -257,6 +257,7 @@ class Leveler:
             self.users[user.id]["rep_color"] = self._hex_to_rgb(rep_color, default_a)
         else: 
             await self.bot.say("**That's not a valid rep color!**")
+            valid = False
 
         if badge_col_color == "auto":
             hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, 0)
@@ -268,9 +269,11 @@ class Leveler:
         elif self._is_hex(badge_col_color):
             self.users[user.id]["badge_col_color"] = self._hex_to_rgb(badge_col_color, default_a)
         else: 
-            await self.bot.say("**That's not a valid badge column color!**") 
+            await self.bot.say("**That's not a valid badge column color!**")
+            valid = False
 
-        await self.bot.say("**Sidebar colors set!**") 
+        if valid:
+            await self.bot.say("**Sidebar colors set!**") 
         fileIO('data/leveler/users.json', "save", self.users)
 
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
