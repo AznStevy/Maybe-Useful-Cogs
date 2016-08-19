@@ -253,7 +253,7 @@ class Leveler:
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def sidebar(self, ctx, rep_color:str, badge_col_color:str):
-        """Set sidebar colors and accents. Auto: according to current bg."""
+        """Set sidebar colors and accents. 'auto': according to current bg."""
         user = ctx.message.author
         server = ctx.message.server
         options = ["default", "auto"]
@@ -518,7 +518,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(pass_context=True, no_pm=True)
     async def setlevel(self, ctx, user : discord.Member, level:int):
-        '''Sets a user's level. (What a cheater c:).'''
+        '''Set a user's level. (What a cheater c:).'''
         org_user = ctx.message.author
         server = user.server
 
@@ -576,7 +576,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(pass_context=True, no_pm=True)
     async def imggen(self, ctx):
-        """Toggles image generation commands on the server."""
+        """Toggle image generation commands on the server."""
         server = ctx.message.server
         if server.id in self.settings["disabled_servers"]:
             self.settings["disabled_servers"].remove(server.id)
@@ -589,7 +589,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(no_pm=True)
     async def lvlalert(self):
-        """Toggles level-up messages on the server."""
+        """Toggle level-up messages on the server."""
         if self.settings["lvl_msg"]:
             self.settings["lvl_msg"] = False
             await self.bot.say("**Level-up messages disabled.**")
@@ -607,7 +607,7 @@ class Leveler:
 
     @lvlbadge.command(pass_context=True, no_pm=True)
     async def listbadges(self, ctx):
-        '''Gives a list of badges.'''
+        '''Get a list of badges.'''
         msg = "```xl\n"
         for badge in self.badges.keys():
             msg += "+ {}\n".format(badge)
@@ -669,7 +669,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(pass_context = True, no_pm=True)
     async def delbadge(self, ctx, name:str):
-        """Deletes a badge and removes from all users."""
+        """Delete a badge and remove from all users."""
         user = ctx.message.author
         channel = ctx.message.channel
         server = user.server
@@ -691,7 +691,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(pass_context = True, no_pm=True)
     async def givebadge(self, ctx, user : discord.Member, badge_name: str):
-        """Gives a user a badge."""
+        """Give a user a badge."""
         org_user = ctx.message.author
         server = org_user.server
 
@@ -710,7 +710,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(pass_context = True, no_pm=True)
     async def takebadge(self, ctx, user : discord.Member, badge_name: str):
-        """Takes a user's badge."""
+        """Take a user's badge."""
         org_user = ctx.message.author
         server = org_user.server
 
