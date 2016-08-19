@@ -1023,8 +1023,8 @@ class Leveler:
                     os.remove('data/leveler/temp_badge.png')
                 else:
                     draw.rectangle([(10,vert_pos + i*17), (95, vert_pos + 15 + i*17)], fill = bg_color, outline = border_color) # badges
-                bar_fnt = ImageFont.truetype(font_bold_file, 14)
-                draw.text((self._center(10,95, text, bar_fnt), vert_pos + 2 + i*17), text,  font=bar_fnt, fill = text_color, outline = (0,0,0,255)) # Credits
+                    bar_fnt = ImageFont.truetype(font_bold_file, 14)
+                    draw.text((self._center(10,95, text, bar_fnt), vert_pos + 2 + i*17), text,  font=bar_fnt, fill = text_color, outline = (0,0,0,255)) # Credits
                 vert_pos += 2
                 i += 1
 
