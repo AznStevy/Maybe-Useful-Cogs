@@ -16,7 +16,7 @@ try:
     import scipy.misc
     import scipy.cluster
 except:
-    raise RuntimeError("Run 'pip3 install numpy', then 'pip3 install scipy' and try again.")
+    raise RuntimeError("Run 'pip3 install --upgrade numpy', then 'pip3 install --upgrade scipy' and try again.")
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
 except:
