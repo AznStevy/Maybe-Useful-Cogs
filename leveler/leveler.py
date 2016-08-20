@@ -490,22 +490,28 @@ class Leveler:
     async def _process_purchase(self, ctx):
         user = ctx.message.author
         server = ctx.message.server
-
         try:
-            bank = fileIO("data/economy/bank.json", "load")
-            if bank[server.id][user.id]["balance"] < self.settings["bg_price"]:
-                await self.bot.say("**Insufficient funds. Backgrounds changes cost: {}**".format(self.settings["bg_price"]))
-                return False
+            bank = self.bot.get_cog('Economy').bank
+            if bank.account_exists(user):
+                if not bank.can_spend(user, self.settings["bg_price"]):
+                    await self.bot.say("**Insufficient funds. Backgrounds changes cost: {}**".format(self.settings["bg_price"]))
+                    return False
+                else:
+                    new_balance = bank.get_balance(user) - self.settings["bg_price"]
+                    bank.set_credits(user, new_balance)
+                    return True            
             else:
-                bank[server.id][user.id]["balance"] -= self.settings["bg_price"]
-                fileIO('data/economy/bank.json', "save", bank)
-                return True
+                if self.settings["bg_price"] == 0:
+                    return True
+                else:
+                    await self.bot.say("**You don't have an account. Do {}bank register**".format(prefix))
+                    return False
         except:
             if self.settings["bg_price"] == 0:
                 return True
             else:
-                await self.bot.say("**You don't have an account. Do {}bank register**".format(prefix))
-                return False
+                await self.bot.say("**There was an error with economy cog. Fix to allow purchases or set price to 0.**".format(prefix))
+                return False            
 
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(no_pm=True)
@@ -1442,6 +1448,7 @@ def check_files():
         print("Creating default leveler settings.json...")
         fileIO(settings_path, "save", default)
 
+    # thanks Tatsumaki (http://tatsumaki.xyz/) for these bgs! 
     bgs = {
             "profile": {
                 "alice": "http://puu.sh/qAoLx/7335f697fb.png",
