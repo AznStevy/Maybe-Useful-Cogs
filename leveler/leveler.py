@@ -1271,7 +1271,7 @@ class Leveler:
 
         # draw transparent overlay           
         draw.rectangle([(0, 40), (85, 105)], fill=(200,200,200,200)) # white portion
-        draw.rectangle([(15, 11), (68, 63)], fill=(255,255,255,160), outline=(100, 100, 100, 100)) # profile rectangle
+        draw.rectangle([(15, 11), (68, 64)], fill=(255,255,255,160), outline=(100, 100, 100, 100)) # profile rectangle
 
         # put in profile picture
         profile_size = (50, 50)
