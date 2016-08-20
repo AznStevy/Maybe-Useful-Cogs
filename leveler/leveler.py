@@ -600,15 +600,31 @@ class Leveler:
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
-    @lvladmin.command(no_pm=True)
-    async def lvlalert(self):
-        """Toggle level-up messages on the server."""
-        if self.settings["lvl_msg"]:
-            self.settings["lvl_msg"] = False
-            await self.bot.say("**Level-up messages disabled.**")
+    @lvladmin.command(pass_context = True, no_pm=True)
+    async def lvlalert(self, ctx, all:str=None):
+        """Toggle level-up messages on the server. 'disableall/enableall' to toggle all servers."""
+        server = ctx.message.server
+        # deals with disabled array, not enabled
+
+        # old version was boolean
+        if not isinstance(self.settings["lvl_msg"], list):
+            self.settings["lvl_msg"] = []
+
+        if all == "enableall":
+            self.settings["lvl_msg"] = []
+            await self.bot.say("**Level-up messages enabled for all servers.**")
+        elif all == "disableall":
+            self.settings["lvl_msg"] = []
+            for server in self.bot.servers:
+                self.settings["lvl_msg"].append(server.id)
+            await self.bot.say("**Level-up messages disabled for all servers.**")
         else:
-            self.settings["lvl_msg"] = True
-            await self.bot.say("**Level-up messages enabled.**") 
+            if server.id not in self.settings["lvl_msg"]:
+                self.settings["lvl_msg"].append(server.id)
+                await self.bot.say("**Level-up messages disabled for {}.**".format(server.name))
+            else:
+                self.settings["lvl_msg"].remove(server.id)
+                await self.bot.say("**Level-up messages enabled for {}.**".format(server.name)) 
         fileIO('data/leveler/settings.json', "save", self.settings)             
 
     @commands.group(pass_context=True)
@@ -1327,7 +1343,13 @@ class Leveler:
         if self.users[user.id]["servers"][server.id]["current_exp"] + exp >= required:
             self.users[user.id]["servers"][server.id]["level"] += 1
             self.users[user.id]["servers"][server.id]["current_exp"] = self.users[user.id]["servers"][server.id]["current_exp"] + exp - required
-            if self.settings["lvl_msg"]: # if lvl msg is enabled
+            
+            # catch old implementation
+            if not isinstance(self.settings["lvl_msg"], list):
+                self.settings["lvl_msg"] = []
+                fileIO('data/leveler/settings.json', "save", self.settings)
+
+            if server.id not in self.settings["lvl_msg"]: # if lvl msg is enabled
                 # channel lock implementation
                 if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
                     channel_id = self.settings["lvl_msg_lock"][server.id]
@@ -1442,7 +1464,7 @@ def check_files():
 
     default = {
         "bg_price": 0,
-        "lvl_msg": True, 
+        "lvl_msg": [], # disabled lvl servers
         "disabled_servers": [],
         "badge_type": "circles"
         }
