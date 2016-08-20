@@ -602,7 +602,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(pass_context = True, no_pm=True)
     async def lvlalert(self, ctx, all:str=None):
-        """Toggle level-up messages on the server. 'disableall/enableall' to toggle all servers."""
+        """Toggle level-up messages on the server. Parameter: disableall/enableall"""
         server = ctx.message.server
         # deals with disabled array, not enabled
 
@@ -629,12 +629,12 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(pass_context = True, no_pm=True)
-    async def privatelvlalert(self, ctx, all:str=None):
+    async def lvlprivate(self, ctx, all:str=None):
         """Toggles if lvl alert is a private message to the user."""
         server = ctx.message.server
         # deals with ENABLED array, not disabled
 
-        if "private_lvl_msg" not in self.settings["lvl_msg"].keys():
+        if "private_lvl_msg" not in self.settings.keys():
             self.settings["private_lvl_msg"] = [] 
 
         if all == "disableall":
