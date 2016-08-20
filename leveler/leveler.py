@@ -53,9 +53,9 @@ title_fnt = ImageFont.truetype(font_file, 18)
 sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
 badge_fnt = ImageFont.truetype(font_bold_file, 12)
 exp_fnt = ImageFont.truetype(font_file, 14)
-level_fnt = ImageFont.truetype(font_bold_file, 32)
-level_label_fnt = ImageFont.truetype(font_bold_file, 22)
-general_info_fnt = ImageFont.truetype(font_bold_file, 13)
+level_fnt = ImageFont.truetype(font_bold_file, 30)
+level_label_fnt = ImageFont.truetype(font_bold_file, 20)
+general_info_fnt = ImageFont.truetype(font_bold_file, 14)
 rep_fnt = ImageFont.truetype(font_bold_file, 30)
 text_fnt = ImageFont.truetype(font_bold_file, 12)
 text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
@@ -926,22 +926,20 @@ class Leveler:
         draw.text((label_start, 165), "Level",  font=level_label_fnt, fill=light_color) # Level Label
         lvl_label_width = level_label_fnt.getsize("Level")[0]
         lvl_txt = "{}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(label_start, label_start + lvl_label_width, lvl_txt, level_fnt), 185), lvl_txt,  font=level_fnt, fill=light_color) # Level #
+        draw.text((self._center(label_start, label_start + lvl_label_width, lvl_txt, level_fnt), 183), lvl_txt,  font=level_fnt, fill=light_color) # Level #
 
         draw.text((label_align, 165), "Total Exp:",  font=general_info_fnt, fill=light_color) # Exp
-        draw.text((label_align, 177), "Global Rank:", font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((label_align, 189), "Server Rank:", font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((label_align, 201), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
+        draw.text((label_align, 180), "Global Rank:", font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
 
         num_align = 230
         draw.text((num_align, 165), "{}".format(userinfo["total_exp"]),  font=general_info_fnt, fill=light_color) # Exp
-        draw.text((num_align, 177), "#{}".format(await self._find_global_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((num_align, 189), "#{}".format(await self._find_server_rank(user, server)), font=general_info_fnt, fill=light_color) # Server Rank
+        draw.text((num_align, 180), "#{}".format(await self._find_global_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
         try:
             credits = fileIO("data/economy/bank.json", "load")[server.id][user.id]["balance"]
         except:
             credits = 0
-        draw.text((num_align, 201), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
+        draw.text((num_align, 195), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
 
         draw.text((105, 220), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box 
         margin = 105
