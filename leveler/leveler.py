@@ -270,9 +270,13 @@ class Leveler:
 
         # still ugly, might fix later
         if rep_color == "auto":
-            hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, color_ranks)
-            color = self._hex_to_rgb(hex_color[0], default_a)
-            color = self._moderate_color(color, default_a, 5)
+            hex_color = await self._auto_color(self.users[user.id]["profile_background"], color_ranks)
+            if hex_color != None:
+                color = self._hex_to_rgb(hex_color[0], default_a)
+                color = self._moderate_color(color, default_a, 5)
+            else:
+                color = default_rep
+                await self.bot.say("**Error in color calculation.**")
             self.users[user.id]["rep_color"] = color                 
         elif rep_color == "default":
             self.users[user.id]["rep_color"] = default_rep
@@ -286,7 +290,7 @@ class Leveler:
             if hex_color != None:
                 hex_color = hex_color[1] # grabs the other color
             else:
-                hex_color = await self._auto_color(self.users[user.id]["profile_background"], default_rep, [0])
+                hex_color = await self._auto_color(self.users[user.id]["profile_background"], [0])
                 hex_color = hex_color[0]
             color = self._hex_to_rgb(hex_color, default_a)
             color = self._moderate_color(color, default_a, 15)
@@ -304,7 +308,7 @@ class Leveler:
         fileIO('data/leveler/users.json', "save", self.users)
 
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
-    async def _auto_color(self, url:str, default, ranks):
+    async def _auto_color(self, url:str, ranks):
         phrases = ["Calculating colors..."] # in case I want more
         try:
             await self.bot.say("**{}**".format(random.choice(phrases)))   
