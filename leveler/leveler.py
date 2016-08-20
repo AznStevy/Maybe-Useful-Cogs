@@ -214,7 +214,11 @@ class Leveler:
         msg += "Title: {}\n".format(userinfo["title"])
         msg += "Reps: {}\n".format(userinfo["rep"])
         msg += "Server Level: {}\n".format(userinfo["servers"][server.id]["level"])
-        msg += "Current Server Exp: {}\n".format(userinfo["servers"][server.id]["current_exp"])
+        total_server_exp = 0
+        for i in range(userinfo["servers"][server.id]["level"]):
+            total_server_exp += self._required_exp(i)
+        total_server_exp += userinfo["servers"][server.id]["current_exp"]
+        msg += "Server Exp: {}\n".format(total_server_exp)
         msg += "Total Exp: {}\n".format(userinfo["total_exp"])
         msg += "Info: {}\n".format(userinfo["info"])
         msg += "Profile background: {}\n".format(userinfo["profile_background"])
