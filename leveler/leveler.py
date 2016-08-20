@@ -649,7 +649,7 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(no_pm=True)
-    async def badgetype(self, name:str):
+    async def type(self, name:str):
         """circles, bars, or squares. All lowercase."""
         valid_types = ["circles", "bars", "squares"]
         if name.lower() not in valid_types:
@@ -956,6 +956,7 @@ class Leveler:
             priority_badges.append((badge, priority_num))
         sorted_badges = sorted(priority_badges, key=operator.itemgetter(1), reverse=True)
 
+        # TODO: simplify this. it shouldn't be this complicated... sacrifice conciseness for customizability
         if "badge_type" not in self.settings.keys() or self.settings["badge_type"] == "circles":
             # circles require antialiasing
             vert_pos = 187
@@ -964,6 +965,9 @@ class Leveler:
             right = 52 + right_shift
             coord = [(left, vert_pos), (right, vert_pos), (left, vert_pos + 33), (right, vert_pos + 33), (left, vert_pos + 66), (right, vert_pos + 66)]
             i = 0
+            total_gap = 2 # /2
+            border_width = int(total_gap/2)
+
             for pair in sorted_badges[:6]:
                 badge = pair[0]
                 bg_color = self.badges[badge]["bg_color"]
@@ -974,11 +978,10 @@ class Leveler:
                 multiplier = 6 # for antialiasing
                 raw_length = size * multiplier
 
-                # draw mask
+                # draw mask circle
                 mask = Image.new('L', (raw_length, raw_length), 0)
                 draw_thumb = ImageDraw.Draw(mask)
                 draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
-                mask = mask.resize((size, size), Image.ANTIALIAS)
 
                 # determine image or color for badge bg
                 if await self._valid_image_url(bg_color):
@@ -990,17 +993,50 @@ class Leveler:
                     badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
                     badge_image = badge_image.resize((raw_length, raw_length), Image.ANTIALIAS)
 
-                    # put on ellipse/circle
-                    output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
-                    output = output.resize((size, size), Image.ANTIALIAS)
-                    process.paste(output, coord[i], mask)
-                else:
-                    square = Image.new('RGBA', (raw_length, raw_length), bg_color)
+                    # structured like this because if border = 0, still leaves outline.
+                    if border_color:
+                        square = Image.new('RGBA', (raw_length, raw_length), border_color)
+                        # put border on ellipse/circle
+                        output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
+                        output = output.resize((size, size), Image.ANTIALIAS)
+                        outer_mask = mask.resize((size, size), Image.ANTIALIAS)
+                        process.paste(output, coord[i], outer_mask)
 
-                    output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
-                    output = output.resize((size, size), Image.ANTIALIAS)
-                    process.paste(output, coord[i], mask)
-                    draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text
+                        # put on ellipse/circle
+                        output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
+                        output = output.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
+                        inner_mask = mask.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
+                        process.paste(output, (coord[i][0] + border_width, coord[i][1] + border_width), inner_mask)
+                    else:
+                        # put on ellipse/circle
+                        output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
+                        output = output.resize((size, size), Image.ANTIALIAS)
+                        outer_mask = mask.resize((size, size), Image.ANTIALIAS)
+                        process.paste(output, coord[i], outer_mask)
+                    os.remove('data/leveler/temp_badge.png')
+                else: # if it's just a color
+                    if border_color:
+                        # border
+                        square = Image.new('RGBA', (raw_length, raw_length), border_color)
+                        output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
+                        output = output.resize((size, size), Image.ANTIALIAS)
+                        outer_mask = mask.resize((size, size), Image.ANTIALIAS)
+                        process.paste(output, coord[i], outer_mask)
+
+                        # put on ellipse/circle
+                        square = Image.new('RGBA', (raw_length, raw_length), bg_color)
+                        output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
+                        output = output.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
+                        inner_mask = mask.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
+                        process.paste(output, (coord[i][0] + border_width, coord[i][1] + border_width), inner_mask)
+                        draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text
+                    else:
+                        square = Image.new('RGBA', (raw_length, raw_length), bg_color)
+                        output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
+                        output = output.resize((size, size), Image.ANTIALIAS)
+                        outer_mask = mask.resize((size, size), Image.ANTIALIAS)
+                        process.paste(output, coord[i], outer_mask)
+                        draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text
                 i += 1
         elif self.settings["badge_type"] == "squares":
             # squares, cause eslyium.
@@ -1009,6 +1045,8 @@ class Leveler:
             left = 10 + right_shift
             right = 52 + right_shift
             coord = [(left, vert_pos), (right, vert_pos), (left, vert_pos + 33), (right, vert_pos + 33), (left, vert_pos + 66), (right, vert_pos + 66)]
+            total_gap = 4
+            border_width = int(total_gap/2)
             i = 0
             for pair in sorted_badges[:6]:
                 badge = pair[0]
@@ -1018,23 +1056,31 @@ class Leveler:
                 text = badge.replace("_", " ")
                 size = 32
 
-                # determine image or color for badge bg
+                # determine image or color for badge bg, this is also pretty terrible tbh...
                 if await self._valid_image_url(bg_color):
                     # get image
                     async with aiohttp.get(bg_color) as r:
                         image = await r.content.read()
                     with open('data/leveler/temp_badge.png','wb') as f:
                         f.write(image)
+
                     badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
-                    badge_image = badge_image.resize((size, size), Image.ANTIALIAS)
-                    process.paste(badge_image, coord[i])
+                    if border_color != None:
+                        draw.rectangle([coord[i], (coord[i][0] + size, coord[i][1] + size)], fill=border_color) # border
+                        badge_image = badge_image.resize((size - total_gap + 1, size - total_gap + 1), Image.ANTIALIAS)
+                        process.paste(badge_image, (coord[i][0] + border_width, coord[i][1] + border_width))
+                    else:
+                        badge_image = badge_image.resize((size, size), Image.ANTIALIAS)
+                        process.paste(badge_image, coord[i])
+                    os.remove('data/leveler/temp_badge.png')
                 else:
-                    square = Image.new('RGBA', (size, size), bg_color)
-                    draw_square = ImageDraw.Draw(square)
-                    draw_square.rectangle((0,0), (size, size), fill = bg_color, outline = border_color)
-                    square = Image.alpha_composite(square, draw_square)
-                    process.paste(square, coord[i])
+                    if border_color != None:
+                        draw.rectangle([coord[i], (coord[i][0] + size, coord[i][1] + size)], fill=border_color) # border
+                        draw.rectangle([(coord[i][0] + border_width, coord[i][1] + border_width), (coord[i][0] + size - border_width, coord[i][1] + size - border_width)], fill=bg_color) # bg               
+                    else:
+                        draw.rectangle([coord[i], (coord[i][0] + size, coord[i][1] + size)], fill = bg_color)
                     draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text            
+                i+=1
         elif self.settings["badge_type"] == "tags" or self.settings["badge_type"] == "bars":
             vert_pos = 190
             i = 0
@@ -1043,7 +1089,12 @@ class Leveler:
                 bg_color = self.badges[badge]["bg_color"]
                 text_color = self.badges[badge]["text_color"]
                 border_color = self.badges[badge]["border_color"]
+                left_pos = 10
+                right_pos = 95
                 text = badge.replace("_", " ")
+                total_gap = 4
+                border_width = int(total_gap/2)
+                bar_size = (85, 15)
 
                 # determine image or color for badge bg
                 if await self._valid_image_url(bg_color):
@@ -1052,14 +1103,24 @@ class Leveler:
                     with open('data/leveler/temp_badge.png','wb') as f:
                         f.write(image)
                     badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
-                    badge_image = badge_image.resize((85, 15), Image.ANTIALIAS)
-                    process.paste(badge_image, (10,vert_pos + i*17))
+
+                    if border_color != None:
+                        draw.rectangle([(left_pos, vert_pos + i*17), (right_pos, vert_pos + 15 + i*17)], fill = border_color, outline = border_color) # border
+                        badge_image = badge_image.resize((bar_size[0] - total_gap + 1, bar_size[1] - total_gap + 1), Image.ANTIALIAS)
+                        process.paste(badge_image, (left_pos + border_width, vert_pos + border_width + i*17))
+                    else:
+                        badge_image = badge_image.resize(bar_size, Image.ANTIALIAS)
+                        process.paste(badge_image, (left_pos,vert_pos + i*17))                    
                     os.remove('data/leveler/temp_badge.png')
                 else:
-                    draw.rectangle([(10,vert_pos + i*17), (95, vert_pos + 15 + i*17)], fill = bg_color, outline = border_color) # badges
-                    bar_fnt = ImageFont.truetype(font_bold_file, 14)
-                    draw.text((self._center(10,95, text, bar_fnt), vert_pos + 2 + i*17), text,  font=bar_fnt, fill = text_color, outline = (0,0,0,255)) # Credits
-                vert_pos += 2
+                    if border_color != None:
+                        draw.rectangle([(left_pos, vert_pos + i*17), (right_pos, vert_pos + 15 + i*17)], fill = border_color, outline = border_color) # border
+                        draw.rectangle([(left_pos + border_width, vert_pos + border_width + i*17), (right_pos - border_width, vert_pos - border_width + 15 + i*17)], fill = bg_color) # bg                       
+                    else:
+                        draw.rectangle([(left_pos,vert_pos + i*17), (right_pos, vert_pos + 15 + i*17)], fill = bg_color, outline = border_color) # bg
+                    bar_fnt = ImageFont.truetype(font_bold_file, 14) # a slightly bigger font was requested
+                    draw.text((self._center(left_pos,right_pos, text, bar_fnt), vert_pos + 2 + i*17), text,  font=bar_fnt, fill = text_color) # Credits
+                vert_pos += 2 # spacing
                 i += 1
 
         result = Image.alpha_composite(result, process)
