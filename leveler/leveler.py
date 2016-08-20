@@ -263,8 +263,9 @@ class Leveler:
         default_a = 230
         auto = None
         valid = True
-        color_ranks = [3,0] # gets the first and fourth(arbitrary) most prominent colors
         hex_color = None
+        rep_rank = int(random.randint(2,3))
+        color_ranks = [rep_rank, 0] # adds some randomness to rep color + most prominent color
         # creates user if doesn't exist
         await self._create_user(user, server)
 
