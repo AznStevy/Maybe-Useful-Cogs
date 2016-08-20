@@ -625,6 +625,34 @@ class Leveler:
             else:
                 self.settings["lvl_msg"].remove(server.id)
                 await self.bot.say("**Level-up messages enabled for {}.**".format(server.name)) 
+        fileIO('data/leveler/settings.json', "save", self.settings)
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvladmin.command(pass_context = True, no_pm=True)
+    async def privatelvlalert(self, ctx, all:str=None):
+        """Toggles if lvl alert is a private message to the user."""
+        server = ctx.message.server
+        # deals with ENABLED array, not disabled
+
+        if "private_lvl_msg" not in self.settings["lvl_msg"].keys():
+            self.settings["private_lvl_msg"] = [] 
+
+        if all == "disableall":
+            self.settings["private_lvl_msg"] = []
+            await self.bot.say("**Private level-up messages disabled for all servers.**")
+        elif all == "enableall":
+            self.settings["private_lvl_msg"] = []
+            for server in self.bot.servers:
+                self.settings["private_lvl_msg"].append(server.id)
+            await self.bot.say("**Private level-up messages enabled for all servers.**")
+        else:
+            if server.id in self.settings["private_lvl_msg"]:
+                self.settings["private_lvl_msg"].remove(server.id)
+                await self.bot.say("**Private level-up messages disabled for {}.**".format(server.name))
+            else:
+                self.settings["private_lvl_msg"].append(server.id)
+                await self.bot.say("**Private level-up messages enabled for {}.**".format(server.name))
+
         fileIO('data/leveler/settings.json', "save", self.settings)             
 
     @commands.group(pass_context=True)
@@ -1354,6 +1382,11 @@ class Leveler:
                 if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
                     channel_id = self.settings["lvl_msg_lock"][server.id]
                     channel = find(lambda m: m.id == channel_id, server.channels)
+
+                # private message takes precedent, of course
+                if server.id in self.settings["private_lvl_msg"]:
+                    channel = user
+                    
                 await self.draw_levelup(user, server)
                 await self.bot.send_typing(channel)        
                 await self.bot.send_file(channel, 'data/leveler/level.png', content='**{} just gained a level!**'.format(self._is_mention(user))) 
