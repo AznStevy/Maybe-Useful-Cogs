@@ -1394,15 +1394,16 @@ class Leveler:
                     channel = find(lambda m: m.id == channel_id, server.channels)
 
                 server_identifier = "" # super hacky
-
+                name = self._is_mention(user) # also super hacky
                 # private message takes precedent, of course
                 if server.id in self.settings["private_lvl_msg"]:
                     server_identifier = " on {}".format(server.name)
                     channel = user
+                    name = "You"
 
                 await self.draw_levelup(user, server)
                 await self.bot.send_typing(channel)        
-                await self.bot.send_file(channel, 'data/leveler/level.png', content='**{} just gained a level{}!**'.format(self._is_mention(user), server_identifier)) 
+                await self.bot.send_file(channel, 'data/leveler/level.png', content='**{} just gained a level{}!**'.format(name, server_identifier)) 
         else:
             self.users[user.id]["servers"][server.id]["current_exp"] += exp
         fileIO('data/leveler/users.json', "save", self.users)
