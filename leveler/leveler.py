@@ -500,7 +500,7 @@ class Leveler:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
                 if not bank.can_spend(user, self.settings["bg_price"]):
-                    await self.bot.say("**Insufficient funds. Backgrounds changes cost: {}**".format(self.settings["bg_price"]))
+                    await self.bot.say("**Insufficient funds. Backgrounds changes cost: ${}**".format(self.settings["bg_price"]))
                     return False
                 else:
                     new_balance = bank.get_balance(user) - self.settings["bg_price"]
@@ -516,8 +516,8 @@ class Leveler:
             if self.settings["bg_price"] == 0:
                 return True
             else:
-                await self.bot.say("**There was an error with economy cog. Fix to allow purchases or set price to 0.**".format(prefix))
-                return False            
+                await self.bot.say("**There was an error with economy cog. Fix to allow purchases or set price to $0. Currently ${}**".format(prefix, self.settings["bg_price"]))
+                return False           
 
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(no_pm=True)
@@ -992,7 +992,9 @@ class Leveler:
         draw.text((num_align, 165), "{}".format(userinfo["total_exp"]),  font=general_info_fnt, fill=light_color) # Exp
         draw.text((num_align, 180), "#{}".format(await self._find_global_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
         try:
-            credits = fileIO("data/economy/bank.json", "load")[server.id][user.id]["balance"]
+            bank = self.bot.get_cog('Economy').bank
+            if bank.account_exists(user):
+                credits = bank.get_balance(user)
         except:
             credits = 0
         draw.text((num_align, 195), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
@@ -1265,7 +1267,9 @@ class Leveler:
         text_align = 290
         draw.text((text_align, 55), "#{}".format(await self._find_server_rank(user, server)), font=sub_header_fnt, fill=(110,110,110,255)) # Server Rank
         try:
-            credits = fileIO("data/economy/bank.json", "load")[server.id][user.id]["balance"]
+            bank = self.bot.get_cog('Economy').bank
+            if bank.account_exists(user):
+                credits = bank.get_balance(user)
         except:
             credits = 0
         draw.text((text_align, 75), "${}".format(credits),  font=sub_header_fnt, fill=(110,110,110,255)) # Credits
