@@ -1406,7 +1406,9 @@ class Leveler:
         for userid in self.users.keys():
             if "servers" in self.users[userid] and server.id in self.users[userid]["servers"]:
                 temp_user = find(lambda m: m.id == userid, server.members)
-                server_exp = self._required_exp(self.users[userid]["servers"][server.id]["level"] - 1)
+                server_exp = 0
+                for i in range(self.users[userid]["servers"][server.id]["level"]):
+                    server_exp += self._required_exp(i)
                 server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
                 if temp_user != None:
                     users.append((userid, temp_user.name, server_exp))
