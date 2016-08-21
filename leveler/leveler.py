@@ -995,6 +995,8 @@ class Leveler:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
                 credits = bank.get_balance(user)
+            else:
+                credits = 0
         except:
             credits = 0
         draw.text((num_align, 195), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
@@ -1270,6 +1272,8 @@ class Leveler:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
                 credits = bank.get_balance(user)
+            else:
+                credits = 0
         except:
             credits = 0
         draw.text((text_align, 75), "${}".format(credits),  font=sub_header_fnt, fill=(110,110,110,255)) # Credits
