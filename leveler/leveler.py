@@ -987,12 +987,19 @@ class Leveler:
         _write_unicode(userinfo["title"], head_align, 135, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
+        """
         level_right = right_pos
         level_left = level_right - 72
         draw.rectangle([(level_left, vert_pos), (level_right, vert_pos + 21)], fill="#AAA") # box
         lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])     
         draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), vert_pos + 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
+        """
 
+        level_right = 290
+        level_left = level_right - 72
+        draw.rectangle([(level_left, 0), (level_right, 21)], fill="#AAA") # box
+        lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])     
+        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
 
         rep_text = "+{}rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 141), rep_text, font=rep_fnt, fill=white_color)
