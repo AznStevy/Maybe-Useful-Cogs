@@ -944,7 +944,7 @@ class Leveler:
         # level outline
         lvl_circle = Image.new("RGBA", (raw_length, raw_length))
         draw_lvl_circle = ImageDraw.Draw(lvl_circle)
-        draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(20, 20, 20, 180), outline = (255, 255, 255, 250))
+        draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(180, 180, 180, 180), outline = (255, 255, 255, 250))
         draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=(255, 255, 255, 230), outline = (255, 255, 255, 230))
         # put on level bar circle
         lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
@@ -1283,7 +1283,7 @@ class Leveler:
      
         lvl_circle = Image.new("RGBA", (raw_length, raw_length))
         draw_lvl_circle = ImageDraw.Draw(lvl_circle)
-        draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(0, 0, 0, 100), outline = (255, 255, 255, 220))
+        draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(180, 180, 180, 180), outline = (255, 255, 255, 220))
         draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=(255, 255, 255, 230), outline = (255, 255, 255, 230))
         # put on level bar circle
         lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
@@ -1615,6 +1615,7 @@ def check_files():
                 "aurora" : "http://puu.sh/qJJv4/82aeb6de54.jpg",
                 "default" : "http://puu.sh/qJJgx/abeda18e15.jpg",
                 "nebula": "http://puu.sh/qJJqh/4a530e48ef.jpg",
+                "mountain" : "http://puu.sh/qJvR4/52a5797b4f.jpg"
             },
             "levelup": {
                 "default" : "http://puu.sh/qJJjz/27f499f989.jpg",
