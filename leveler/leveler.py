@@ -23,20 +23,9 @@ except:
     raise RuntimeError("You don't have pillow installed. run 'pip3 install pillow' and try again")
 import time
 
-# Thanks Tatsumaki (http://tatsumaki.xyz/) and others for design and bgs!
+# None anymore! lol :c
 bg_credits = {
-        "http://puu.sh/qAqqs/fc35ca027b.png" : "Tachit",
-        "http://puu.sh/qArJl/67ab438957.png" : "Hit-Point Ent",
-        "http://puu.sh/qArnm/4dd317d64c.png" : "Hit-Point Ent",
-        "http://puu.sh/qArKm/78ad01fd9d.png" : "Roadcrosser",
-        "http://puu.sh/qArYy/a0a7eeae18.png" : "Galaxy",
-        "http://puu.sh/qArZU/52f1282ef7.png" : "JAW3L",
-        "http://puu.sh/qArZt/e3369e4a95.png" : "Roadcrosser",
-        "http://puu.sh/qAs0b/2270971d6d.png" : "Hit-Point Ent",
-        "http://puu.sh/qAs0F/c9ee5ac9ff.png" : "Hit-Point Ent",
-        "http://puu.sh/qAs0q/eb5ae8b942.png" : "Hit-Point Ent",
-        "http://puu.sh/qAs1b/a2f4f9fcd1.png" : "Roadcrosser",
-        "http://puu.sh/qAsiM/a0e7321e8b.png" : "Roadcrosser"
+
 }
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
@@ -47,15 +36,15 @@ font_file = 'data/leveler/fonts/font.ttf'
 font_bold_file = 'data/leveler/fonts/font_bold.ttf'
 font_unicode_file = 'data/leveler/fonts/unicode.ttf'
 
-name_fnt = ImageFont.truetype(font_bold_file, 18)
+name_fnt = ImageFont.truetype(font_bold_file, 22)
 header_u_fnt = ImageFont.truetype(font_unicode_file, 14)
 title_fnt = ImageFont.truetype(font_file, 18)
 sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
 badge_fnt = ImageFont.truetype(font_bold_file, 12)
-exp_fnt = ImageFont.truetype(font_file, 14)
-level_fnt = ImageFont.truetype(font_bold_file, 30)
-level_label_fnt = ImageFont.truetype(font_bold_file, 20)
-general_info_fnt = ImageFont.truetype(font_bold_file, 14)
+exp_fnt = ImageFont.truetype(font_bold_file, 13)
+large_fnt = ImageFont.truetype(font_bold_file, 33)
+level_label_fnt = ImageFont.truetype(font_bold_file, 22)
+general_info_fnt = ImageFont.truetype(font_bold_file, 15)
 rep_fnt = ImageFont.truetype(font_bold_file, 30)
 text_fnt = ImageFont.truetype(font_bold_file, 12)
 text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
@@ -917,9 +906,18 @@ class Leveler:
         # draw filter
         draw.rectangle([(0,0),(290, 290)], fill=(0,0,0,10))
 
-        # draw transparent overlay           
-        draw.rectangle([(5,100), (285, 135)], fill=(50,50,50,200)) # header
-        draw.rectangle([(100,135), (285, 285)], fill=(200,200,200,230)) # main content
+        # draw transparent overlay
+        vert_pos = 110
+        left_pos = 70
+        right_pos = 285
+        title_height = 22
+        gap = 3
+
+        draw.rectangle([(5, vert_pos), (right_pos, vert_pos + title_height)], fill=(230,230,230,230)) # name box
+        # draw.rectangle([(left_pos - 20, content_top), (right_pos, content_bottom)], fill=(30, 30 ,30, 220), outline=(230,230,230,230)) # content box
+        draw.rectangle([(left_pos - 20, vert_pos + title_height), (right_pos, 156)], fill=(40,40,40,230)) # title box
+        draw.rectangle([(100,159), (285, 212)], fill=(30, 30 ,30, 220)) # general content
+        draw.rectangle([(100,215), (285, 285)], fill=(30, 30 ,30, 220)) # info content
 
         # stick in credits if needed
         if bg_url in bg_credits.keys():
@@ -927,70 +925,91 @@ class Leveler:
             credit_init = 290 - credit_fnt.getsize(credit_text)[0]
             draw.text((credit_init, 0), credit_text,  font=credit_fnt, fill=(0,0,0,100))
 
-        # determines rep section color
-        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
-            rep_fill = (92,130,203,230)
-        else:
-            rep_fill = tuple(userinfo["rep_color"])
-        draw.rectangle([(5,135), (100, 168)], fill = rep_fill) # reps
+        # draw level circle
+        multiplier = 6  
+        lvl_circle_dia = 104
+        circle_left = 1
+        circle_top = 42
+        raw_length = lvl_circle_dia * multiplier
+
+        # create mask
+        mask = Image.new('L', (raw_length, raw_length), 0)
+        draw_thumb = ImageDraw.Draw(mask)
+        draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
+
+        # drawing level bar calculate angle
+        start_angle = -90 # from top instead of 3oclock
+        angle = int(360 * (userinfo["servers"][server.id]["current_exp"]/self._required_exp(userinfo["servers"][server.id]["level"]))) + start_angle
+
+        # level outline
+        lvl_circle = Image.new("RGBA", (raw_length, raw_length))
+        draw_lvl_circle = ImageDraw.Draw(lvl_circle)
+        draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(20, 20, 20, 180), outline = (255, 255, 255, 250))
+        draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=(255, 255, 255, 230), outline = (255, 255, 255, 230))
+        # put on level bar circle
+        lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
+        lvl_bar_mask = mask.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
+        process.paste(lvl_circle, (circle_left, circle_top), lvl_bar_mask)  
 
         # determines badge section color
         if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
             badge_fill = (128,151,165,230)
         else:
             badge_fill = tuple(userinfo["badge_col_color"])
-        draw.rectangle([(5,168), (100, 285)], fill= badge_fill) # badges
 
-        draw.rectangle([(12,60), (92,140)], fill=(255,255,255, 160), outline=(255, 255, 255, 160)) # profile square
+        # determines rep section color, should go in front
+        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
+            rep_fill = (92,130,203,230)
+        else:
+            rep_fill = tuple(userinfo["rep_color"])
 
+        draw.rectangle([(5,132), (100, 285)], fill= badge_fill, outline = rep_fill) # badges 
+        draw.rectangle([(10,138), (95, 168)], fill = rep_fill) # reps
+
+        # draws mask
+        total_gap = 10
+        border = int(total_gap/2)
+        profile_size = lvl_circle_dia - total_gap
+        raw_length = profile_size * multiplier
         # put in profile picture
-        profile_size = (77, 77)
-        profile_image = profile_image.resize(profile_size, Image.ANTIALIAS)
-        process.paste(profile_image, (14, 62))
-
-        # level bar
-        draw.rectangle([(105,140), (280,160)], fill=(255,255,255,255), outline=(255, 255, 255, 160)) # box
-
-        # bar
-        full_length = 278-107
-        init_pos = 107
-        level_length = int(full_length * (userinfo["servers"][server.id]["current_exp"]/self._required_exp(userinfo["servers"][server.id]["level"])))
-        draw.rectangle([(init_pos, 142), (init_pos+level_length, 158)], fill=(150,150,150,255)) # box
-
-        #divider bar
-        draw.rectangle([(105, 213), (280, 215)], fill=(150,150,150,255)) # box
+        output = ImageOps.fit(profile_image, (raw_length, raw_length), centering=(0.5, 0.5))
+        output = output.resize((profile_size, profile_size), Image.ANTIALIAS)
+        mask = mask.resize((profile_size, profile_size), Image.ANTIALIAS)      
+        profile_image = profile_image.resize((profile_size, profile_size), Image.ANTIALIAS)
+        process.paste(profile_image, (circle_left + border, circle_top + border), mask)
+        
+        # draw level box
+        level_right = right_pos
+        level_left = level_right - 72
+        draw.rectangle([(level_left, vert_pos), (level_right, vert_pos + 21)], fill="#AAA") # box
+        lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])     
+        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), vert_pos + 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
 
         # write label text
-        white_color = (255,255,255,255)
-        light_color = (100,100,100,255)
+        white_color = (240,240,240,255)
+        light_color = (160,160,160,255)
 
-        head_align = 110
-        _write_unicode(user.name, head_align, 103, name_fnt, header_u_fnt, white_color)
-        _write_unicode(userinfo["title"], head_align, 118, title_fnt, header_u_fnt, white_color)
+        head_align = 105
+        _write_unicode(user.name, head_align, vert_pos + 2, level_label_fnt, header_u_fnt, (110,110,110,255))
+        _write_unicode(userinfo["title"], head_align, 135, level_label_fnt, header_u_fnt, white_color)
 
         rep_text = "+{}rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 141), rep_text, font=rep_fnt, fill=white_color)
 
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
 
-        exp_text = "Exp: {}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"]))
-        draw.text((self._center(init_pos, 278, exp_text, exp_fnt), 145), exp_text,  font=exp_fnt, fill=(40,40,40,250)) # Exp Bar
+        exp_text = "{}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"])) # Exp
+        draw.text((105, 99), exp_text,  font=exp_fnt, fill=(200, 200, 200, 255), outline = (0,0,0,250)) # Exp Text
         
         lvl_left = 100
-        label_align = 150
-        label_start = self._center(lvl_left, label_align, "Level", level_label_fnt)
-        draw.text((label_start, 165), "Level",  font=level_label_fnt, fill=light_color) # Level Label
-        lvl_label_width = level_label_fnt.getsize("Level")[0]
-        lvl_txt = "{}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(label_start, label_start + lvl_label_width, lvl_txt, level_fnt), 183), lvl_txt,  font=level_fnt, fill=light_color) # Level #
-
-        draw.text((label_align, 165), "Total Exp:",  font=general_info_fnt, fill=light_color) # Exp
-        draw.text((label_align, 180), "Global Rank:", font=general_info_fnt, fill=light_color) # Global Rank
+        label_align = 105
+        draw.text((label_align, 165), "Global Rank:", font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((label_align, 180), "Total Exp:",  font=general_info_fnt, fill=light_color) # Exp
         draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
 
         num_align = 230
-        draw.text((num_align, 165), "{}".format(userinfo["total_exp"]),  font=general_info_fnt, fill=light_color) # Exp
-        draw.text((num_align, 180), "#{}".format(await self._find_global_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((num_align, 165), "#{}".format(await self._find_global_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((num_align, 180), "{}".format(userinfo["total_exp"]),  font=general_info_fnt, fill=light_color) # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1006,7 +1025,7 @@ class Leveler:
         offset = 238
         for line in textwrap.wrap(userinfo["info"], width=40):
             # draw.text((margin, offset), line, font=text_fnt, fill=(70,70,70,255))
-            _write_unicode(line, margin, offset, text_fnt, text_u_fnt, (70,70,70,255))            
+            _write_unicode(line, margin, offset, text_fnt, text_u_fnt, light_color)            
             offset += text_fnt.getsize(line)[1] + 2
 
         # sort badges
@@ -1191,6 +1210,7 @@ class Leveler:
 
     async def draw_rank(self, user, server):
         userinfo = self.users[user.id]
+
         # get urls
         bg_url = userinfo["rank_background"]
         profile_url = user.avatar_url         
@@ -1219,6 +1239,7 @@ class Leveler:
         bg_color = (255,255,255, 0)
         result = Image.new('RGBA', (360, 100), bg_color)
         process = Image.new('RGBA', (360, 100), bg_color)
+        
         # puts in background
         bg_image = bg_image.resize((360, 100), Image.ANTIALIAS)
         bg_image = bg_image.crop((0,0, 360, 100))
@@ -1227,47 +1248,91 @@ class Leveler:
         # draw
         draw = ImageDraw.Draw(process)
 
-        # draw transparent overlay           
-        draw.rectangle([(77,5), (355, 95)], fill=(200,200,200,230)) # box
+        # draw transparent overlay
+        vert_pos = 5
+        left_pos = 70
+        right_pos = 360 - vert_pos
+        title_height = 22
+        gap = 3
+
+        draw.rectangle([(left_pos - 20,vert_pos), (right_pos, vert_pos + title_height)], fill=(230,230,230,230)) # title box
+        content_top = vert_pos + title_height + gap
+        content_bottom = 100 - vert_pos
+        draw.rectangle([(left_pos - 20, content_top), (right_pos, content_bottom)], fill=(30, 30 ,30, 220), outline=(230,230,230,230)) # content box
+
         # stick in credits if needed
         if bg_url in bg_credits.keys():
             credit_text = " ".join("{}".format(bg_credits[bg_url]))
             draw.text((2, 92), credit_text,  font=credit_fnt, fill=(0,0,0,190))
-        draw.rectangle([(37,12), (114,89)], fill=(255,255,255, 160), outline=(100, 100, 100, 200)) # profile square
 
+        # draw level circle
+        multiplier = 6  
+        lvl_circle_dia = 94
+        circle_left = 15
+        circle_top = int((100 - lvl_circle_dia)/2)
+        raw_length = lvl_circle_dia * multiplier
+
+        # create mask
+        mask = Image.new('L', (raw_length, raw_length), 0)
+        draw_thumb = ImageDraw.Draw(mask)
+        draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
+
+        # drawing level bar calculate angle
+        start_angle = -90 # from top instead of 3oclock
+        angle = int(360 * (userinfo["servers"][server.id]["current_exp"]/self._required_exp(userinfo["servers"][server.id]["level"]))) + start_angle
+     
+        lvl_circle = Image.new("RGBA", (raw_length, raw_length))
+        draw_lvl_circle = ImageDraw.Draw(lvl_circle)
+        draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(0, 0, 0, 100), outline = (255, 255, 255, 220))
+        draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=(255, 255, 255, 230), outline = (255, 255, 255, 230))
+        # put on level bar circle
+        lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
+        lvl_bar_mask = mask.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
+        process.paste(lvl_circle, (circle_left, circle_top), lvl_bar_mask)       
+
+        # draws mask
+        total_gap = 10
+        border = int(total_gap/2)
+        profile_size = lvl_circle_dia - total_gap
+        raw_length = profile_size * multiplier
         # put in profile picture
-        profile_size = (74, 74)
-        profile_image = profile_image.resize(profile_size, Image.ANTIALIAS)
-        process.paste(profile_image, (39, 14))
-
-        # level bar
-        draw.rectangle([(140,28), (330,45)], fill=(255,255,255,255), outline=(255, 255, 255, 160)) # box
-        # actual bar
-        full_length = 328 - 142
-        init_pos = 142
-        level_length = int(full_length * (userinfo["servers"][server.id]["current_exp"]/self._required_exp(userinfo["servers"][server.id]["level"])))    
-        draw.rectangle([(init_pos,30), (init_pos+level_length, 43)], fill=(200,200,200,250)) # box    
-
-        # write label text    
-        draw.text((140, 10), u"{}".format(user.name),  font=name_fnt, fill=(110,110,110,255)) # Name
-        exp_text = "Exp: {}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"]))
-        draw.text((self._center(140, 330, exp_text, exp_fnt), 31), exp_text,  font=exp_fnt, fill=(70,70,70,230)) # Exp Bar
+        output = ImageOps.fit(profile_image, (raw_length, raw_length), centering=(0.5, 0.5))
+        output = output.resize((profile_size, profile_size), Image.ANTIALIAS)
+        mask = mask.resize((profile_size, profile_size), Image.ANTIALIAS)      
+        profile_image = profile_image.resize((profile_size, profile_size), Image.ANTIALIAS)
+        process.paste(profile_image, (circle_left + border, circle_top + border), mask)
         
-        lvl_align = 142
-        draw.text((lvl_align, 49), "Level",  font=level_label_fnt, fill=(110,110,110,255)) # Level Label
-        lvl_label_width = level_label_fnt.getsize("Level")[0]
-        lvl_text = "{}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(lvl_align, lvl_align + lvl_label_width, lvl_text, level_fnt), 67), lvl_text,  font=level_fnt, fill=(110,110,110,255)) # Level #
+        # draw level box
+        level_left = 277
+        level_right = right_pos
+        draw.rectangle([(level_left, vert_pos), (level_right, vert_pos + title_height)], fill="#AAA") # box
+        lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])     
+        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), vert_pos + 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
 
+        # draw text
+        grey_color = (110,110,110,255)
+        white_color = (230,230,230,255)
+        # reputation points
+        left_text_align = 130
+        rep_align = self._center(110, 190, "R e p s", level_label_fnt)
+        draw.text((left_text_align - 20, vert_pos + 2), u"{}".format(user.name),  font=name_fnt, fill=grey_color) # Name 
+        draw.text((rep_align, 37), "R e p s".format(await self._find_server_rank(user, server)), font=level_label_fnt, fill=white_color) # Rep Label
+        rep_label_width = level_label_fnt.getsize("Reps")[0]
+        rep_text = "+{}".format(userinfo["rep"])
+        draw.text((self._center(rep_align, rep_align + rep_label_width, rep_text, large_fnt) , 63), rep_text, font=large_fnt, fill=white_color) # Rep
+       
         # divider bar
-        draw.rectangle([(190,50), (191, 90)], fill=(110,110,110,240))      
+        draw.rectangle([(190, 45), (191, 85)], fill=(160,160,160,240))      
 
+        # labels
         label_align = 210
-        draw.text((label_align, 55), "Server Rank:", font=sub_header_fnt, fill=(110,110,110,255)) # Server Rank Label
-        draw.text((label_align, 75), "Credits:",  font=sub_header_fnt, fill=(110,110,110,255)) # Credits
-
-        text_align = 290
-        draw.text((text_align, 55), "#{}".format(await self._find_server_rank(user, server)), font=sub_header_fnt, fill=(110,110,110,255)) # Server Rank
+        draw.text((label_align, 38), "Server Rank:", font=general_info_fnt, fill=white_color) # Server Rank
+        draw.text((label_align, 58), "Server Exp:", font=general_info_fnt, fill=white_color) # Server Exp
+        draw.text((label_align, 78), "Credits:", font=general_info_fnt, fill=white_color) # Credit
+        # info
+        right_text_align = 290
+        draw.text((right_text_align, 38), "#{}".format(await self._find_server_rank(user, server)), font=general_info_fnt, fill=white_color) # Rack
+        draw.text((right_text_align, 58), "{}".format(await self._find_server_exp(user, server)), font=general_info_fnt, fill=white_color) # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1276,7 +1341,7 @@ class Leveler:
                 credits = 0
         except:
             credits = 0
-        draw.text((text_align, 75), "${}".format(credits),  font=sub_header_fnt, fill=(110,110,110,255)) # Credits
+        draw.text((right_text_align, 78), "${}".format(credits),  font=general_info_fnt, fill=white_color) # Credits
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/rank.png','PNG', quality=100)
@@ -1323,8 +1388,8 @@ class Leveler:
         bg_image = bg_image.crop((0,0, 85, 105))
         result.paste(bg_image, (0,0))
 
-        # draw transparent overlay           
-        draw.rectangle([(0, 40), (85, 105)], fill=(200,200,200,200)) # white portion
+        # draw transparent overlay   
+        draw.rectangle([(0, 40), (85, 105)], fill=(30, 30 ,30, 220)) # white portion
         draw.rectangle([(15, 11), (68, 64)], fill=(255,255,255,160), outline=(100, 100, 100, 100)) # profile rectangle
 
         # put in profile picture
@@ -1337,9 +1402,9 @@ class Leveler:
         level_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 32)
 
         # write label text
-        draw.text((self._center(0, 85, "Level Up!", level_fnt2), 65), "Level Up!", font=level_fnt2, fill=(100,100,100,250)) # Level
+        draw.text((self._center(0, 85, "Level Up!", level_fnt2), 65), "Level Up!", font=level_fnt2, fill=(240,240,240,255)) # Level
         lvl_text = "LVL {}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(0, 85, lvl_text, level_fnt), 80), lvl_text, font=level_fnt, fill=(100,100,100,250)) # Level Number
+        draw.text((self._center(0, 85, lvl_text, level_fnt), 80), lvl_text, font=level_fnt, fill=(240,240,240,255)) # Level Number
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/level.png','PNG', quality=100)
@@ -1428,6 +1493,16 @@ class Leveler:
             if user[0] == targetid:
                 return rank
             rank+=1
+
+    async def _find_server_exp(self, user, server):
+        server_exp = 0
+        try:
+            for i in range(self.users[user.id]["servers"][server.id]["level"]):
+                server_exp += self._required_exp(i)
+            server_exp +=  self.users[user.id]["servers"][server.id]["current_exp"]
+            return server_exp
+        except:
+            return server_exp
 
     async def _find_global_rank(self, user, server):
         users = []
@@ -1523,54 +1598,26 @@ def check_files():
         print("Creating default leveler settings.json...")
         fileIO(settings_path, "save", default)
 
-    # thanks Tatsumaki (http://tatsumaki.xyz/) for these bgs! 
     bgs = {
             "profile": {
                 "alice": "http://puu.sh/qAoLx/7335f697fb.png",
-                "blueskyclouds": "http://puu.sh/qAoNL/a4f43997dc.png",
                 "bluestairs": "http://puu.sh/qAqpi/5e64aa6804.png",
-                "cherryblossom": "http://puu.sh/qAqqs/fc35ca027b.png",
-                "coastline": "http://puu.sh/qAqrz/70b8bf8f28.png",
+                "lamp": "http://puu.sh/qJJIb/05e4e02edd.jpg",
+                "coastline": "http://puu.sh/qJJVl/f4bf98d408.jpg",
                 "default": "http://puu.sh/qAqsG/18e228f43f.png",
-                "gilgamesh": "http://puu.sh/qAqtX/715235660e.png",
-                "girloncomputer": "http://puu.sh/qAqv3/214bae3d23.png",
-                "graffiti": "http://puu.sh/qAqyU/e312c4100c.png",
-                "greenery": "http://puu.sh/qAqzy/4c520ea92a.png",
-                "hearts": "http://puu.sh/qAr52/5ec47e8ec2.png",
                 "iceberg": "http://puu.sh/qAr6p/1d4e031a9e.png",
-                "ishidamitsunari": "http://puu.sh/qAr89/1ce985cf7c.png",
-                "lambo": "http://puu.sh/qAr94/b45aa8a5f7.png",
                 "miraiglasses": "http://puu.sh/qArax/ce8a8bf12e.png",
                 "miraikuriyama": "http://puu.sh/qArbY/59b883fe71.png",
-                "mistyforest": "http://puu.sh/qArkT/c3e6dd80e9.png",
-                "mountaindawn": "http://puu.sh/qArmh/d88eb46ca2.png",
-                "nekoatsume_sassyfran": "http://puu.sh/qArnm/4dd317d64c.png",
-                "nekoatsume_tower": "http://puu.sh/qArJl/67ab438957.png",
-                "potatoes": "http://puu.sh/qArKm/78ad01fd9d.png",
-                "suikaibuki": "http://puu.sh/qArKK/8bd593a864.png",
-                "tri_rainbow": "http://puu.sh/qArLB/36c80c6e3c.png",
-                "utsuhoaim": "http://puu.sh/qArMh/f76be2c98c.png",
-                "utsuhoflight": "http://puu.sh/qArNG/9f0c30d3ce.png",
-                "waterlilies": "http://puu.sh/qArOJ/2172044e13.png",
-                "wolfsrain": "http://puu.sh/qArPc/e3e63a9525.png"
+                "mountaindawn": "http://puu.sh/qJJLa/568b9a318b.jpg",
+                "waterlilies": "http://puu.sh/qJJSL/43b0f852c0.jpg"
             },
             "rank": {
-                "aurora" : "http://puu.sh/qArYi/69ae5e9699.png",
-                "piano" : "http://puu.sh/qArYy/a0a7eeae18.png",
-                "default" : "http://puu.sh/qArYW/b746dfbf84.png",
-                "interstellar":"http://puu.sh/qArZt/e3369e4a95.png",
-                "nebula": "http://puu.sh/qArZU/52f1282ef7.png",
-                "nekoatsume_belly": "http://puu.sh/qAs0b/2270971d6d.png",
-                "nekoatsume_cyan": "http://puu.sh/qAs0q/eb5ae8b942.png",
-                "nekoatsume_neapolitan": "http://puu.sh/qAs0F/c9ee5ac9ff.png",
-                "potatoes" : "http://puu.sh/qAs1b/a2f4f9fcd1.png",
-                "tri_rainbow" : "http://puu.sh/qAs1u/f5b4843e96.png"
+                "aurora" : "http://puu.sh/qJJv4/82aeb6de54.jpg",
+                "default" : "http://puu.sh/qJJgx/abeda18e15.jpg",
+                "nebula": "http://puu.sh/qJJqh/4a530e48ef.jpg",
             },
             "levelup": {
-                "default" : "http://puu.sh/qAsht/22a4f6b0ac.png",
-                "interstellar" : "http://puu.sh/qAshP/d55efec3f6.png",
-                "metalpatch": "http://puu.sh/qAsi4/438b912088.png",
-                "potatoes" : "http://puu.sh/qAsiM/a0e7321e8b.png"
+                "default" : "http://puu.sh/qJJjz/27f499f989.jpg",
             },
         }
 
