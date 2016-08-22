@@ -219,6 +219,10 @@ class Leveler:
             msg += "Rep section color: {}\n".format(self._rgb_to_hex(userinfo["rep_color"]))
         if "badge_col_color" in userinfo.keys() and userinfo["badge_col_color"]:
             msg += "Badge section color: {}\n".format(self._rgb_to_hex(userinfo["badge_col_color"]))
+        if "profile_exp_color" in userinfo.keys() and userinfo["profile_exp_color"]:
+            msg += "Profile exp color: {}\n".format(self._rgb_to_hex(userinfo["profile_exp_color"]))
+        if "rank_exp_color" in userinfo.keys() and userinfo["rank_exp_color"]:
+            msg += "Rank exp color: {}\n".format(self._rgb_to_hex(userinfo["rank_exp_color"]))
         msg += "Badges: "
         msg += ", ".join(userinfo["badges"])
         msg += "```"
