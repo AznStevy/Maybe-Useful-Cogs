@@ -1,3 +1,6 @@
+#Thanks to STEVY for this AWESOME LEVELER!! :)
+#Forked by MrB for LABOT, Instance of Red Discord BOT and Parallax BOT.
+#I'm really happy reading this code :) 
 import discord
 from discord.ext import commands
 from discord.utils import find
@@ -927,9 +930,9 @@ class Leveler:
 
         # draw level circle
         multiplier = 6  
-        lvl_circle_dia = 104
-        circle_left = 1
-        circle_top = 42
+        lvl_circle_dia = 105
+        circle_left = 95
+        circle_top = 5
         raw_length = lvl_circle_dia * multiplier
 
         # create mask
@@ -982,7 +985,7 @@ class Leveler:
         white_color = (240,240,240,255)
         light_color = (160,160,160,255)
 
-        head_align = 105
+        head_align = 130
         _write_unicode(user.name, head_align, vert_pos + 2, level_label_fnt, header_u_fnt, (110,110,110,255))
         _write_unicode(userinfo["title"], head_align, 135, level_label_fnt, header_u_fnt, white_color)
 
@@ -1007,17 +1010,17 @@ class Leveler:
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
 
         exp_text = "{}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"])) # Exp
-        draw.text((105, 99), exp_text,  font=exp_fnt, fill=(200, 200, 200, 255), outline = (0,0,0,250)) # Exp Text
-        
+        draw.text((130, 99), exp_text,  font=exp_fnt, fill=(200, 200, 200, 255), outline = (0,0,0,250)) # Exp Text
+       
         lvl_left = 100
         label_align = 105
-        draw.text((label_align, 165), "Global Rank:", font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((label_align, 180), "Total Exp:",  font=general_info_fnt, fill=light_color) # Exp
-        draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
+        draw.text((label_align, 225), "Server Rank:", font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((label_align, 245), "Server EXP:",  font=general_info_fnt, fill=light_color) # Exp
+        draw.text((label_align, 265), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
 
         num_align = 230
-        draw.text((num_align, 165), "#{}".format(await self._find_global_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((num_align, 180), "{}".format(userinfo["total_exp"]),  font=general_info_fnt, fill=light_color) # Exp
+        draw.text((num_align, 225), "#{}".format(await self._find_global_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((num_align, 245), "{}".format(userinfo["total_exp"]),  font=general_info_fnt, fill=light_color) # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1026,11 +1029,11 @@ class Leveler:
                 credits = 0
         except:
             credits = 0
-        draw.text((num_align, 195), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
+        draw.text((num_align, 265), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
 
-        draw.text((105, 220), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box 
+        draw.text((105, 165), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box 
         margin = 105
-        offset = 238
+        offset = 180
         for line in textwrap.wrap(userinfo["info"], width=40):
             # draw.text((margin, offset), line, font=text_fnt, fill=(70,70,70,255))
             _write_unicode(line, margin, offset, text_fnt, text_u_fnt, light_color)            
@@ -1260,7 +1263,7 @@ class Leveler:
         vert_pos = 5
         left_pos = 70
         right_pos = 360 - vert_pos
-        title_height = 22
+        title_height = 30
         gap = 3
 
         draw.rectangle([(left_pos - 20,vert_pos), (right_pos, vert_pos + title_height)], fill=(230,230,230,230)) # title box
@@ -1324,23 +1327,24 @@ class Leveler:
         left_text_align = 130
         rep_align = self._center(110, 190, "R e p s", level_label_fnt)
         draw.text((left_text_align - 20, vert_pos + 2), u"{}".format(user.name),  font=name_fnt, fill=grey_color) # Name 
-        draw.text((rep_align, 37), "R e p s".format(await self._find_server_rank(user, server)), font=level_label_fnt, fill=white_color) # Rep Label
+        draw.text((rep_align, 40), "R e p s".format(await self._find_server_rank(user, server)), font=level_label_fnt, fill=white_color) # Rep Label
         rep_label_width = level_label_fnt.getsize("Reps")[0]
         rep_text = "+{}".format(userinfo["rep"])
         draw.text((self._center(rep_align, rep_align + rep_label_width, rep_text, large_fnt) , 63), rep_text, font=large_fnt, fill=white_color) # Rep
        
         # divider bar
-        draw.rectangle([(190, 45), (191, 85)], fill=(160,160,160,240))      
+        draw.rectangle([(190, 45), (191, 85)], fill=(160,160,160,240))    
+		
 
         # labels
         label_align = 210
-        draw.text((label_align, 38), "Server Rank:", font=general_info_fnt, fill=white_color) # Server Rank
-        draw.text((label_align, 58), "Server Exp:", font=general_info_fnt, fill=white_color) # Server Exp
-        draw.text((label_align, 78), "Credits:", font=general_info_fnt, fill=white_color) # Credit
+        draw.text((label_align, 42), "Rank:", font=general_info_fnt, fill=white_color) # Server Rank
+        draw.text((label_align, 62), "EXP:", font=general_info_fnt, fill=white_color) # Server Exp
+        draw.text((label_align, 82), "Credits:", font=general_info_fnt, fill=white_color) # Credit
         # info
         right_text_align = 290
-        draw.text((right_text_align, 38), "#{}".format(await self._find_server_rank(user, server)), font=general_info_fnt, fill=white_color) # Rack
-        draw.text((right_text_align, 58), "{}".format(await self._find_server_exp(user, server)), font=general_info_fnt, fill=white_color) # Exp
+        draw.text((right_text_align, 42), "#{}".format(await self._find_server_rank(user, server)), font=general_info_fnt, fill=white_color) # Rack
+        draw.text((right_text_align, 62), "{}".format(await self._find_server_exp(user, server)), font=general_info_fnt, fill=white_color) # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1349,7 +1353,7 @@ class Leveler:
                 credits = 0
         except:
             credits = 0
-        draw.text((right_text_align, 78), "${}".format(credits),  font=general_info_fnt, fill=white_color) # Credits
+        draw.text((right_text_align, 82), "${}".format(credits),  font=general_info_fnt, fill=white_color) # Credits
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/rank.png','PNG', quality=100)
@@ -1386,7 +1390,7 @@ class Leveler:
         # set canvas
         bg_color = (255,255,255, 0)
         result = Image.new('RGBA', (85, 105), bg_color)
-        process = Image.new('RGBA', (85, 105), bg_color)
+        process = Image.new('RGBA', (85, 105), bg_color)	
 
         # draw
         draw = ImageDraw.Draw(process)
