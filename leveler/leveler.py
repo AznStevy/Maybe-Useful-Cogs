@@ -977,21 +977,9 @@ class Leveler:
         title_height = 22
         gap = 3
 
-        # determines rep section color
-        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
-            rep_fill = (92,130,203,230)
-        else:
-            rep_fill = tuple(userinfo["rep_color"])
-        # determines badge section color, should be behind the titlebar
-        if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
-            badge_fill = (128,151,165,230)
-        else:
-            badge_fill = tuple(userinfo["badge_col_color"])
         draw.rectangle([(left_pos - 20, vert_pos + title_height), (right_pos, 156)], fill=(40,40,40,230)) # title box
         draw.rectangle([(100,159), (285, 212)], fill=(30, 30 ,30, 220)) # general content
         draw.rectangle([(100,215), (285, 285)], fill=(30, 30 ,30, 220)) # info content
-        draw.rectangle([(5,133), (100, 285)], fill= badge_fill, outline = rep_fill) # badges
-        draw.rectangle([(10,138), (95, 168)], fill = rep_fill) # reps
 
         # stick in credits if needed
         if bg_url in bg_credits.keys():
@@ -1031,7 +1019,20 @@ class Leveler:
         lvl_bar_mask = mask.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
         process.paste(lvl_circle, (circle_left, circle_top), lvl_bar_mask)  
 
-        # draws mask
+        # draws boxes
+        # determines rep section color
+        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
+            rep_fill = (92,130,203,230)
+        else:
+            rep_fill = tuple(userinfo["rep_color"])
+        # determines badge section color, should be behind the titlebar
+        if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
+            badge_fill = (128,151,165,230)
+        else:
+            badge_fill = tuple(userinfo["badge_col_color"])
+        draw.rectangle([(5,133), (100, 285)], fill= badge_fill, outline = rep_fill) # badges
+        draw.rectangle([(10,138), (95, 168)], fill = rep_fill) # reps
+
         total_gap = 10
         border = int(total_gap/2)
         profile_size = lvl_circle_dia - total_gap
@@ -1068,13 +1069,14 @@ class Leveler:
         
         lvl_left = 100
         label_align = 105
-        draw.text((label_align, 165), "Global Rank:", font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((label_align, 180), "Total Exp:",  font=general_info_fnt, fill=light_color) # Exp
+        draw.text((label_align, 165), "Rank:", font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((label_align, 180), "Exp:",  font=general_info_fnt, fill=light_color) # Exp
         draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
 
-        num_align = 230
-        draw.text((num_align, 165), "#{}".format(await self._find_global_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((num_align, 180), "{}".format(userinfo["total_exp"]),  font=general_info_fnt, fill=light_color) # Exp
+        # local stats
+        num_local_align = 180
+        draw.text((num_local_align, 165), "#{}".format(await self._find_server_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((num_local_align, 180), "{}".format(await self._find_server_exp(user, server)),  font=general_info_fnt, fill=light_color) # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1083,7 +1085,18 @@ class Leveler:
                 credits = 0
         except:
             credits = 0
-        draw.text((num_align, 195), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
+        draw.text((num_local_align, 195), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
+
+        # global stats
+        num_align = 230
+        rank_txt = "#{}".format(await self._find_global_rank(user, server))
+        exp_txt = "{}".format(userinfo["total_exp"])
+        draw.text((num_align, 165), rank_txt, font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((num_align, 180), exp_txt,  font=general_info_fnt, fill=light_color) # Exp
+
+        # draw underlines
+        draw.rectangle([(num_align, 165 + general_info_fnt.getsize(rank_txt)[1]), num_align + general_info_fnt.getsize(rank_txt)[0], 166 + general_info_fnt.getsize(rank_txt)[1]], fill=light_color)
+        draw.rectangle([(num_align, 180 + general_info_fnt.getsize(exp_txt)[1]), num_align + general_info_fnt.getsize(exp_txt)[0], 181 + general_info_fnt.getsize(exp_txt)[1]], fill=light_color)
 
         draw.text((105, 220), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box 
         margin = 105
