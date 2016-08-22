@@ -977,10 +977,6 @@ class Leveler:
         title_height = 22
         gap = 3
 
-        # draw.rectangle([(left_pos - 20, content_top), (right_pos, content_bottom)], fill=(30, 30 ,30, 220), outline=(230,230,230,230)) # content box
-        draw.rectangle([(left_pos - 20, vert_pos + title_height), (right_pos, 156)], fill=(40,40,40,230)) # title box
-        draw.rectangle([(100,159), (285, 212)], fill=(30, 30 ,30, 220)) # general content
-        draw.rectangle([(100,215), (285, 285)], fill=(30, 30 ,30, 220)) # info content
         # determines rep section color
         if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
             rep_fill = (92,130,203,230)
@@ -991,7 +987,11 @@ class Leveler:
             badge_fill = (128,151,165,230)
         else:
             badge_fill = tuple(userinfo["badge_col_color"])
-        draw.rectangle([(5,132), (100, 285)], fill= badge_fill, outline = rep_fill) # badges 
+        draw.rectangle([(left_pos - 20, vert_pos + title_height), (right_pos, 156)], fill=(40,40,40,230)) # title box
+        draw.rectangle([(100,159), (285, 212)], fill=(30, 30 ,30, 220)) # general content
+        draw.rectangle([(100,215), (285, 285)], fill=(30, 30 ,30, 220)) # info content
+        draw.rectangle([(5,133), (100, 285)], fill= badge_fill, outline = rep_fill) # badges
+        draw.rectangle([(10,138), (95, 168)], fill = rep_fill) # reps
 
         # stick in credits if needed
         if bg_url in bg_credits.keys():
@@ -1030,9 +1030,6 @@ class Leveler:
         lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
         lvl_bar_mask = mask.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
         process.paste(lvl_circle, (circle_left, circle_top), lvl_bar_mask)  
-
-        # reps here because it should go in front on badge but behind profile circle
-        draw.rectangle([(10,138), (95, 168)], fill = rep_fill) # reps
 
         # draws mask
         total_gap = 10
