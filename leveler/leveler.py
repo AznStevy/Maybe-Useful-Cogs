@@ -28,7 +28,7 @@ bg_credits = {
 
 }
 
-prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
+prefix = fileIO("data/red/settings.json", "load")['PREFIXES']
 default_avatar_url = "http://puu.sh/qB89K/c37cd0de38.jpg"
 
 # fonts
@@ -252,11 +252,9 @@ class Leveler:
         """Set sidebar colors and accents. 'auto': according to current bg."""
         user = ctx.message.author
         server = ctx.message.server
-        options = ["default", "auto"]
         default_rep = (92,130,203,230)
         default_badge_col = (128,151,165,230)
         default_a = 230
-        auto = None
         valid = True
         hex_color = None
         rep_rank = int(random.randint(2,3))
@@ -297,48 +295,110 @@ class Leveler:
 
         if valid:
             await self.bot.say("**{}, your sidebar colors have been set!**".format(self._is_mention(user)))
-        fileIO('data/leveler/users.json', "save", self.users)
+            fileIO('data/leveler/users.json', "save", self.users)
+
+    @commands.cooldown(rate = '1', per = '3')
+    @lvlset.command(pass_context=True, no_pm=True)
+    async def profileexp(self, ctx, exp_color:str):
+        """Set profile exp color. 'auto': according to current bg."""
+        user = ctx.message.author
+        server = ctx.message.server
+        default_exp = (255, 255, 255, 230)
+        default_a = 230
+        valid = True
+        color_rank = int(random.randint(2,3))
+
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
+        if exp_color == "auto":
+            hex_color = await self._auto_color(self.users[user.id]["profile_background"], [color_rank])
+            color = self._hex_to_rgb(hex_color[0], default_a)
+            color = self._moderate_color(color, default_a, 5)
+            self.users[user.id]["profile_exp_color"] = color                 
+        elif exp_color == "default":
+            self.users[user.id]["profile_exp_color"] = default_exp
+        elif self._is_hex(exp_color):
+            self.users[user.id]["profile_exp_color"] = self._hex_to_rgb(exp_color, default_a)
+        else: 
+            await self.bot.say("**That's not a valid exp color!**")
+            valid = False
+
+        if valid:
+            await self.bot.say("**{}, your profile exp colors have been set!**".format(self._is_mention(user)))
+            fileIO('data/leveler/users.json', "save", self.users)
+
+    @commands.cooldown(rate = '1', per = '3')
+    @lvlset.command(pass_context=True, no_pm=True)
+    async def rankexp(self, ctx, exp_color:str):
+        """Set rank exp color. 'auto': according to current bg."""
+        user = ctx.message.author
+        server = ctx.message.server
+        default_exp = (255, 255, 255, 230)
+        default_a = 230
+        valid = True
+        color_rank = int(random.randint(2,3))
+        
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
+        if exp_color == "auto":
+            hex_color = await self._auto_color(self.users[user.id]["rank_background"], [color_rank])
+            color = self._hex_to_rgb(hex_color[0], default_a)
+            color = self._moderate_color(color, default_a, 5)
+            self.users[user.id]["rank_exp_color"] = color          
+        elif exp_color == "default":
+            self.users[user.id]["rank_exp_color"] = default_exp
+        elif self._is_hex(exp_color):
+            self.users[user.id]["rank_exp_color"] = self._hex_to_rgb(exp_color, default_a)
+        else: 
+            await self.bot.say("**That's not a valid exp color!**")
+            valid = False
+
+        if valid:
+            await self.bot.say("**{}, your rank exp colors have been set!**".format(self._is_mention(user)))
+            fileIO('data/leveler/users.json', "save", self.users)
 
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
     async def _auto_color(self, url:str, ranks):
         phrases = ["Calculating colors..."] # in case I want more
-        try:
-            await self.bot.say("**{}**".format(random.choice(phrases)))   
-            clusters = 10
+        # try:
+        await self.bot.say("**{}**".format(random.choice(phrases)))   
+        clusters = 10
 
-            async with aiohttp.get(url) as r:
-                image = await r.content.read()
-            with open('data/leveler/temp_auto.png','wb') as f:
-                f.write(image)
+        async with aiohttp.get(url) as r:
+            image = await r.content.read()
+        with open('data/leveler/temp_auto.png','wb') as f:
+            f.write(image)
 
-            im = Image.open('data/leveler/temp_auto.png').convert('RGBA')            
-            im = im.resize((290, 290)) # resized to reduce time
-            ar = scipy.misc.fromimage(im)
-            shape = ar.shape
-            ar = ar.reshape(scipy.product(shape[:2]), shape[2])
+        im = Image.open('data/leveler/temp_auto.png').convert('RGBA')            
+        im = im.resize((290, 290)) # resized to reduce time
+        ar = scipy.misc.fromimage(im)
+        shape = ar.shape
+        ar = ar.reshape(scipy.product(shape[:2]), shape[2])
 
-            codes, dist = scipy.cluster.vq.kmeans(ar.astype(float), clusters)
-            vecs, dist = scipy.cluster.vq.vq(ar, codes)         # assign codes
-            counts, bins = scipy.histogram(vecs, len(codes))    # count occurrences
+        codes, dist = scipy.cluster.vq.kmeans(ar.astype(float), clusters)
+        vecs, dist = scipy.cluster.vq.vq(ar, codes)         # assign codes
+        counts, bins = scipy.histogram(vecs, len(codes))    # count occurrences
 
-            # sort counts
-            freq_index = []
-            index = 0
-            for count in counts:
-                freq_index.append((index, count))
-                index += 1
-            sorted_list = sorted(freq_index, key=operator.itemgetter(1), reverse=True)
+        # sort counts
+        freq_index = []
+        index = 0
+        for count in counts:
+            freq_index.append((index, count))
+            index += 1
+        sorted_list = sorted(freq_index, key=operator.itemgetter(1), reverse=True)
 
-            colors = []
-            for rank in ranks:
-                color_index = min(rank, len(codes))
-                peak = codes[sorted_list[color_index][0]] # gets the original index
-                peak = peak.astype(int)
+        colors = []
+        for rank in ranks:
+            color_index = min(rank, len(codes))
+            peak = codes[sorted_list[color_index][0]] # gets the original index
+            peak = peak.astype(int)
 
-                colors.append(''.join(format(c, '02x') for c in peak))
-            return colors # returns array
-        except:
-            await self.bot.say("**Error or no scipy: 'pip3 install scipy'**")           
+            colors.append(''.join(format(c, '02x') for c in peak))
+        return colors # returns array
+        #except:
+            # await self.bot.say("**Error or no scipy: 'pip3 install scipy'**")           
 
     # converts hex to rgb
     def _hex_to_rgb(self, hex_num: str, a:int):
@@ -913,17 +973,28 @@ class Leveler:
         title_height = 22
         gap = 3
 
-        draw.rectangle([(5, vert_pos), (right_pos, vert_pos + title_height)], fill=(230,230,230,230)) # name box
         # draw.rectangle([(left_pos - 20, content_top), (right_pos, content_bottom)], fill=(30, 30 ,30, 220), outline=(230,230,230,230)) # content box
         draw.rectangle([(left_pos - 20, vert_pos + title_height), (right_pos, 156)], fill=(40,40,40,230)) # title box
         draw.rectangle([(100,159), (285, 212)], fill=(30, 30 ,30, 220)) # general content
         draw.rectangle([(100,215), (285, 285)], fill=(30, 30 ,30, 220)) # info content
+        # determines rep section color
+        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
+            rep_fill = (92,130,203,230)
+        else:
+            rep_fill = tuple(userinfo["rep_color"])
+        # determines badge section color, should be behind the titlebar
+        if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
+            badge_fill = (128,151,165,230)
+        else:
+            badge_fill = tuple(userinfo["badge_col_color"])
+        draw.rectangle([(5,132), (100, 285)], fill= badge_fill, outline = rep_fill) # badges 
 
         # stick in credits if needed
         if bg_url in bg_credits.keys():
             credit_text = "  ".join("Background by {}".format(bg_credits[bg_url]))
             credit_init = 290 - credit_fnt.getsize(credit_text)[0]
             draw.text((credit_init, 0), credit_text,  font=credit_fnt, fill=(0,0,0,100))
+        draw.rectangle([(5, vert_pos), (right_pos, vert_pos + title_height)], fill=(230,230,230,230)) # name box in front
 
         # draw level circle
         multiplier = 6  
@@ -945,25 +1016,18 @@ class Leveler:
         lvl_circle = Image.new("RGBA", (raw_length, raw_length))
         draw_lvl_circle = ImageDraw.Draw(lvl_circle)
         draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(180, 180, 180, 180), outline = (255, 255, 255, 250))
-        draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=(255, 255, 255, 230), outline = (255, 255, 255, 230))
+        # determines exp bar color
+        if "profile_exp_color" not in userinfo.keys() or not userinfo["profile_exp_color"]:
+            exp_fill = (255, 255, 255, 230)
+        else:
+            exp_fill = tuple(userinfo["profile_exp_color"])
+        draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=exp_fill, outline = (255, 255, 255, 230))
         # put on level bar circle
         lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
         lvl_bar_mask = mask.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
         process.paste(lvl_circle, (circle_left, circle_top), lvl_bar_mask)  
 
-        # determines badge section color
-        if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
-            badge_fill = (128,151,165,230)
-        else:
-            badge_fill = tuple(userinfo["badge_col_color"])
-
-        # determines rep section color, should go in front
-        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
-            rep_fill = (92,130,203,230)
-        else:
-            rep_fill = tuple(userinfo["rep_color"])
-
-        draw.rectangle([(5,132), (100, 285)], fill= badge_fill, outline = rep_fill) # badges 
+        # reps here because it should go in front on badge but behind profile circle
         draw.rectangle([(10,138), (95, 168)], fill = rep_fill) # reps
 
         # draws mask
@@ -987,17 +1051,9 @@ class Leveler:
         _write_unicode(userinfo["title"], head_align, 135, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
-        """
-        level_right = right_pos
-        level_left = level_right - 72
-        draw.rectangle([(level_left, vert_pos), (level_right, vert_pos + 21)], fill="#AAA") # box
-        lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])     
-        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), vert_pos + 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
-        """
-
         level_right = 290
         level_left = level_right - 72
-        draw.rectangle([(level_left, 0), (level_right, 21)], fill="#AAA") # box
+        draw.rectangle([(level_left, 0), (level_right, 21)], fill=(170, 170, 170, 255)) # box
         lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])     
         draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
 
@@ -1007,7 +1063,7 @@ class Leveler:
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
 
         exp_text = "{}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"])) # Exp
-        draw.text((105, 99), exp_text,  font=exp_fnt, fill=(200, 200, 200, 255), outline = (0,0,0,250)) # Exp Text
+        draw.text((105, 99), exp_text,  font=exp_fnt, fill=(exp_fill[0], exp_fill[1], exp_fill[2], 255), outline = (0,0,0,250)) # Exp Text
         
         lvl_left = 100
         label_align = 105
@@ -1292,7 +1348,12 @@ class Leveler:
         lvl_circle = Image.new("RGBA", (raw_length, raw_length))
         draw_lvl_circle = ImageDraw.Draw(lvl_circle)
         draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(180, 180, 180, 180), outline = (255, 255, 255, 220))
-        draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=(255, 255, 255, 230), outline = (255, 255, 255, 230))
+        # determines exp bar color
+        if "rank_exp_color" not in userinfo.keys() or not userinfo["rank_exp_color"]:
+            exp_fill = (255, 255, 255, 230)
+        else:
+            exp_fill = tuple(userinfo["rank_exp_color"])
+        draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=exp_fill, outline = (255, 255, 255, 230))
         # put on level bar circle
         lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
         lvl_bar_mask = mask.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
@@ -1436,7 +1497,7 @@ class Leveler:
         if user.bot:
             return
 
-        if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and prefix not in text:
+        if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and not any(x.startswith(text) for x in prefix):
             await self._process_exp(message, random.randint(15, 20))
             self.block[server.id][user.id]["chat"] = time.time()
             fileIO('data/leveler/block.json', "save", self.block)
@@ -1469,7 +1530,7 @@ class Leveler:
                 server_identifier = "" # super hacky
                 name = self._is_mention(user) # also super hacky
                 # private message takes precedent, of course
-                if server.id in self.settings["private_lvl_msg"]:
+                if "private_lvl_msg" in self.settings and server.id in self.settings["private_lvl_msg"]:
                     server_identifier = " on {}".format(server.name)
                     channel = user
                     name = "You"
