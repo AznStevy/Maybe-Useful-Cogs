@@ -1304,17 +1304,14 @@ class Leveler:
             dr /= bg_color[2]
 
         if abs(dr) > min_diff or abs(dg) > min_diff or abs(dg) > min_diff:
-            print("same")
             return text_color
         else:
             new_color = []
             if dr > 0 or dg > 0 or db > 0:
-                print("darker")
                 for val in bg_color:
                     new_color.append(int(val*min_diff))
                 return tuple(new_color)
             else:
-                print("lighter")
                 for val in bg_color:
                     val = val*(1+min_diff)
                     if val > 255:
