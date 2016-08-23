@@ -1050,7 +1050,7 @@ class Leveler:
         light_color = (160,160,160,255)
 
         head_align = 105
-        _write_unicode(self._truncate_text(user.name, 20), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255))
+        _write_unicode(self._truncate_text(user.name, 24), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255))
         _write_unicode(userinfo["title"], head_align, 136, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
@@ -1691,6 +1691,9 @@ class Leveler:
 
     def _truncate_text(self, text, max_length):
         if len(text) > max_length:
+            if text.strip('$').isdigit():
+                text = int(text.strip('$'))
+                return "${:.2E}".format(text)
             return text[:max_length-3] + "..."
         return text
 
