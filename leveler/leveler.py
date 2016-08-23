@@ -318,7 +318,7 @@ class Leveler:
         if exp_color == "auto":
             hex_color = await self._auto_color(self.users[user.id]["profile_background"], [color_rank])
             color = self._hex_to_rgb(hex_color[0], default_a)
-            color = self._moderate_color(color, default_a, 5)
+            color = self._moderate_color(color, default_a, 0)
             self.users[user.id]["profile_exp_color"] = color                 
         elif exp_color == "default":
             self.users[user.id]["profile_exp_color"] = default_exp
@@ -349,7 +349,7 @@ class Leveler:
         if exp_color == "auto":
             hex_color = await self._auto_color(self.users[user.id]["rank_background"], [color_rank])
             color = self._hex_to_rgb(hex_color[0], default_a)
-            color = self._moderate_color(color, default_a, 5)
+            color = self._moderate_color(color, default_a, 0)
             self.users[user.id]["rank_exp_color"] = color          
         elif exp_color == "default":
             self.users[user.id]["rank_exp_color"] = default_exp
@@ -989,7 +989,7 @@ class Leveler:
         draw.rectangle([(5, vert_pos), (right_pos, vert_pos + title_height)], fill=(230,230,230,230)) # name box in front
 
         # draw level circle
-        multiplier = 6  
+        multiplier = 8
         lvl_circle_dia = 104
         circle_left = 1
         circle_top = 42
@@ -1004,22 +1004,6 @@ class Leveler:
         start_angle = -90 # from top instead of 3oclock
         angle = int(360 * (userinfo["servers"][server.id]["current_exp"]/self._required_exp(userinfo["servers"][server.id]["level"]))) + start_angle
 
-        # level outline
-        lvl_circle = Image.new("RGBA", (raw_length, raw_length))
-        draw_lvl_circle = ImageDraw.Draw(lvl_circle)
-        draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(180, 180, 180, 180), outline = (255, 255, 255, 250))
-        # determines exp bar color
-        if "profile_exp_color" not in userinfo.keys() or not userinfo["profile_exp_color"]:
-            exp_fill = (255, 255, 255, 230)
-        else:
-            exp_fill = tuple(userinfo["profile_exp_color"])
-        draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=exp_fill, outline = (255, 255, 255, 230))
-        # put on level bar circle
-        lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
-        lvl_bar_mask = mask.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
-        process.paste(lvl_circle, (circle_left, circle_top), lvl_bar_mask)  
-
-        # draws boxes
         # determines rep section color
         if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
             rep_fill = (92,130,203,230)
@@ -1030,6 +1014,23 @@ class Leveler:
             badge_fill = (128,151,165,230)
         else:
             badge_fill = tuple(userinfo["badge_col_color"])
+
+        # level outline
+        lvl_circle = Image.new("RGBA", (raw_length, raw_length))
+        draw_lvl_circle = ImageDraw.Draw(lvl_circle)
+        draw_lvl_circle.ellipse([0, 0, raw_length, raw_length], fill=(badge_fill[0], badge_fill[1], badge_fill[2], 180), outline = (255, 255, 255, 250))
+        # determines exp bar color
+        if "profile_exp_color" not in userinfo.keys() or not userinfo["profile_exp_color"]:
+            exp_fill = (255, 255, 255, 230)
+        else:
+            exp_fill = tuple(userinfo["profile_exp_color"])
+        draw_lvl_circle.pieslice([0, 0, raw_length, raw_length], start_angle, angle, fill=exp_fill, outline = (255, 255, 255, 255))
+        # put on level bar circle
+        lvl_circle = lvl_circle.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
+        lvl_bar_mask = mask.resize((lvl_circle_dia, lvl_circle_dia), Image.ANTIALIAS)
+        process.paste(lvl_circle, (circle_left, circle_top), lvl_bar_mask)  
+
+        # draws boxes
         draw.rectangle([(5,133), (100, 285)], fill= badge_fill, outline = rep_fill) # badges
         draw.rectangle([(10,138), (95, 168)], fill = rep_fill) # reps
 
@@ -1049,15 +1050,16 @@ class Leveler:
         light_color = (160,160,160,255)
 
         head_align = 105
-        _write_unicode(user.name, head_align, vert_pos + 2, level_label_fnt, header_u_fnt, (110,110,110,255))
-        _write_unicode(userinfo["title"], head_align, 135, level_label_fnt, header_u_fnt, white_color)
+        _write_unicode(user.name, head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255))
+        _write_unicode(userinfo["title"], head_align, 136, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
         level_right = 290
         level_left = level_right - 72
-        draw.rectangle([(level_left, 0), (level_right, 21)], fill=(170, 170, 170, 255)) # box
-        lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])     
-        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
+        draw.rectangle([(level_left, 0), (level_right, 21)], fill=(rep_fill[0],rep_fill[1],rep_fill[2],160)) # box
+        lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])
+        lvl_color = self._contrast(rep_fill, badge_fill)   
+        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(lvl_color[0],lvl_color[1],lvl_color[2],255)) # Level #
 
         rep_text = "+{}rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 141), rep_text, font=rep_fnt, fill=white_color)
@@ -1065,7 +1067,8 @@ class Leveler:
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
 
         exp_text = "{}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"])) # Exp
-        draw.text((105, 99), exp_text,  font=exp_fnt, fill=(exp_fill[0], exp_fill[1], exp_fill[2], 255), outline = (0,0,0,250)) # Exp Text
+        exp_color = self._contrast(badge_fill, exp_fill)
+        draw.text((105, 99), exp_text,  font=exp_fnt, fill=(exp_color[0], exp_color[1], exp_color[2], 255), outline = (0,0,0,250)) # Exp Text
         
         lvl_left = 100
         label_align = 105
@@ -1284,7 +1287,40 @@ class Leveler:
         result.save('data/leveler/profile.png','PNG', quality=100)
 
         os.remove('data/leveler/temp_bg.png')
-        os.remove('data/leveler/temp_profile.png')     
+        os.remove('data/leveler/temp_profile.png')
+
+    # returns new text color based on the bg. doesn't work great.
+    def _contrast(self, bg_color, text_color):
+        min_diff = .50 # percent difference
+        dr = (bg_color[0] - text_color[0])
+        dg = (bg_color[1] - text_color[1])
+        db = (bg_color[2] - text_color[2])
+
+        if bg_color[0] != 0:
+            dr /= bg_color[0]
+        if bg_color[1] != 0:
+            dr /= bg_color[1]
+        if bg_color[2] != 0:
+            dr /= bg_color[2]
+
+        if abs(dr) > min_diff or abs(dg) > min_diff or abs(dg) > min_diff:
+            print("same")
+            return text_color
+        else:
+            new_color = []
+            if dr > 0 or dg > 0 or db > 0:
+                print("darker")
+                for val in bg_color:
+                    new_color.append(int(val*min_diff))
+                return tuple(new_color)
+            else:
+                print("lighter")
+                for val in bg_color:
+                    val = val*(1+min_diff)
+                    if val > 255:
+                        val = 255
+                    new_color.append(int(val))
+                return tuple(new_color)                
 
     async def draw_rank(self, user, server):
         userinfo = self.users[user.id]
@@ -1511,7 +1547,7 @@ class Leveler:
         if user.bot:
             return
 
-        if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and not any(x.startswith(text) for x in prefix):
+        if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and not any(text.startswith(x) for x in prefix):
             await self._process_exp(message, random.randint(15, 20))
             self.block[server.id][user.id]["chat"] = time.time()
             fileIO('data/leveler/block.json', "save", self.block)
