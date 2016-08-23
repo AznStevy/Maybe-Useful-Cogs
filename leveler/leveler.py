@@ -16,7 +16,7 @@ try:
     import scipy.misc
     import scipy.cluster
 except:
-    print("Run 'pip3 install --upgrade numpy', then 'pip3 install --upgrade scipy' and try again.")
+    print("Install scipy by either doing 'pip3 install scipy' or following instructions here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md")
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
 except:
@@ -366,43 +366,43 @@ class Leveler:
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
     async def _auto_color(self, url:str, ranks):
         phrases = ["Calculating colors..."] # in case I want more
-        # try:
-        await self.bot.say("**{}**".format(random.choice(phrases)))   
-        clusters = 10
+        try:
+            await self.bot.say("**{}**".format(random.choice(phrases)))   
+            clusters = 10
 
-        async with aiohttp.get(url) as r:
-            image = await r.content.read()
-        with open('data/leveler/temp_auto.png','wb') as f:
-            f.write(image)
+            async with aiohttp.get(url) as r:
+                image = await r.content.read()
+            with open('data/leveler/temp_auto.png','wb') as f:
+                f.write(image)
 
-        im = Image.open('data/leveler/temp_auto.png').convert('RGBA')            
-        im = im.resize((290, 290)) # resized to reduce time
-        ar = scipy.misc.fromimage(im)
-        shape = ar.shape
-        ar = ar.reshape(scipy.product(shape[:2]), shape[2])
+            im = Image.open('data/leveler/temp_auto.png').convert('RGBA')            
+            im = im.resize((290, 290)) # resized to reduce time
+            ar = scipy.misc.fromimage(im)
+            shape = ar.shape
+            ar = ar.reshape(scipy.product(shape[:2]), shape[2])
 
-        codes, dist = scipy.cluster.vq.kmeans(ar.astype(float), clusters)
-        vecs, dist = scipy.cluster.vq.vq(ar, codes)         # assign codes
-        counts, bins = scipy.histogram(vecs, len(codes))    # count occurrences
+            codes, dist = scipy.cluster.vq.kmeans(ar.astype(float), clusters)
+            vecs, dist = scipy.cluster.vq.vq(ar, codes)         # assign codes
+            counts, bins = scipy.histogram(vecs, len(codes))    # count occurrences
 
-        # sort counts
-        freq_index = []
-        index = 0
-        for count in counts:
-            freq_index.append((index, count))
-            index += 1
-        sorted_list = sorted(freq_index, key=operator.itemgetter(1), reverse=True)
+            # sort counts
+            freq_index = []
+            index = 0
+            for count in counts:
+                freq_index.append((index, count))
+                index += 1
+            sorted_list = sorted(freq_index, key=operator.itemgetter(1), reverse=True)
 
-        colors = []
-        for rank in ranks:
-            color_index = min(rank, len(codes))
-            peak = codes[sorted_list[color_index][0]] # gets the original index
-            peak = peak.astype(int)
+            colors = []
+            for rank in ranks:
+                color_index = min(rank, len(codes))
+                peak = codes[sorted_list[color_index][0]] # gets the original index
+                peak = peak.astype(int)
 
-            colors.append(''.join(format(c, '02x') for c in peak))
-        return colors # returns array
-        #except:
-            # await self.bot.say("**Error or no scipy: 'pip3 install scipy'**")           
+                colors.append(''.join(format(c, '02x') for c in peak))
+            return colors # returns array
+        except:
+            await self.bot.say("**Error or no scipy. Install scipy doing 'pip3 install scipy' or read here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md**")           
 
     # converts hex to rgb
     def _hex_to_rgb(self, hex_num: str, a:int):
@@ -977,6 +977,17 @@ class Leveler:
         title_height = 22
         gap = 3
 
+        # determines rep section color
+        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
+            rep_fill = (92,130,203,230)
+        else:
+            rep_fill = tuple(userinfo["rep_color"])
+        # determines badge section color, should be behind the titlebar
+        if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
+            badge_fill = (128,151,165,230)
+        else:
+            badge_fill = tuple(userinfo["badge_col_color"])
+
         draw.rectangle([(left_pos - 20, vert_pos + title_height), (right_pos, 156)], fill=(40,40,40,230)) # title box
         draw.rectangle([(100,159), (285, 212)], fill=(30, 30 ,30, 220)) # general content
         draw.rectangle([(100,215), (285, 285)], fill=(30, 30 ,30, 220)) # info content
@@ -1004,17 +1015,6 @@ class Leveler:
         start_angle = -90 # from top instead of 3oclock
         angle = int(360 * (userinfo["servers"][server.id]["current_exp"]/self._required_exp(userinfo["servers"][server.id]["level"]))) + start_angle
 
-        # determines rep section color
-        if "rep_color" not in userinfo.keys() or not userinfo["rep_color"]:
-            rep_fill = (92,130,203,230)
-        else:
-            rep_fill = tuple(userinfo["rep_color"])
-        # determines badge section color, should be behind the titlebar
-        if "badge_col_color" not in userinfo.keys() or not userinfo["badge_col_color"]:
-            badge_fill = (128,151,165,230)
-        else:
-            badge_fill = tuple(userinfo["badge_col_color"])
-
         # level outline
         lvl_circle = Image.new("RGBA", (raw_length, raw_length))
         draw_lvl_circle = ImageDraw.Draw(lvl_circle)
@@ -1031,7 +1031,7 @@ class Leveler:
         process.paste(lvl_circle, (circle_left, circle_top), lvl_bar_mask)  
 
         # draws boxes
-        draw.rectangle([(5,133), (100, 285)], fill= badge_fill, outline = rep_fill) # badges
+        draw.rectangle([(5,133), (100, 285)], fill= badge_fill) # badges
         draw.rectangle([(10,138), (95, 168)], fill = rep_fill) # reps
 
         total_gap = 10
@@ -1050,7 +1050,7 @@ class Leveler:
         light_color = (160,160,160,255)
 
         head_align = 105
-        _write_unicode(user.name, head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255))
+        _write_unicode(self._truncate_text(user.name, 20), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255))
         _write_unicode(userinfo["title"], head_align, 136, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
@@ -1072,14 +1072,16 @@ class Leveler:
         
         lvl_left = 100
         label_align = 105
-        draw.text((label_align, 165), "Rank:", font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((label_align, 180), "Exp:",  font=general_info_fnt, fill=light_color) # Exp
+        draw.text((label_align, 165), "Rank (S/G):", font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((label_align, 180), "Exp (S/G):",  font=general_info_fnt, fill=light_color) # Exp
         draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
 
         # local stats
         num_local_align = 180
-        draw.text((num_local_align, 165), "#{}".format(await self._find_server_rank(user, server)), font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((num_local_align, 180), "{}".format(await self._find_server_exp(user, server)),  font=general_info_fnt, fill=light_color) # Exp
+        s_rank_txt = "#{}".format(await self._find_server_rank(user, server))
+        draw.text((num_local_align, 165), self._truncate_text(s_rank_txt, 8), font=general_info_fnt, fill=light_color) # Server Rank
+        s_exp_txt = "{}".format(await self._find_server_exp(user, server))
+        draw.text((num_local_align, 180), self._truncate_text(s_exp_txt, 8),  font=general_info_fnt, fill=light_color) # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1088,14 +1090,15 @@ class Leveler:
                 credits = 0
         except:
             credits = 0
-        draw.text((num_local_align, 195), "${}".format(credits),  font=general_info_fnt, fill=light_color) # Credits
+        credit_txt = "${}".format(credits)
+        draw.text((num_local_align, 195), self._truncate_text(credit_txt, 18),  font=general_info_fnt, fill=light_color) # Credits
 
         # global stats
         num_align = 230
         rank_txt = "#{}".format(await self._find_global_rank(user, server))
         exp_txt = "{}".format(userinfo["total_exp"])
-        draw.text((num_align, 165), rank_txt, font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((num_align, 180), exp_txt,  font=general_info_fnt, fill=light_color) # Exp
+        draw.text((num_align, 165), self._truncate_text(rank_txt, 8), font=general_info_fnt, fill=light_color) # Global Rank
+        draw.text((num_align, 180), self._truncate_text(exp_txt, 8),  font=general_info_fnt, fill=light_color) # Exp
 
         # draw underlines
         draw.rectangle([(num_align, 165 + general_info_fnt.getsize(rank_txt)[1]), num_align + general_info_fnt.getsize(rank_txt)[0], 166 + general_info_fnt.getsize(rank_txt)[1]], fill=light_color)
@@ -1320,6 +1323,16 @@ class Leveler:
                 return tuple(new_color)                
 
     async def draw_rank(self, user, server):
+        def _write_unicode(text, init_x, y, font, unicode_font, fill):
+            write_pos = init_x
+
+            for char in text:
+                if char.isalnum() or char in string.punctuation or char in string.whitespace:
+                    draw.text((write_pos, y), char, font=font, fill=fill)
+                    write_pos += font.getsize(char)[0] 
+                else:
+                    draw.text((write_pos, y), u"{}".format(char), font=unicode_font, fill=fill)
+                    write_pos += unicode_font.getsize(char)[0]
         userinfo = self.users[user.id]
 
         # get urls
@@ -1431,7 +1444,7 @@ class Leveler:
         # reputation points
         left_text_align = 130
         rep_align = self._center(110, 190, "R e p s", level_label_fnt)
-        draw.text((left_text_align - 20, vert_pos + 2), u"{}".format(user.name),  font=name_fnt, fill=grey_color) # Name 
+        _write_unicode(self._truncate_text("{}".format(user.name), 23), left_text_align - 20, vert_pos + 2, name_fnt, header_u_fnt, grey_color) # Name 
         draw.text((rep_align, 37), "R e p s".format(await self._find_server_rank(user, server)), font=level_label_fnt, fill=white_color) # Rep Label
         rep_label_width = level_label_fnt.getsize("Reps")[0]
         rep_text = "+{}".format(userinfo["rep"])
@@ -1447,8 +1460,10 @@ class Leveler:
         draw.text((label_align, 78), "Credits:", font=general_info_fnt, fill=white_color) # Credit
         # info
         right_text_align = 290
-        draw.text((right_text_align, 38), "#{}".format(await self._find_server_rank(user, server)), font=general_info_fnt, fill=white_color) # Rack
-        draw.text((right_text_align, 58), "{}".format(await self._find_server_exp(user, server)), font=general_info_fnt, fill=white_color) # Exp
+        rank_txt = "#{}".format(await self._find_server_rank(user, server))
+        draw.text((right_text_align, 38), self._truncate_text(rank_txt, 12) , font=general_info_fnt, fill=white_color) # Rank
+        exp_txt = "{}".format(await self._find_server_exp(user, server))
+        draw.text((right_text_align, 58), self._truncate_text(exp_txt, 12), font=general_info_fnt, fill=white_color) # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1457,7 +1472,8 @@ class Leveler:
                 credits = 0
         except:
             credits = 0
-        draw.text((right_text_align, 78), "${}".format(credits),  font=general_info_fnt, fill=white_color) # Credits
+        credit_txt = "${}".format(credits)
+        draw.text((right_text_align, 78), self._truncate_text(credit_txt, 12),  font=general_info_fnt, fill=white_color) # Credits
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/rank.png','PNG', quality=100)
@@ -1672,6 +1688,11 @@ class Leveler:
                 "rep" : 0.0
             }
         fileIO('data/leveler/block.json', "save", self.block)
+
+    def _truncate_text(self, text, max_length):
+        if len(text) > max_length:
+            return text[:max_length-3] + "..."
+        return text
 
     # finds the the pixel to center the text
     def _center(self, start, end, text, font):
