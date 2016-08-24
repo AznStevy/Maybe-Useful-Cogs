@@ -1051,7 +1051,7 @@ class Leveler:
         light_color = (160,160,160,255)
 
         head_align = 105
-        _write_unicode(self._truncate_text(self._name(user, 24), 24), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255))
+        _write_unicode(self._truncate_text(self._name(user, 22), 22), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255)) # NAME
         _write_unicode(userinfo["title"], head_align, 136, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
