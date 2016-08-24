@@ -17,7 +17,7 @@ try:
     import scipy.misc
     import scipy.cluster
 except:
-    print("Install scipy by either doing 'pip3 install scipy' or following instructions here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md")
+    print("NOT CRUCIAL: Install scipy by either doing 'pip3 install numpy' and 'pip3 install scipy' or following instructions here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md")
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
 except:
@@ -389,7 +389,7 @@ class Leveler:
                 colors.append(''.join(format(c, '02x') for c in peak))
             return colors # returns array
         except:
-            await self.bot.say("**Error or no scipy. Install scipy doing 'pip3 install scipy' or read here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md**")           
+            await self.bot.say("**Error or no scipy. Install scipy doing `pip3 install numpy` and 'pip3 install scipy' or read here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md**")           
 
     # converts hex to rgb
     def _hex_to_rgb(self, hex_num: str, a:int):
