@@ -37,7 +37,7 @@ font_bold_file = 'data/leveler/fonts/font_bold.ttf'
 font_unicode_file = 'data/leveler/fonts/unicode.ttf'
 
 name_fnt = ImageFont.truetype(font_bold_file, 22)
-header_u_fnt = ImageFont.truetype(font_unicode_file, 14)
+header_u_fnt = ImageFont.truetype(font_unicode_file, 18)
 title_fnt = ImageFont.truetype(font_file, 18)
 sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
 badge_fnt = ImageFont.truetype(font_bold_file, 12)
@@ -45,6 +45,7 @@ exp_fnt = ImageFont.truetype(font_bold_file, 13)
 large_fnt = ImageFont.truetype(font_bold_file, 33)
 level_label_fnt = ImageFont.truetype(font_bold_file, 22)
 general_info_fnt = ImageFont.truetype(font_bold_file, 15)
+general_info_u_fnt = ImageFont.truetype(font_unicode_file, 11)
 rep_fnt = ImageFont.truetype(font_bold_file, 30)
 text_fnt = ImageFont.truetype(font_bold_file, 12)
 text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
@@ -1050,7 +1051,7 @@ class Leveler:
         light_color = (160,160,160,255)
 
         head_align = 105
-        _write_unicode(self._truncate_text(user.name, 24), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255))
+        _write_unicode(self._truncate_text(self._name(user, 24), 24), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255))
         _write_unicode(userinfo["title"], head_align, 136, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
@@ -1061,7 +1062,7 @@ class Leveler:
         lvl_color = self._contrast(rep_fill, badge_fill)   
         draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(lvl_color[0],lvl_color[1],lvl_color[2],255)) # Level #
 
-        rep_text = "+{}rep".format(userinfo["rep"])
+        rep_text = "+{} rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 141), rep_text, font=rep_fnt, fill=white_color)
 
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
@@ -1072,16 +1073,17 @@ class Leveler:
         
         lvl_left = 100
         label_align = 105
-        draw.text((label_align, 165), "Rank (S/G):", font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((label_align, 180), "Exp (S/G):",  font=general_info_fnt, fill=light_color) # Exp
+        _write_unicode(u"Rank:", label_align, 165, general_info_fnt, general_info_u_fnt, light_color)
+        draw.text((label_align, 180), "Exp:",  font=general_info_fnt, fill=light_color) # Exp
         draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
 
         # local stats
         num_local_align = 180
-        s_rank_txt = "#{}".format(await self._find_server_rank(user, server))
-        draw.text((num_local_align, 165), self._truncate_text(s_rank_txt, 8), font=general_info_fnt, fill=light_color) # Server Rank
-        s_exp_txt = "{}".format(await self._find_server_exp(user, server))
-        draw.text((num_local_align, 180), self._truncate_text(s_exp_txt, 8),  font=general_info_fnt, fill=light_color) # Exp
+        s_rank_txt = u"\U0001F3E0 " + self._truncate_text("#{}".format(await self._find_server_rank(user, server)), 8)
+        _write_unicode(s_rank_txt, num_local_align - general_info_u_fnt.getsize(u"\U0001F3E0 ")[0], 165, general_info_fnt, general_info_u_fnt, light_color) # Rank 
+
+        s_exp_txt = self._truncate_text("{}".format(await self._find_server_exp(user, server)), 8)
+        _write_unicode(s_exp_txt, num_local_align, 180, general_info_fnt, general_info_u_fnt, light_color)  # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1095,14 +1097,10 @@ class Leveler:
 
         # global stats
         num_align = 230
-        rank_txt = "#{}".format(await self._find_global_rank(user, server))
-        exp_txt = "{}".format(userinfo["total_exp"])
-        draw.text((num_align, 165), self._truncate_text(rank_txt, 8), font=general_info_fnt, fill=light_color) # Global Rank
-        draw.text((num_align, 180), self._truncate_text(exp_txt, 8),  font=general_info_fnt, fill=light_color) # Exp
-
-        # draw underlines
-        draw.rectangle([(num_align, 165 + general_info_fnt.getsize(rank_txt)[1]), num_align + general_info_fnt.getsize(rank_txt)[0], 166 + general_info_fnt.getsize(rank_txt)[1]], fill=light_color)
-        draw.rectangle([(num_align, 180 + general_info_fnt.getsize(exp_txt)[1]), num_align + general_info_fnt.getsize(exp_txt)[0], 181 + general_info_fnt.getsize(exp_txt)[1]], fill=light_color)
+        rank_txt = u"\U0001F30E " + self._truncate_text("#{}".format(await self._find_global_rank(user, server)), 8)
+        exp_txt = self._truncate_text("{}".format(userinfo["total_exp"]), 8)
+        _write_unicode(rank_txt, num_align - general_info_u_fnt.getsize("u\U0001F30E")[0] + 4, 165, general_info_fnt, general_info_u_fnt, light_color) # Rank 
+        _write_unicode(exp_txt, num_align, 180, general_info_fnt, general_info_u_fnt, light_color)  # Exp
 
         draw.text((105, 220), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box 
         margin = 105
@@ -1320,7 +1318,14 @@ class Leveler:
                     if val > 255:
                         val = 255
                     new_color.append(int(val))
-                return tuple(new_color)                
+                return tuple(new_color)
+
+    # returns a string with possibly a nickname
+    def _name(self, user, max_length):
+        if user.name == user.display_name:
+            return user.name
+        else:
+            return "{} ({})".format(user.name, self._truncate_text(user.display_name, max_length - len(user.name) - 3))
 
     async def draw_rank(self, user, server):
         def _write_unicode(text, init_x, y, font, unicode_font, fill):
@@ -1444,7 +1449,7 @@ class Leveler:
         # reputation points
         left_text_align = 130
         rep_align = self._center(110, 190, "R e p s", level_label_fnt)
-        _write_unicode(self._truncate_text("{}".format(user.name), 23), left_text_align - 20, vert_pos + 2, name_fnt, header_u_fnt, grey_color) # Name 
+        _write_unicode(self._truncate_text(self._name(user, 21), 21), left_text_align - 20, vert_pos + 2, name_fnt, header_u_fnt, grey_color) # Name 
         draw.text((rep_align, 37), "R e p s".format(await self._find_server_rank(user, server)), font=level_label_fnt, fill=white_color) # Rep Label
         rep_label_width = level_label_fnt.getsize("Reps")[0]
         rep_text = "+{}".format(userinfo["rep"])
