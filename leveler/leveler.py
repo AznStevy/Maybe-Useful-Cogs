@@ -11,6 +11,7 @@ import textwrap
 import aiohttp
 import operator
 import string
+import platform
 try:
     import scipy
     import scipy.misc
@@ -23,6 +24,11 @@ except:
     raise RuntimeError("You don't have pillow installed. run 'pip3 install pillow' and try again")
 import time
 
+# fonts
+font_file = 'data/leveler/fonts/font.ttf'
+font_bold_file = 'data/leveler/fonts/font_bold.ttf'
+font_unicode_file = 'data/leveler/fonts/unicode.ttf'
+
 # None anymore! lol :c
 bg_credits = {
 
@@ -30,26 +36,6 @@ bg_credits = {
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES']
 default_avatar_url = "http://puu.sh/qB89K/c37cd0de38.jpg"
-
-# fonts
-font_file = 'data/leveler/fonts/font.ttf'
-font_bold_file = 'data/leveler/fonts/font_bold.ttf'
-font_unicode_file = 'data/leveler/fonts/unicode.ttf'
-
-name_fnt = ImageFont.truetype(font_bold_file, 22)
-header_u_fnt = ImageFont.truetype(font_unicode_file, 18)
-title_fnt = ImageFont.truetype(font_file, 18)
-sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
-badge_fnt = ImageFont.truetype(font_bold_file, 12)
-exp_fnt = ImageFont.truetype(font_bold_file, 13)
-large_fnt = ImageFont.truetype(font_bold_file, 33)
-level_label_fnt = ImageFont.truetype(font_bold_file, 22)
-general_info_fnt = ImageFont.truetype(font_bold_file, 15)
-general_info_u_fnt = ImageFont.truetype(font_unicode_file, 11)
-rep_fnt = ImageFont.truetype(font_bold_file, 30)
-text_fnt = ImageFont.truetype(font_bold_file, 12)
-text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
-credit_fnt = ImageFont.truetype(font_bold_file, 10)
 
 class Leveler:
     """A level up thing with image generation!"""
@@ -919,6 +905,22 @@ class Leveler:
             await self.bot.say("**That level-up background name doesn't exist.**")
 
     async def draw_profile(self, user, server):
+
+        name_fnt = ImageFont.truetype(font_bold_file, 22)
+        header_u_fnt = ImageFont.truetype(font_unicode_file, 18)
+        title_fnt = ImageFont.truetype(font_file, 18)
+        sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
+        badge_fnt = ImageFont.truetype(font_bold_file, 12)
+        exp_fnt = ImageFont.truetype(font_bold_file, 13)
+        large_fnt = ImageFont.truetype(font_bold_file, 33)
+        level_label_fnt = ImageFont.truetype(font_bold_file, 22)
+        general_info_fnt = ImageFont.truetype(font_bold_file, 15)
+        general_info_u_fnt = ImageFont.truetype(font_unicode_file, 11)
+        rep_fnt = ImageFont.truetype(font_bold_file, 30)
+        text_fnt = ImageFont.truetype(font_bold_file, 12)
+        text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
+        credit_fnt = ImageFont.truetype(font_bold_file, 10)
+
         def _write_unicode(text, init_x, y, font, unicode_font, fill):
             write_pos = init_x
 
@@ -1079,8 +1081,14 @@ class Leveler:
 
         # local stats
         num_local_align = 180
-        s_rank_txt = u"\U0001F3E0 " + self._truncate_text("#{}".format(await self._find_server_rank(user, server)), 8)
-        _write_unicode(s_rank_txt, num_local_align - general_info_u_fnt.getsize(u"\U0001F3E0 ")[0], 165, general_info_fnt, general_info_u_fnt, light_color) # Rank 
+        local_symbol = u"\U0001F3E0 "
+        if "linux" in platform.system().lower():
+            local_symbol = u"\U0001F3E0 "
+        else:
+            local_symbol = "S "
+
+        s_rank_txt = local_symbol + self._truncate_text("#{}".format(await self._find_server_rank(user, server)), 8)
+        _write_unicode(s_rank_txt, num_local_align - general_info_u_fnt.getsize(local_symbol)[0], 165, general_info_fnt, general_info_u_fnt, light_color) # Rank 
 
         s_exp_txt = self._truncate_text("{}".format(await self._find_server_exp(user, server)), 8)
         _write_unicode(s_exp_txt, num_local_align, 180, general_info_fnt, general_info_u_fnt, light_color)  # Exp
@@ -1097,9 +1105,16 @@ class Leveler:
 
         # global stats
         num_align = 230
-        rank_txt = u"\U0001F30E " + self._truncate_text("#{}".format(await self._find_global_rank(user, server)), 8)
+        if "linux" in platform.system().lower():
+            global_symbol = u"\U0001F30E "
+            fine_adjust = 1
+        else:
+            global_symbol = "G "
+            fine_adjust = 0
+
+        rank_txt = global_symbol + self._truncate_text("#{}".format(await self._find_global_rank(user, server)), 8)
         exp_txt = self._truncate_text("{}".format(userinfo["total_exp"]), 8)
-        _write_unicode(rank_txt, num_align - general_info_u_fnt.getsize("u\U0001F30E")[0] + 4, 165, general_info_fnt, general_info_u_fnt, light_color) # Rank 
+        _write_unicode(rank_txt, num_align - general_info_u_fnt.getsize(global_symbol)[0] + fine_adjust, 165, general_info_fnt, general_info_u_fnt, light_color) # Rank 
         _write_unicode(exp_txt, num_align, 180, general_info_fnt, general_info_u_fnt, light_color)  # Exp
 
         draw.text((105, 220), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box 
@@ -1328,6 +1343,18 @@ class Leveler:
             return "{} ({})".format(user.name, self._truncate_text(user.display_name, max_length - len(user.name) - 3), max_length)
 
     async def draw_rank(self, user, server):
+
+        # fonts
+        name_fnt = ImageFont.truetype(font_bold_file, 22)
+        header_u_fnt = ImageFont.truetype(font_unicode_file, 18)
+        sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
+        badge_fnt = ImageFont.truetype(font_bold_file, 12)
+        large_fnt = ImageFont.truetype(font_bold_file, 33)
+        level_label_fnt = ImageFont.truetype(font_bold_file, 22)
+        general_info_fnt = ImageFont.truetype(font_bold_file, 15)
+        general_info_u_fnt = ImageFont.truetype(font_unicode_file, 11)
+        credit_fnt = ImageFont.truetype(font_bold_file, 10)
+
         def _write_unicode(text, init_x, y, font, unicode_font, fill):
             write_pos = init_x
 
