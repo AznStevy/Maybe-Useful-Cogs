@@ -1051,7 +1051,7 @@ class Leveler:
         light_color = (160,160,160,255)
 
         head_align = 105
-        _write_unicode(self._truncate_text(self._name(user, 22), 22), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255)) # NAME
+        _write_unicode(self._truncate_text(self._name(user, 24), 24), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255)) # NAME
         _write_unicode(userinfo["title"], head_align, 136, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
@@ -1325,7 +1325,7 @@ class Leveler:
         if user.name == user.display_name:
             return user.name
         else:
-            return "{} ({})".format(user.name, self._truncate_text(user.display_name, max_length - len(user.name) - 3))
+            return "{} ({})".format(user.name, self._truncate_text(user.display_name, max_length - len(user.name) - 3), max_length)
 
     async def draw_rank(self, user, server):
         def _write_unicode(text, init_x, y, font, unicode_font, fill):
