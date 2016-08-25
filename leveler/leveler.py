@@ -18,7 +18,7 @@ try:
     import scipy.cluster
 except:
     pass
-    
+
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
 except:
@@ -1072,7 +1072,7 @@ class Leveler:
 
         exp_text = "{}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"])) # Exp
         exp_color = self._contrast(badge_fill, exp_fill)
-        draw.text((105, 99), exp_text,  font=exp_fnt, fill=(exp_color[0], exp_color[1], exp_color[2], 255), outline = (0,0,0,250)) # Exp Text
+        draw.text((105, 99), exp_text,  font=exp_fnt, fill=(exp_color[0], exp_color[1], exp_color[2], 255)) # Exp Text
         
         lvl_left = 100
         label_align = 105
