@@ -17,7 +17,8 @@ try:
     import scipy.misc
     import scipy.cluster
 except:
-    print("NOT CRUCIAL: Install scipy by either doing 'pip3 install numpy' and 'pip3 install scipy' or following instructions here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md")
+    pass
+    
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
 except:
@@ -389,7 +390,7 @@ class Leveler:
                 colors.append(''.join(format(c, '02x') for c in peak))
             return colors # returns array
         except:
-            await self.bot.say("**Error or no scipy. Install scipy doing `pip3 install numpy` and 'pip3 install scipy' or read here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md**")           
+            await self.bot.say("```Error or no scipy. Install scipy doing 'pip3 install numpy' and 'pip3 install scipy' or read here: https://github.com/AznStevy/Maybe-Useful-Cogs/blob/master/README.md```")           
 
     # converts hex to rgb
     def _hex_to_rgb(self, hex_num: str, a:int):
@@ -1584,13 +1585,13 @@ class Leveler:
         user = message.author
         curr_time = time.time()
 
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
         if server.id in self.settings["disabled_servers"]:
             return
         if user.bot:
             return
+
+        # creates user if doesn't exist, bots are not logged.
+        await self._create_user(user, server)
 
         if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and not any(text.startswith(x) for x in prefix):
             await self._process_exp(message, random.randint(15, 20))
