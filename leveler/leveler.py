@@ -1786,7 +1786,7 @@ def check_files():
             },
             "rank": {
                 "aurora" : "http://puu.sh/qJJv4/82aeb6de54.jpg",
-                "default" : "http://puu.sh/qJJgx/abeda18e15.jpg",
+                "default" : "http://puu.sh/qNrD6/ee0ef9462d.jpg",
                 "nebula": "http://puu.sh/qJJqh/4a530e48ef.jpg",
                 "mountain" : "http://puu.sh/qJvR4/52a5797b4f.jpg"
             },
