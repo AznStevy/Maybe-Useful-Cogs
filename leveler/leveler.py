@@ -1777,7 +1777,7 @@ def check_files():
                 "bluestairs": "http://puu.sh/qAqpi/5e64aa6804.png",
                 "lamp": "http://puu.sh/qJJIb/05e4e02edd.jpg",
                 "coastline": "http://puu.sh/qJJVl/f4bf98d408.jpg",
-                "default": "http://puu.sh/qAqsG/18e228f43f.png",
+                "default": "http://puu.sh/qNrD6/ee0ef9462d.jpg",
                 "iceberg": "http://puu.sh/qAr6p/1d4e031a9e.png",
                 "miraiglasses": "http://puu.sh/qArax/ce8a8bf12e.png",
                 "miraikuriyama": "http://puu.sh/qArbY/59b883fe71.png",
@@ -1786,7 +1786,7 @@ def check_files():
             },
             "rank": {
                 "aurora" : "http://puu.sh/qJJv4/82aeb6de54.jpg",
-                "default" : "http://puu.sh/qNrD6/ee0ef9462d.jpg",
+                "default" : "http://puu.sh/qJJgx/abeda18e15.jpg",
                 "nebula": "http://puu.sh/qJJqh/4a530e48ef.jpg",
                 "mountain" : "http://puu.sh/qJvR4/52a5797b4f.jpg"
             },
