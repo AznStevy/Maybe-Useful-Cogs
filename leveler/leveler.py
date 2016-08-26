@@ -655,12 +655,12 @@ class Leveler:
 
         if all == "disableall":
             self.settings["lvl_msg"] = []
-            await self.bot.say("**Level-up messages enabled for all servers.**")
+            await self.bot.say("**Level-up messages disabled for all servers.**")
         elif all == "enableall":
             self.settings["lvl_msg"] = []
             for server in self.bot.servers:
                 self.settings["lvl_msg"].append(server.id)
-            await self.bot.say("**Level-up messages disabled for all servers.**")
+            await self.bot.say("**Level-up messages enabled for all servers.**")
         else:
             if server.id in self.settings["lvl_msg"]:
                 self.settings["lvl_msg"].remove(server.id)
