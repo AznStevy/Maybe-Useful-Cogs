@@ -1063,7 +1063,7 @@ class Leveler:
         draw.rectangle([(level_left, 0), (level_right, 21)], fill=(rep_fill[0],rep_fill[1],rep_fill[2],160)) # box
         lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])
         if badge_fill == (128,151,165,230):
-            lvl_color = (255, 255, 255, 230)
+            lvl_color = white_color
         else:
             lvl_color = self._contrast(rep_fill, badge_fill)   
         draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(lvl_color[0],lvl_color[1],lvl_color[2],255)) # Level #
