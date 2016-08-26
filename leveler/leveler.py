@@ -1582,24 +1582,27 @@ class Leveler:
 
     # loads the new text into the model
     async def on_message(self, message):
-        text = message.content
-        server = message.author.server
-        channel = message.channel
-        user = message.author
-        curr_time = time.time()
+        try:
+            text = message.content
+            channel = message.channel
+            server = message.author.server
+            user = message.author
+            curr_time = time.time()
 
-        if server.id in self.settings["disabled_servers"]:
-            return
-        if user.bot:
-            return
+            if server.id in self.settings["disabled_servers"]:
+                return
+            if user.bot:
+                return
 
-        # creates user if doesn't exist, bots are not logged.
-        await self._create_user(user, server)
+            # creates user if doesn't exist, bots are not logged.
+            await self._create_user(user, server)
 
-        if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and not any(text.startswith(x) for x in prefix):
-            await self._process_exp(message, random.randint(15, 20))
-            self.block[server.id][user.id]["chat"] = time.time()
-            fileIO('data/leveler/block.json', "save", self.block)
+            if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and not any(text.startswith(x) for x in prefix):
+                await self._process_exp(message, random.randint(15, 20))
+                self.block[server.id][user.id]["chat"] = time.time()
+                fileIO('data/leveler/block.json', "save", self.block)
+        except:
+            pass
 
     async def _process_exp(self, message, exp:int):
         server = message.author.server
