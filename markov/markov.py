@@ -106,33 +106,36 @@ class Markov:
 
     # loads the new text into the model
     async def track_message(self, message):
-        text = message.content
-        server = message.author.server
-        channel = message.channel
-        user = message.author
+        try:
+            text = message.content
+            server = message.author.server
+            channel = message.channel
+            user = message.author
 
-        if server.id not in self.settings:
-            self.settings[server.id] = {}
-        if channel.id not in self.settings[server.id]:
-            self.settings[server.id][channel.id] = False
+            if server.id not in self.settings:
+                self.settings[server.id] = {}
+            if channel.id not in self.settings[server.id]:
+                self.settings[server.id][channel.id] = False
 
-        if not self.settings[server.id][channel.id]:
-            return
+            if not self.settings[server.id][channel.id]:
+                return
 
-        if not user.bot and not any(text.startswith(p) for p in self.bot.command_prefix):
-            words = text.split(" ")
+            if not user.bot and not any(text.startswith(p) for p in self.bot.command_prefix):
+                words = text.split(" ")
 
-            if server.id not in self.model:
-                self.model[server.id] = {}
-            if channel.id not in self.model[server.id]:
-                self.model[server.id][channel.id] = {}
+                if server.id not in self.model:
+                    self.model[server.id] = {}
+                if channel.id not in self.model[server.id]:
+                    self.model[server.id][channel.id] = {}
 
-            for i in range(len(words) - 1):
-                if words[i] not in self.model[server.id][channel.id]:
-                    self.model[server.id][channel.id][words[i]] = list()
-                self.model[server.id][channel.id][words[i]].append(words[i + 1])
+                for i in range(len(words) - 1):
+                    if words[i] not in self.model[server.id][channel.id]:
+                        self.model[server.id][channel.id][words[i]] = list()
+                    self.model[server.id][channel.id][words[i]].append(words[i + 1])
 
-            self.save_json()
+                self.save_json()
+        except:
+            pass
 
 # ------------------------------ setup ----------------------------------------
 
