@@ -653,20 +653,20 @@ class Leveler:
         if not isinstance(self.settings["lvl_msg"], list):
             self.settings["lvl_msg"] = []
 
-        if all == "enableall":
+        if all == "disableall":
             self.settings["lvl_msg"] = []
             await self.bot.say("**Level-up messages enabled for all servers.**")
-        elif all == "disableall":
+        elif all == "enableall":
             self.settings["lvl_msg"] = []
             for server in self.bot.servers:
                 self.settings["lvl_msg"].append(server.id)
             await self.bot.say("**Level-up messages disabled for all servers.**")
         else:
-            if server.id not in self.settings["lvl_msg"]:
-                self.settings["lvl_msg"].append(server.id)
+            if server.id in self.settings["lvl_msg"]:
+                self.settings["lvl_msg"].remove(server.id)
                 await self.bot.say("**Level-up messages disabled for {}.**".format(server.name))
             else:
-                self.settings["lvl_msg"].remove(server.id)
+                self.settings["lvl_msg"].append(server.id)
                 await self.bot.say("**Level-up messages enabled for {}.**".format(server.name)) 
         fileIO('data/leveler/settings.json', "save", self.settings)
 
@@ -1617,7 +1617,7 @@ class Leveler:
                 self.settings["lvl_msg"] = []
                 fileIO('data/leveler/settings.json', "save", self.settings)
 
-            if server.id not in self.settings["lvl_msg"]: # if lvl msg is enabled
+            if server.id in self.settings["lvl_msg"]: # if lvl msg is enabled
                 # channel lock implementation
                 if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
                     channel_id = self.settings["lvl_msg_lock"][server.id]
@@ -1759,9 +1759,11 @@ def check_files():
         print("Creating block.json...")
         fileIO(f, "save", {})
 
+
+
     default = {
         "bg_price": 0,
-        "lvl_msg": [], # disabled lvl servers
+        "lvl_msg": [], # enabled lvl msg servers
         "disabled_servers": [],
         "badge_type": "circles"
         }
