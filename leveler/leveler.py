@@ -57,11 +57,12 @@ class Leveler:
         channel = ctx.message.channel
         server = user.server
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
-
-        if server.id in self.settings["disabled_servers"]:
-            return
 
         await self.draw_profile(user, server)
         await self.bot.send_typing(channel)         
@@ -75,11 +76,12 @@ class Leveler:
         channel = ctx.message.channel
         server = user.server
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
-
-        if server.id in self.settings["disabled_servers"]:
-            return
 
         # get urls
         await self.draw_rank(user, server)
@@ -97,6 +99,10 @@ class Leveler:
     async def top10(self,ctx, global_rank:str = None):
         '''Displays leaderboard. Add "global" parameter for global'''
         server = ctx.message.server
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
 
         users = []
         if global_rank == "global":
@@ -140,8 +146,9 @@ class Leveler:
         channel = ctx.message.channel
         server = user.server
         curr_time = time.time()
-
+        
         if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
             return
         if user.id == org_user.id:
             await self.bot.say("**You can't give a rep to yourself!**")
@@ -180,10 +187,17 @@ class Leveler:
     @commands.command(pass_context=True, no_pm=True)
     async def profileinfo(self, ctx, user : discord.Member = None):
         """Gives more specific details about user profile image."""
+
         if not user:
             user = ctx.message.author
         server = ctx.message.server
         userinfo = self.users[user.id]
+
+        server = ctx.message.server
+        
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
 
         # creates user if doesn't exist
         await self._create_user(user, server)
@@ -230,6 +244,12 @@ class Leveler:
     @lvlset.command(pass_context=True, no_pm=True)
     async def listbgs(self, ctx):
         '''Gives a list of backgrounds.'''
+        server = ctx.message.server
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         msg = ""
         for category in self.backgrounds.keys():
             msg += "**{}**".format(category.upper())
@@ -244,6 +264,11 @@ class Leveler:
         """Set sidebar colors and accents. 'auto': according to current bg."""
         user = ctx.message.author
         server = ctx.message.server
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         default_rep = (92,130,203,230)
         default_badge_col = (128,151,165,230)
         default_a = 230
@@ -251,6 +276,7 @@ class Leveler:
         hex_color = None
         rep_rank = int(random.randint(2,3))
         color_ranks = [rep_rank, 0] # adds some randomness to rep color + most prominent color
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -300,6 +326,10 @@ class Leveler:
         valid = True
         color_rank = int(random.randint(2,3))
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -331,6 +361,10 @@ class Leveler:
         valid = True
         color_rank = int(random.randint(2,3))
         
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -426,6 +460,10 @@ class Leveler:
         server = ctx.message.server
         max_char = 150
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -441,6 +479,10 @@ class Leveler:
         """Set your level background"""
         user = ctx.message.author
         server = ctx.message.server
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
 
         # creates user if doesn't exist
         await self._create_user(user, server)
@@ -459,6 +501,10 @@ class Leveler:
         user = ctx.message.author
         server = ctx.message.server
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -475,6 +521,10 @@ class Leveler:
         """Set your rank background"""
         user = ctx.message.author
         server = ctx.message.server
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
 
         # creates user if doesn't exist
         await self._create_user(user, server)
@@ -494,6 +544,10 @@ class Leveler:
         server = ctx.message.server
         max_char = 20
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -511,6 +565,40 @@ class Leveler:
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvladmin.command(pass_context=True, no_pm=True)
+    async def overview(self, ctx):
+        """A list of settings"""
+        disabled_servers = []
+        private_levels = []
+        disabled_levels = []
+        locked_channels = []
+
+        for server in self.bot.servers:
+            if "disabled_servers" in self.settings.keys() and server.id in self.settings["disabled_servers"]:
+                disabled_servers.append(server.name)
+            if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
+                for channel in server.channels:
+                    if self.settings["lvl_msg_lock"][server.id] == channel.id:
+                        locked_channels.append("\n{} -> #{}".format(server.name,channel.name))
+                disabled_servers.append(server.name)
+            if "lvl_msg" in self.settings.keys() and server.id in self.settings["lvl_msg"]:
+                disabled_levels.append(server.name)
+            if "private_lvl_msg" in self.settings.keys() and server.id in self.settings["private_lvl_msg"]:
+                private_levels.append(server.name)
+
+        msg = "```xl\n"
+        msg += "Mentions: {}\n".format(str(self.settings["mention"]))
+        msg += "Background Price: {}\n".format(self.settings["bg_price"])
+        msg += "Badge type: {}\n".format(self.settings["badge_type"])
+        msg += "Disabled Servers: {}\n".format(", ".join(disabled_servers))
+        msg += "Disabled Level Messages: {}\n".format(", ".join(disabled_levels))
+        msg += "Private Level Messages: {}\n".format(", ".join(private_levels))
+        msg += "Channel Locks: {}\n".format(", ".join(locked_channels))
+        msg += "```"
+        await self.bot.say(msg)
+
 
     @lvladmin.command(pass_context=True, no_pm=True)
     async def lvlmsglock(self, ctx):
@@ -578,6 +666,10 @@ class Leveler:
         org_user = ctx.message.author
         server = user.server
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         if level < 0:
             await self.bot.say("**Please enter a positive number.**")
             return
@@ -631,15 +723,15 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(pass_context=True, no_pm=True)
-    async def imggen(self, ctx):
-        """Toggle image generation commands on the server."""
+    async def toggle(self, ctx):
+        """Toggle most leveler commands on the current server."""
         server = ctx.message.server
         if server.id in self.settings["disabled_servers"]:
             self.settings["disabled_servers"].remove(server.id)
-            await self.bot.say("**Image-gen commands enabled.**")
+            await self.bot.say("**Leveler enabled on {}.**".format(server.name))
         else:
             self.settings["disabled_servers"].append(server.id)
-            await self.bot.say("**Image-gen commands disabled.**")
+            await self.bot.say("**Leveler disabled on {}.**".format(server.name))
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
@@ -647,7 +739,7 @@ class Leveler:
     async def lvlalert(self, ctx, all:str=None):
         """Toggle level-up messages on the server. Parameter: disableall/enableall"""
         server = ctx.message.server
-        # deals with disabled array, not enabled
+        # deals with enabled array
 
         # old version was boolean
         if not isinstance(self.settings["lvl_msg"], list):
@@ -719,7 +811,6 @@ class Leveler:
     async def addbadge(self, name:str, priority_num: int, text_color:str, bg_color:str, border_color:str = None):
         """Add a badge. Colors in hex, border color optional."""
 
-        # TODO: add hex checker
         if not self._is_hex(text_color):
             await self.bot.say("**Text color hex is not valid!**")
             return
@@ -774,6 +865,10 @@ class Leveler:
         channel = ctx.message.channel
         server = user.server
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         if name in self.badges:
             del self.badges[name]
 
@@ -795,6 +890,10 @@ class Leveler:
         org_user = ctx.message.author
         server = org_user.server
 
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -813,6 +912,10 @@ class Leveler:
         """Take a user's badge."""
         org_user = ctx.message.author
         server = org_user.server
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
 
         # creates user if doesn't exist
         await self._create_user(user, server)
@@ -1765,8 +1868,6 @@ def check_files():
         print("Creating block.json...")
         fileIO(f, "save", {})
 
-
-
     default = {
         "bg_price": 0,
         "lvl_msg": [], # enabled lvl msg servers
@@ -1785,6 +1886,7 @@ def check_files():
                 "bluestairs": "http://puu.sh/qAqpi/5e64aa6804.png",
                 "lamp": "http://puu.sh/qJJIb/05e4e02edd.jpg",
                 "coastline": "http://puu.sh/qJJVl/f4bf98d408.jpg",
+                "redblack": "http://puu.sh/qI0lQ/3a5e04ff05.jpg",
                 "default": "http://puu.sh/qNrD6/ee0ef9462d.jpg",
                 "iceberg": "http://puu.sh/qAr6p/1d4e031a9e.png",
                 "miraiglasses": "http://puu.sh/qArax/ce8a8bf12e.png",
