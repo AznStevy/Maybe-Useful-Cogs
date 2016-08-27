@@ -491,6 +491,12 @@ class Leveler:
             if await self._process_purchase(ctx):
                 self.users[user.id]["levelup_background"] = self.backgrounds["levelup"][image_name]
                 fileIO('data/leveler/users.json', "save", self.users)
+
+                f = "data/leveler/users/{}/level_bg.png".format(user.id)
+                async with aiohttp.get(self.backgrounds["levelup"][image_name]) as r:
+                    image = await r.content.read()
+                with open(f,'wb') as f:
+                    f.write(image)
                 await self.bot.say("**Your new level-up background has been succesfully set!**")
         else:
             await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
@@ -512,6 +518,13 @@ class Leveler:
             if await self._process_purchase(ctx):
                 self.users[user.id]["profile_background"] = self.backgrounds["profile"][image_name]
                 fileIO('data/leveler/users.json', "save", self.users)
+
+                f = "data/leveler/users/{}/profile_bg.png".format(user.id)
+                async with aiohttp.get(self.backgrounds["levelup"][image_name]) as r:
+                    image = await r.content.read()
+                with open(f,'wb') as f:
+                    f.write(image)
+
                 await self.bot.say("**Your new profile background has been succesfully set!**")
         else:
             await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
@@ -533,6 +546,13 @@ class Leveler:
             if await self._process_purchase(ctx):
                 self.users[user.id]["rank_background"] = self.backgrounds["rank"][image_name]
                 fileIO('data/leveler/users.json', "save", self.users)
+
+                f = "data/leveler/users/{}/rank_bg.png".format(user.id)
+                async with aiohttp.get(self.backgrounds["levelup"][image_name]) as r:
+                    image = await r.content.read()
+                with open(f,'wb') as f:
+                    f.write(image)
+
                 await self.bot.say("**Your new rank background has been succesfully set!**")
         else:
             await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
@@ -1045,21 +1065,25 @@ class Leveler:
         bg_image = Image
         profile_image = Image   
     
-        async with aiohttp.get(bg_url) as r:
-            image = await r.content.read()
-        with open('data/leveler/temp_bg.png','wb') as f:
-            f.write(image)
+        f = "data/leveler/users/{}/profile_bg.png".format(user.id)
+        if not fileIO(f, "check"):
+            async with aiohttp.get(bg_url) as r:
+                image = await r.content.read()
+            with open(f,'wb') as f:
+                f.write(image)
+
+        # still gets profile picture every time
         try:
             async with aiohttp.get(profile_url) as r:
                 image = await r.content.read()
         except:
             async with aiohttp.get(default_avatar_url) as r:
                 image = await r.content.read()
-        with open('data/leveler/temp_profile.png','wb') as f:
+        with open("data/leveler/users/{}/profile.png".format(user.id),'wb') as f:
             f.write(image)
 
-        bg_image = Image.open('data/leveler/temp_bg.png').convert('RGBA')            
-        profile_image = Image.open('data/leveler/temp_profile.png').convert('RGBA')
+        bg_image = Image.open("data/leveler/users/{}/profile_bg.png".format(user.id)).convert('RGBA')            
+        profile_image = Image.open("data/leveler/users/{}/profile.png".format(user.id)).convert('RGBA')
 
         # set canvas
         bg_color = (255,255,255,0)
@@ -1472,31 +1496,37 @@ class Leveler:
                 else:
                     draw.text((write_pos, y), u"{}".format(char), font=unicode_font, fill=fill)
                     write_pos += unicode_font.getsize(char)[0]
+
         userinfo = self.users[user.id]
 
         # get urls
-        bg_url = userinfo["rank_background"]
-        profile_url = user.avatar_url         
+        userinfo = self.users[user.id]
+        bg_url = userinfo["profile_background"]
+        profile_url = user.avatar_url 
 
         # create image objects
         bg_image = Image
-        profile_image = Image      
+        profile_image = Image   
     
-        async with aiohttp.get(bg_url) as r:
-            image = await r.content.read()
-        with open('data/leveler/temp_bg.png','wb') as f:
-            f.write(image)
+        f = "data/leveler/users/{}/rank_bg.png".format(user.id)
+        if not fileIO(f, "check"):
+            async with aiohttp.get(bg_url) as r:
+                image = await r.content.read()
+            with open(f,'wb') as f:
+                f.write(image)
+
+        # still gets profile picture every time
         try:
             async with aiohttp.get(profile_url) as r:
                 image = await r.content.read()
         except:
             async with aiohttp.get(default_avatar_url) as r:
                 image = await r.content.read()
-        with open('data/leveler/temp_profile.png','wb') as f:
+        with open("data/leveler/users/{}/profile.png".format(user.id),'wb') as f:
             f.write(image)
 
-        bg_image = Image.open('data/leveler/temp_bg.png').convert('RGBA')            
-        profile_image = Image.open('data/leveler/temp_profile.png').convert('RGBA')
+        bg_image = Image.open("data/leveler/users/{}/rank_bg.png").convert('RGBA')            
+        profile_image = Image.open("data/leveler/users/{}/profile.png").convert('RGBA')
 
         # set canvas
         bg_color = (255,255,255, 0)
@@ -1630,21 +1660,25 @@ class Leveler:
         bg_image = Image
         profile_image = Image   
     
-        async with aiohttp.get(bg_url) as r:
-            image = await r.content.read()
-        with open('data/leveler/temp_bg.png','wb') as f:
-            f.write(image)
+        f = "data/leveler/users/{}/level_bg.png".format(user.id)
+        if not fileIO(f, "check"):
+            async with aiohttp.get(bg_url) as r:
+                image = await r.content.read()
+            with open(f,'wb') as f:
+                f.write(image)
+
+        # still gets profile picture every time
         try:
             async with aiohttp.get(profile_url) as r:
                 image = await r.content.read()
         except:
             async with aiohttp.get(default_avatar_url) as r:
                 image = await r.content.read()
-        with open('data/leveler/temp_profile.png','wb') as f:
+        with open("data/leveler/users/{}/profile.png".format(user.id),'wb') as f:
             f.write(image)
 
-        bg_image = Image.open('data/leveler/temp_bg.png').convert('RGBA')            
-        profile_image = Image.open('data/leveler/temp_profile.png').convert('RGBA')
+        bg_image = Image.open("data/leveler/users/{}/level_bg.png").convert('RGBA')            
+        profile_image = Image.open("data/leveler/users/{}/profile.png").convert('RGBA')
 
         # set canvas
         bg_color = (255,255,255, 0)
@@ -1798,6 +1832,14 @@ class Leveler:
 
     # handles user creation, adding new server, blocking
     async def _create_user(self, user, server):
+
+        if not os.path.exists("data/leveler/users"):
+            print("Creating data/leveler/users folder...")
+            os.makedirs("data/leveler/users")
+
+        if not os.path.exists("data/leveler/users/{}".format(user.id)):
+            os.makedirs("data/leveler/users/{}".format(user.id))
+
         if user.id not in self.users:     
             new_account = {
                 "servers": {},
