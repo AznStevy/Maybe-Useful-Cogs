@@ -589,9 +589,11 @@ class Leveler:
                 private_levels.append(server.name)
 
         msg = "```xl\n"
-        msg += "Mentions: {}\n".format(str(self.settings["mention"]))
+        if "mention" in self.settings.keys():
+            msg += "Mentions: {}\n".format(str(self.settings["mention"]))
         msg += "Background Price: {}\n".format(self.settings["bg_price"])
-        msg += "Badge type: {}\n".format(self.settings["badge_type"])
+        if "badge_type" in self.settings.keys():
+            msg += "Badge type: {}\n".format(self.settings["badge_type"])
         msg += "Disabled Servers: {}\n".format(", ".join(disabled_servers))
         msg += "Disabled Level Messages: {}\n".format(", ".join(disabled_levels))
         msg += "Private Level Messages: {}\n".format(", ".join(private_levels))
