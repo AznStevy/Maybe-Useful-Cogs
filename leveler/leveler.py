@@ -158,7 +158,7 @@ class Leveler:
             return
 
         # creates user if doesn't exist
-        await self._create_user(org_user, server)
+        await self._create_user(user, server)
 
         if server.id not in self.block:
             self.block[server.id] = {}
