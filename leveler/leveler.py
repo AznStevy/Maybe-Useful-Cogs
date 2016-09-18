@@ -35,6 +35,10 @@ bg_credits = {
 
 }
 
+# Level exp scaling parameters. exp = coef*level + constant
+LEVEL_COEFFICIENT = 139
+LEVEL_CONSTANT = 65
+
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES']
 default_avatar_url = "http://puu.sh/qB89K/c37cd0de38.jpg"
 
@@ -121,9 +125,7 @@ class Leveler:
             for userid in self.users.keys():
                 if "servers" in self.users[userid] and server.id in self.users[userid]["servers"]:
                     temp_user = find(lambda m: m.id == userid, server.members)
-                    server_exp = 0
-                    for i in range(self.users[userid]["servers"][server.id]["level"]):
-                        server_exp += self._required_exp(i)
+                    server_exp = self._level_exp(self.users[userid]["servers"][server.id]["level"])
                     server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
                     if temp_user != None:
                         users.append((temp_user.name, server_exp))
@@ -208,8 +210,7 @@ class Leveler:
         msg += "Reps: {}\n".format(userinfo["rep"])
         msg += "Server Level: {}\n".format(userinfo["servers"][server.id]["level"])
         total_server_exp = 0
-        for i in range(userinfo["servers"][server.id]["level"]):
-            total_server_exp += self._required_exp(i)
+        total_server_exp += self._level_exp(userinfo["servers"][server.id]["level"])
         total_server_exp += userinfo["servers"][server.id]["current_exp"]
         msg += "Server Exp: {}\n".format(total_server_exp)
         msg += "Total Exp: {}\n".format(userinfo["total_exp"])
@@ -680,16 +681,12 @@ class Leveler:
         await self._create_user(user, server)
 
         # get rid of old level exp
-        old_server_exp = 0
-        for i in range(self.users[user.id]["servers"][server.id]["level"]):
-            old_server_exp += self._required_exp(i)
+        old_server_exp = self._level_exp(self.users[user.id]["servers"][server.id]["level"])
         self.users[user.id]["total_exp"] -= old_server_exp
         self.users[user.id]["total_exp"] -= self.users[user.id]["servers"][server.id]["current_exp"]
 
         # add in new exp
-        total_exp = 0
-        for i in range(level):
-            total_exp += self._required_exp(i)
+        total_exp = self._level_exp(level)
         self.users[user.id]["servers"][server.id]["current_exp"] = 0
         self.users[user.id]["servers"][server.id]["level"] = level
         self.users[user.id]["total_exp"] += total_exp
@@ -1756,10 +1753,8 @@ class Leveler:
         for userid in self.users.keys():
             if "servers" in self.users[userid] and server.id in self.users[userid]["servers"]:
                 temp_user = find(lambda m: m.id == userid, server.members)
-                server_exp = 0
-                for i in range(self.users[userid]["servers"][server.id]["level"]):
-                    server_exp += self._required_exp(i)
-                server_exp +=  self.users[userid]["servers"][server.id]["current_exp"]
+                server_exp = self._level_exp(self.users[userid]["servers"][server.id]["level"])
+                server_exp += self.users[userid]["servers"][server.id]["current_exp"]
                 if temp_user != None:
                     users.append((userid, temp_user.name, server_exp))
         sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
@@ -1773,8 +1768,7 @@ class Leveler:
     async def _find_server_exp(self, user, server):
         server_exp = 0
         try:
-            for i in range(self.users[user.id]["servers"][server.id]["level"]):
-                server_exp += self._required_exp(i)
+            server_exp += self._level_exp(self.users[user.id]["servers"][server.id]["level"])
             server_exp +=  self.users[user.id]["servers"][server.id]["current_exp"]
             return server_exp
         except:
@@ -1852,7 +1846,11 @@ class Leveler:
     def _required_exp(self, level:int):
         if level < 0:
             return 0
-        return 139*level+65
+        return LEVEL_COEFFICIENT*level + LEVEL_CONSTANT
+
+    # Calculates required exp for level
+    def _level_exp(self, level: int):
+        return level*LEVEL_CONSTANT + LEVEL_COEFFICIENT*level*(level-1)//2
 # ------------------------------ setup ----------------------------------------    
 def check_folders():
     if not os.path.exists("data/leveler"):
