@@ -2,16 +2,11 @@ import discord
 from discord.ext import commands
 from discord.utils import find
 from __main__ import send_cmd_help
-import random
-import os
-import re
+import platform, asyncio, string, operator, random, textwrap
+import os, re, aiohttp
 from .utils.dataIO import fileIO
 from cogs.utils import checks
-import textwrap
-import aiohttp
-import operator
-import string
-import platform
+import threading
 try:
     import scipy
     import scipy.misc
@@ -42,6 +37,7 @@ class Leveler:
     """A level up thing with image generation!"""
 
     def __init__(self, bot):
+        self.threads = []
         self.bot = bot
         self.users = fileIO("data/leveler/users.json", "load")
         self.block = fileIO("data/leveler/block.json", "load")
@@ -63,10 +59,12 @@ class Leveler:
 
         # creates user if doesn't exist
         await self._create_user(user, server)
-
-        await self.draw_profile(user, server)
+        t = threading.Thread(target = await self.draw_profile(user, server))
+        self.threads.append(t)
+        t.start()
         await self.bot.send_typing(channel)         
-        await self.bot.send_file(channel, 'data/leveler/profile.png', content='**User profile for {}**'.format(self._is_mention(user))) 
+        await self.bot.send_file(channel, 'data/leveler/gen/profile{}.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
+        self._clear_folder()
 
     @commands.command(pass_context=True, no_pm=True)
     async def rank(self,ctx,user : discord.Member=None):
@@ -82,11 +80,12 @@ class Leveler:
 
         # creates user if doesn't exist
         await self._create_user(user, server)
-
-        # get urls
-        await self.draw_rank(user, server)
+        t = threading.Thread(target = await self.draw_rank(user, server))
+        self.threads.append(t)
+        t.start()
         await self.bot.send_typing(channel)            
-        await self.bot.send_file(channel, 'data/leveler/rank.png', content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
+        await self.bot.send_file(channel, 'data/leveler/gen/rank{}.png'.format(user.id), content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
+        self._clear_folder()
 
     # should the user be mentioned based on settings?
     def _is_mention(self,user):
@@ -1009,9 +1008,8 @@ class Leveler:
             await self.bot.say("**The level-up background(`{}`) has been deleted.**".format(name))
         else:                                 
             await self.bot.say("**That level-up background name doesn't exist.**")
-
+    
     async def draw_profile(self, user, server):
-
         name_fnt = ImageFont.truetype(font_bold_file, 22)
         header_u_fnt = ImageFont.truetype(font_unicode_file, 18)
         title_fnt = ImageFont.truetype(font_file, 18)
@@ -1049,7 +1047,7 @@ class Leveler:
     
         async with aiohttp.get(bg_url) as r:
             image = await r.content.read()
-        with open('data/leveler/temp_bg.png','wb') as f:
+        with open('data/leveler/gen/temp_profile_bg{}.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
             async with aiohttp.get(profile_url) as r:
@@ -1057,11 +1055,11 @@ class Leveler:
         except:
             async with aiohttp.get(default_avatar_url) as r:
                 image = await r.content.read()
-        with open('data/leveler/temp_profile.png','wb') as f:
+        with open('data/leveler/gen/temp_profile_profile{}.png'.format(user.id),'wb') as f:
             f.write(image)
 
-        bg_image = Image.open('data/leveler/temp_bg.png').convert('RGBA')            
-        profile_image = Image.open('data/leveler/temp_profile.png').convert('RGBA')
+        bg_image = Image.open('data/leveler/gen/temp_profile_bg{}.png'.format(user.id)).convert('RGBA')            
+        profile_image = Image.open('data/leveler/gen/temp_profile_profile{}.png'.format(user.id)).convert('RGBA')
 
         # set canvas
         bg_color = (255,255,255,0)
@@ -1273,9 +1271,9 @@ class Leveler:
                     # get image
                     async with aiohttp.get(bg_color) as r:
                         image = await r.content.read()
-                    with open('data/leveler/temp_badge.png','wb') as f:
+                    with open('data/leveler/gen/temp_badge{}.png'.format(user.id),'wb') as f:
                         f.write(image)
-                    badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
+                    badge_image = Image.open('data/leveler/gen/temp_badge{}.png'.format(user.id)).convert('RGBA')
                     badge_image = badge_image.resize((raw_length, raw_length), Image.ANTIALIAS)
 
                     # structured like this because if border = 0, still leaves outline.
@@ -1298,7 +1296,7 @@ class Leveler:
                         output = output.resize((size, size), Image.ANTIALIAS)
                         outer_mask = mask.resize((size, size), Image.ANTIALIAS)
                         process.paste(output, coord[i], outer_mask)
-                    os.remove('data/leveler/temp_badge.png')
+                    os.remove('data/leveler/gen/temp_badge{}.png'.format(user.id))
                 else: # if it's just a color
                     if border_color:
                         # border
@@ -1346,10 +1344,10 @@ class Leveler:
                     # get image
                     async with aiohttp.get(bg_color) as r:
                         image = await r.content.read()
-                    with open('data/leveler/temp_badge.png','wb') as f:
+                    with open('data/leveler/gen/temp_badge{}.png'.format(user.id),'wb') as f:
                         f.write(image)
 
-                    badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
+                    badge_image = Image.open('data/leveler/gen/temp_badge{}.png'.format(user.id)).convert('RGBA')
                     if border_color != None:
                         draw.rectangle([coord[i], (coord[i][0] + size, coord[i][1] + size)], fill=border_color) # border
                         badge_image = badge_image.resize((size - total_gap + 1, size - total_gap + 1), Image.ANTIALIAS)
@@ -1357,7 +1355,7 @@ class Leveler:
                     else:
                         badge_image = badge_image.resize((size, size), Image.ANTIALIAS)
                         process.paste(badge_image, coord[i])
-                    os.remove('data/leveler/temp_badge.png')
+                    os.remove('data/leveler/gen/temp_badge{}.png'.format(user.id))
                 else:
                     if border_color != None:
                         draw.rectangle([coord[i], (coord[i][0] + size, coord[i][1] + size)], fill=border_color) # border
@@ -1385,9 +1383,9 @@ class Leveler:
                 if await self._valid_image_url(bg_color):
                     async with aiohttp.get(bg_color) as r:
                         image = await r.content.read()
-                    with open('data/leveler/temp_badge.png','wb') as f:
+                    with open('data/leveler/gen/temp_badge{}.png'.format(user.id),'wb') as f:
                         f.write(image)
-                    badge_image = Image.open('data/leveler/temp_badge.png').convert('RGBA')
+                    badge_image = Image.open('data/leveler/gen/temp_badge{}.png'.format(user.id)).convert('RGBA')
 
                     if border_color != None:
                         draw.rectangle([(left_pos, vert_pos + i*17), (right_pos, vert_pos + 15 + i*17)], fill = border_color, outline = border_color) # border
@@ -1396,7 +1394,7 @@ class Leveler:
                     else:
                         badge_image = badge_image.resize(bar_size, Image.ANTIALIAS)
                         process.paste(badge_image, (left_pos,vert_pos + i*17))                    
-                    os.remove('data/leveler/temp_badge.png')
+                    os.remove('data/leveler/gen/temp_badge{}.png'.format(user.id))
                 else:
                     if border_color != None:
                         draw.rectangle([(left_pos, vert_pos + i*17), (right_pos, vert_pos + 15 + i*17)], fill = border_color, outline = border_color) # border
@@ -1409,10 +1407,7 @@ class Leveler:
                 i += 1
 
         result = Image.alpha_composite(result, process)
-        result.save('data/leveler/profile.png','PNG', quality=100)
-
-        os.remove('data/leveler/temp_bg.png')
-        os.remove('data/leveler/temp_profile.png')
+        result.save('data/leveler/gen/profile{}.png'.format(user.id),'PNG', quality=100)
 
     # returns new text color based on the bg. doesn't work great.
     def _contrast(self, bg_color, text_color):
@@ -1443,6 +1438,9 @@ class Leveler:
                         val = 255
                     new_color.append(int(val))
                 return tuple(new_color)
+
+    def _luminance(self, color):
+        return (0.2126*color[0]) + (0.7152*color[1]) + (0.0722*color[2])
 
     # returns a string with possibly a nickname
     def _name(self, user, max_length):
@@ -1486,7 +1484,7 @@ class Leveler:
     
         async with aiohttp.get(bg_url) as r:
             image = await r.content.read()
-        with open('data/leveler/temp_bg.png','wb') as f:
+        with open('data/leveler/gen/temp_rank_bg{}.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
             async with aiohttp.get(profile_url) as r:
@@ -1494,11 +1492,11 @@ class Leveler:
         except:
             async with aiohttp.get(default_avatar_url) as r:
                 image = await r.content.read()
-        with open('data/leveler/temp_profile.png','wb') as f:
+        with open('data/leveler/gen/temp_rank_profile{}.png'.format(user.id),'wb') as f:
             f.write(image)
 
-        bg_image = Image.open('data/leveler/temp_bg.png').convert('RGBA')            
-        profile_image = Image.open('data/leveler/temp_profile.png').convert('RGBA')
+        bg_image = Image.open('data/leveler/gen/temp_rank_bg{}.png'.format(user.id)).convert('RGBA')            
+        profile_image = Image.open('data/leveler/gen/temp_rank_profile{}.png'.format(user.id)).convert('RGBA')
 
         # set canvas
         bg_color = (255,255,255, 0)
@@ -1617,10 +1615,7 @@ class Leveler:
         draw.text((right_text_align, 78), self._truncate_text(credit_txt, 12),  font=general_info_fnt, fill=white_color) # Credits
 
         result = Image.alpha_composite(result, process)
-        result.save('data/leveler/rank.png','PNG', quality=100)
-
-        os.remove('data/leveler/temp_bg.png')
-        os.remove('data/leveler/temp_profile.png')
+        result.save('data/leveler/gen/rank{}.png'.format(user.id),'PNG', quality=100)
 
     async def draw_levelup(self, user, server):
         userinfo = self.users[user.id]
@@ -1634,7 +1629,7 @@ class Leveler:
     
         async with aiohttp.get(bg_url) as r:
             image = await r.content.read()
-        with open('data/leveler/temp_bg.png','wb') as f:
+        with open('data/leveler/gen/temp_level_bg{}.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
             async with aiohttp.get(profile_url) as r:
@@ -1642,11 +1637,11 @@ class Leveler:
         except:
             async with aiohttp.get(default_avatar_url) as r:
                 image = await r.content.read()
-        with open('data/leveler/temp_profile.png','wb') as f:
+        with open('data/leveler/temp_level_profile{}.png'.format(user.id),'wb') as f:
             f.write(image)
 
-        bg_image = Image.open('data/leveler/temp_bg.png').convert('RGBA')            
-        profile_image = Image.open('data/leveler/temp_profile.png').convert('RGBA')
+        bg_image = Image.open('data/leveler/gen/temp_level_bg{}.png'.format(user.id)).convert('RGBA')            
+        profile_image = Image.open('data/leveler/gen/temp_level_profile{}.png'.format(user.id)).convert('RGBA')
 
         # set canvas
         bg_color = (255,255,255, 0)
@@ -1680,10 +1675,7 @@ class Leveler:
         draw.text((self._center(0, 85, lvl_text, level_fnt), 80), lvl_text, font=level_fnt, fill=(240,240,240,255)) # Level Number
 
         result = Image.alpha_composite(result, process)
-        result.save('data/leveler/level.png','PNG', quality=100)
-
-        os.remove('data/leveler/temp_bg.png')
-        os.remove('data/leveler/temp_profile.png') 
+        result.save('data/leveler/gen/level{}.png'.format(user.id),'PNG', quality=100)
 
     # loads the new text into the model
     async def on_message(self, message):
@@ -1742,9 +1734,13 @@ class Leveler:
                     channel = user
                     name = "You"
 
-                await self.draw_levelup(user, server)
+                t = threading.Thread(target = await self.draw_levelup(user, server))
+                self.threads.append(t)
+                t.start()
                 await self.bot.send_typing(channel)        
-                await self.bot.send_file(channel, 'data/leveler/level.png', content='**{} just gained a level{}!**'.format(name, server_identifier)) 
+                await self.bot.send_file(channel, 'data/leveler/gen/level{}.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
+                os.remove('data/leveler/gen/level{}.png'.format(user.id))
+                self._clear_folder()
         else:
             self.users[user.id]["servers"][server.id]["current_exp"] += exp
         fileIO('data/leveler/users.json', "save", self.users)
@@ -1833,6 +1829,15 @@ class Leveler:
             }
         fileIO('data/leveler/block.json', "save", self.block)
 
+    def _clear_folder(self):
+        f = 'data/leveler/gen'
+        maxsize = 10e6
+        size = sum(os.path.getsize(f) for f in os.listdir('.') if os.path.isfile(f))
+        if size > maxsize:
+            fileList = os.listdir(f)
+            for fileName in fileList:
+                os.remove(f+"/"+fileName)
+
     def _truncate_text(self, text, max_length):
         if len(text) > max_length:
             if text.strip('$').isdigit():
@@ -1858,6 +1863,10 @@ def check_folders():
     if not os.path.exists("data/leveler"):
         print("Creating data/leveler folder...")
         os.makedirs("data/leveler")
+
+    if not os.path.exists("data/leveler/gen"):
+        print("Creating data/leveler/gen folder...")
+        os.makedirs("data/leveler/gen")
 
 def check_files():
     f = "data/leveler/users.json"
