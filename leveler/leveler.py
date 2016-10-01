@@ -44,6 +44,8 @@ class Leveler:
         self.backgrounds = fileIO("data/leveler/backgrounds.json", "load")
         self.badges = fileIO("data/leveler/badges.json", "load")
         self.settings = fileIO("data/leveler/settings.json", "load")
+        bot_settings = fileIO("data/red/settings.json", "load")
+        self.owner = bot_settings["OWNER"]
 
     @commands.command(pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
@@ -54,17 +56,51 @@ class Leveler:
         server = user.server
 
         if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
+            await self.bot.say("**Leveler commands for this server are disabled!**")
             return
 
         # creates user if doesn't exist
         await self._create_user(user, server)
-        t = threading.Thread(target = await self.draw_profile(user, server))
-        self.threads.append(t)
-        t.start()
-        await self.bot.send_typing(channel)         
-        await self.bot.send_file(channel, 'data/leveler/gen/profile{}.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
-        self._clear_folder()
+
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say(await self.profile_text(user, server))
+        else :
+            t = threading.Thread(target = await self.draw_profile(user, server))
+            self.threads.append(t)
+            t.start()
+            await self.bot.send_typing(channel)         
+            await self.bot.send_file(channel, 'data/leveler/gen/profile{}.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
+            self._clear_folder()
+
+    async def profile_text(self, user, server):
+        userinfo = self.users[user.id]
+        msg = "```ruby\n"
+        msg += "Name: {}\n".format(user.name)
+        msg += "Title: {}\n".format(userinfo["title"])
+        msg += "Reps: {}\n".format(userinfo["rep"])            
+        msg += "Global Rank: {}\n".format(await self._find_global_rank(user, server))
+        msg += "Server Rank: {}\n".format(await self._find_server_rank(user, server))
+        msg += "Server Level: {}\n".format(userinfo["servers"][server.id]["level"])
+        msg += "Total Exp: {}\n".format(userinfo["total_exp"])
+        total_server_exp = 0
+        for i in range(userinfo["servers"][server.id]["level"]):
+            total_server_exp += self._required_exp(i)
+        total_server_exp += userinfo["servers"][server.id]["current_exp"]
+        msg += "Server Exp: {}\n".format(total_server_exp)
+        try:
+            bank = self.bot.get_cog('Economy').bank
+            if bank.account_exists(user):
+                credits = bank.get_balance(user)
+            else:
+                credits = 0
+        except:
+            credits = 0
+        msg += "Credits: {}\n".format(credits)
+        msg += "Info: {}\n".format(userinfo["info"])
+        msg += "Badges: "
+        msg += ", ".join(userinfo["badges"])
+        msg += "```"
+        return msg
 
     @commands.command(pass_context=True, no_pm=True)
     async def rank(self,ctx,user : discord.Member=None):
@@ -75,18 +111,36 @@ class Leveler:
         server = user.server
 
         if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
+            await self.bot.say("**Leveler commands for this server are disabled!**")
             return
 
         # creates user if doesn't exist
         await self._create_user(user, server)
-        t = threading.Thread(target = await self.draw_rank(user, server))
-        self.threads.append(t)
-        t.start()
-        await self.bot.send_typing(channel)            
-        await self.bot.send_file(channel, 'data/leveler/gen/rank{}.png'.format(user.id), content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
-        self._clear_folder()
 
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say(await self.rank_text(user, server))
+        else:
+            t = threading.Thread(target = await self.draw_rank(user, server))
+            self.threads.append(t)
+            t.start()
+            await self.bot.send_typing(channel)            
+            await self.bot.send_file(channel, 'data/leveler/gen/rank{}.png'.format(user.id), content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
+            self._clear_folder()
+
+    async def rank_text(self, user, server):
+        userinfo = self.users[user.id]
+        msg = "```ruby\n"
+        msg += "Name: {}\n".format(user.name)
+        msg += "Reps: {}\n".format(userinfo["rep"])   
+        msg += "Server Rank: {}\n".format(await self._find_server_rank(user, server))
+        msg += "Server Level: {}\n".format(userinfo["servers"][server.id]["level"])
+        total_server_exp = 0
+        for i in range(userinfo["servers"][server.id]["level"]):
+            total_server_exp += self._required_exp(i)
+        total_server_exp += userinfo["servers"][server.id]["current_exp"]
+        msg += "Server Exp: {}\n".format(total_server_exp)
+        msg += "```"
+        return msg
     # should the user be mentioned based on settings?
     def _is_mention(self,user):
         if "mention" not in self.settings.keys() or self.settings["mention"]:
@@ -100,7 +154,7 @@ class Leveler:
         server = ctx.message.server
 
         if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
+            await self.bot.say("**Leveler commands for this server are disabled!**")
             return
 
         users = []
@@ -147,7 +201,7 @@ class Leveler:
         curr_time = time.time()
         
         if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
+            await self.bot.say("**Leveler commands for this server are disabled!**")
             return
         if user.id == org_user.id:
             await self.bot.say("**You can't give a rep to yourself!**")
@@ -195,7 +249,7 @@ class Leveler:
         server = ctx.message.server
         
         if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
+            await self.bot.say("**Leveler commands for this server are disabled!**")
             return
 
         # creates user if doesn't exist
@@ -246,7 +300,7 @@ class Leveler:
         server = ctx.message.server
 
         if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
+            await self.bot.say("**Leveler commands for this server are disabled!**")
             return
 
         msg = ""
@@ -265,7 +319,11 @@ class Leveler:
         server = ctx.message.server
 
         if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
+            await self.bot.say("**Leveler commands for this server are disabled!**")
+            return
+
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say("**Text-only commands allowed.**")
             return
 
         default_rep = (92,130,203,230)
@@ -329,6 +387,10 @@ class Leveler:
             await self.bot.say("Leveler commands for this server are disabled.")
             return
 
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say("**Text-only commands allowed.**")
+            return
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -362,6 +424,10 @@ class Leveler:
         
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say("**Text-only commands allowed.**")
             return
 
         # creates user if doesn't exist
@@ -483,6 +549,10 @@ class Leveler:
             await self.bot.say("Leveler commands for this server are disabled.")
             return
 
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say("**Text-only commands allowed.**")
+            return            
+
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -502,6 +572,10 @@ class Leveler:
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say("**Text-only commands allowed.**")
             return
 
         # creates user if doesn't exist
@@ -525,6 +599,10 @@ class Leveler:
             await self.bot.say("Leveler commands for this server are disabled.")
             return
 
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say("**Text-only commands allowed.**")
+            return
+            
         # creates user if doesn't exist
         await self._create_user(user, server)
 
@@ -599,6 +677,7 @@ class Leveler:
         msg += "Channel Locks: {}\n".format(", ".join(locked_channels))
         msg += "```"
         await self.bot.say(msg)
+
 
 
     @lvladmin.command(pass_context=True, no_pm=True)
@@ -737,6 +816,38 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(pass_context = True, no_pm=True)
+    async def textonly(self, ctx, all:str=None):
+        """Toggle text-based messages on the server. Parameter: disableall/enableall"""
+        server = ctx.message.server
+        user = ctx.message.author
+        # deals with enabled array
+
+        if "text_only" not in self.settings.keys():
+            self.settings["text_only"] = [] 
+
+        if all != None:
+            if user.id == self.owner:
+                if all == "disableall":
+                    self.settings["text_only"] = []
+                    await self.bot.say("**Text-only disabled for all servers.**")
+                elif all == "enableall":
+                    self.settings["lvl_msg"] = []
+                    for server in self.bot.servers:
+                        self.settings["text_only"].append(server.id)
+                    await self.bot.say("**Text-only messages enabled for all servers.**")
+            else:
+                await self.bot.say("**No Permission.**")                
+        else:
+            if server.id in self.settings["text_only"]:
+                self.settings["text_only"].remove(server.id)
+                await self.bot.say("**Text-only messages disabled for {}.**".format(server.name))
+            else:
+                self.settings["text_only"].append(server.id)
+                await self.bot.say("**Text-only messages enabled for {}.**".format(server.name)) 
+        fileIO('data/leveler/settings.json', "save", self.settings)
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvladmin.command(pass_context = True, no_pm=True)
     async def lvlalert(self, ctx, all:str=None):
         """Toggle level-up messages on the server. Parameter: disableall/enableall"""
         server = ctx.message.server
@@ -746,14 +857,18 @@ class Leveler:
         if not isinstance(self.settings["lvl_msg"], list):
             self.settings["lvl_msg"] = []
 
-        if all == "disableall":
-            self.settings["lvl_msg"] = []
-            await self.bot.say("**Level-up messages disabled for all servers.**")
-        elif all == "enableall":
-            self.settings["lvl_msg"] = []
-            for server in self.bot.servers:
-                self.settings["lvl_msg"].append(server.id)
-            await self.bot.say("**Level-up messages enabled for all servers.**")
+        if all != None:
+            if user.id == self.owner:
+                if all == "disableall":
+                    self.settings["lvl_msg"] = []
+                    await self.bot.say("**Level-up messages disabled for all servers.**")
+                elif all == "enableall":
+                    self.settings["lvl_msg"] = []
+                    for server in self.bot.servers:
+                        self.settings["lvl_msg"].append(server.id)
+                    await self.bot.say("**Level-up messages enabled for all servers.**")
+            else:
+                await self.bot.say("**No Permission.**")
         else:
             if server.id in self.settings["lvl_msg"]:
                 self.settings["lvl_msg"].remove(server.id)
@@ -773,14 +888,18 @@ class Leveler:
         if "private_lvl_msg" not in self.settings.keys():
             self.settings["private_lvl_msg"] = [] 
 
-        if all == "disableall":
-            self.settings["private_lvl_msg"] = []
-            await self.bot.say("**Private level-up messages disabled for all servers.**")
-        elif all == "enableall":
-            self.settings["private_lvl_msg"] = []
-            for server in self.bot.servers:
-                self.settings["private_lvl_msg"].append(server.id)
-            await self.bot.say("**Private level-up messages enabled for all servers.**")
+        if all != None:
+            if user.id == self.owner:
+                if all == "disableall":
+                    self.settings["private_lvl_msg"] = []
+                    await self.bot.say("**Private level-up messages disabled for all servers.**")
+                elif all == "enableall":
+                    self.settings["private_lvl_msg"] = []
+                    for server in self.bot.servers:
+                        self.settings["private_lvl_msg"].append(server.id)
+                    await self.bot.say("**Private level-up messages enabled for all servers.**")
+            else:
+                await self.bot.say("**No Permission.**")
         else:
             if server.id in self.settings["private_lvl_msg"]:
                 self.settings["private_lvl_msg"].remove(server.id)
@@ -1734,13 +1853,17 @@ class Leveler:
                     channel = user
                     name = "You"
 
-                t = threading.Thread(target = await self.draw_levelup(user, server))
-                self.threads.append(t)
-                t.start()
-                await self.bot.send_typing(channel)        
-                await self.bot.send_file(channel, 'data/leveler/gen/level{}.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
-                os.remove('data/leveler/gen/level{}.png'.format(user.id))
-                self._clear_folder()
+                if "text_only" in self.settings and server.id in self.settings["text_only"]:
+                    await self.bot.send_typing(channel)        
+                    await self.bot.send_message(channel, content='**{} just gained a level{}! (LEVEL {})**'.format(name, server_identifier, self.users[user.id]["servers"][server.id]["level"]))
+                else:
+                    t = threading.Thread(target = await self.draw_levelup(user, server))
+                    self.threads.append(t)
+                    t.start()
+                    await self.bot.send_typing(channel)        
+                    await self.bot.send_file(channel, 'data/leveler/gen/level{}.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
+                    os.remove('data/leveler/gen/level{}.png'.format(user.id))
+                    self._clear_folder()
         else:
             self.users[user.id]["servers"][server.id]["current_exp"] += exp
         fileIO('data/leveler/users.json', "save", self.users)
@@ -1883,7 +2006,9 @@ def check_files():
         "bg_price": 0,
         "lvl_msg": [], # enabled lvl msg servers
         "disabled_servers": [],
-        "badge_type": "circles"
+        "badge_type": "circles",
+        "mention" : True,
+        "text_only": []
         }
 
     settings_path = "data/leveler/settings.json"
