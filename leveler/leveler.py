@@ -1831,7 +1831,7 @@ class Leveler:
 
     def _clear_folder(self):
         f = 'data/leveler/gen'
-        maxsize = 10e6
+        maxsize = 25000000 # 25mb max
         size = sum(os.path.getsize(f) for f in os.listdir('.') if os.path.isfile(f))
         if size > maxsize:
             fileList = os.listdir(f)
