@@ -54,6 +54,7 @@ class Leveler:
             user = ctx.message.author
         channel = ctx.message.channel
         server = user.server
+        curr_time = time.time()
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
@@ -65,12 +66,22 @@ class Leveler:
         if "text_only" in self.settings and server.id in self.settings["text_only"]:
             await self.bot.say(await self.profile_text(user, server))
         else :
-            t = threading.Thread(target = await self.draw_profile(user, server))
-            self.threads.append(t)
-            t.start()
-            await self.bot.send_typing(channel)         
-            await self.bot.send_file(channel, 'data/leveler/gen/profile{}.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
-            self._clear_folder()
+            if "profile" not in self.block[user.id]:
+                self.block[user.id]["profile"] = 0
+
+            cooldown = 10
+            elapsed_time = curr_time - self.block[user.id]["profile"]
+            if elapsed_time > cooldown:
+                t = threading.Thread(target = await self.draw_profile(user, server))
+                self.threads.append(t)
+                t.start()
+                await self.bot.send_typing(channel)         
+                await self.bot.send_file(channel, 'data/leveler/gen/profile{}.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
+                self._clear_folder()
+                self.block[user.id]["profile"] = curr_time
+                fileIO('data/leveler/block.json', "save", self.block)
+            else:
+                await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time)))       
 
     async def profile_text(self, user, server):
         userinfo = self.users[user.id]
@@ -109,6 +120,7 @@ class Leveler:
             user = ctx.message.author
         channel = ctx.message.channel
         server = user.server
+        curr_time = time.time()
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
@@ -120,12 +132,22 @@ class Leveler:
         if "text_only" in self.settings and server.id in self.settings["text_only"]:
             await self.bot.say(await self.rank_text(user, server))
         else:
-            t = threading.Thread(target = await self.draw_rank(user, server))
-            self.threads.append(t)
-            t.start()
-            await self.bot.send_typing(channel)            
-            await self.bot.send_file(channel, 'data/leveler/gen/rank{}.png'.format(user.id), content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
-            self._clear_folder()
+            if "rank" not in self.block[user.id]:
+                self.block[user.id]["rank"] = 0
+
+            cooldown = 10
+            elapsed_time = curr_time - self.block[user.id]["rank"]
+            if elapsed_time > cooldown:
+                t = threading.Thread(target = await self.draw_rank(user, server))
+                self.threads.append(t)
+                t.start()
+                await self.bot.send_typing(channel)            
+                await self.bot.send_file(channel, 'data/leveler/gen/rank{}.png'.format(user.id), content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
+                self._clear_folder()
+                self.block[user.id]["rank"] = curr_time
+                fileIO('data/leveler/block.json', "save", self.block)
+            else:
+                await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time))) 
 
     async def rank_text(self, user, server):
         userinfo = self.users[user.id]
@@ -213,19 +235,16 @@ class Leveler:
         # creates user if doesn't exist
         await self._create_user(user, server)
 
-        if server.id not in self.block:
-            self.block[server.id] = {}
-            fileIO('data/leveler/block.json', "save", self.block)
-        if org_user.id not in self.block[server.id]:
-            self.block[server.id][org_user.id] = {
-                "chat": time.time(),
-                "rep" : time.time()
+        if org_user.id not in self.block:
+            self.block[org_user.id] = {
+                "chat": 0,
+                "rep" : 0
             }
             fileIO('data/leveler/block.json', "save", self.block)
 
-        delta = float(curr_time) - float(self.block[server.id][org_user.id]["rep"])
+        delta = float(curr_time) - float(self.block[org_user.id]["rep"])
         if delta >= 43200.0 and delta>0:
-            self.block[server.id][org_user.id]["rep"] = curr_time
+            self.block[org_user.id]["rep"] = curr_time
             self.users[user.id]["rep"] += 1
             fileIO('data/leveler/block.json', "save", self.block)
             fileIO('data/leveler/users.json', "save", self.users)
@@ -1797,8 +1816,14 @@ class Leveler:
         result.save('data/leveler/gen/level{}.png'.format(user.id),'PNG', quality=100)
 
     # loads the new text into the model
-    async def on_message(self, message):
+    async def on_message(self, message): 
+        t = threading.Thread(target = await self._handle_on_message(message))
+        self.threads.append(t)
+        t.start()
+
+    async def _handle_on_message(self, message):
         try:
+
             text = message.content
             channel = message.channel
             server = message.author.server
@@ -1813,12 +1838,12 @@ class Leveler:
             # creates user if doesn't exist, bots are not logged.
             await self._create_user(user, server)
 
-            if float(curr_time) - float(self.block[server.id][user.id]["chat"]) >= 120 and not any(text.startswith(x) for x in prefix):
+            if float(curr_time) - float(self.block[user.id]["chat"]) >= 120 and not any(text.startswith(x) for x in prefix):
                 await self._process_exp(message, random.randint(15, 20))
-                self.block[server.id][user.id]["chat"] = time.time()
+                self.block[user.id]["chat"] = time.time()
                 fileIO('data/leveler/block.json', "save", self.block)
         except:
-            pass
+            pass        
 
     async def _process_exp(self, message, exp:int):
         server = message.author.server
@@ -1940,14 +1965,10 @@ class Leveler:
                 "level": 0,
                 "current_exp": 0
             }
-        fileIO('data/leveler/users.json', "save", self.users)
 
-        if server.id not in self.block:
-            self.block[server.id] = {}
-            fileIO('data/leveler/block.json', "save", self.block)
-        if user.id not in self.block[server.id]:
-            self.block[server.id][user.id] = {
-                "chat": time.time(),
+        if user.id not in self.block:
+            self.block[user.id] = {
+                "chat": 0.0,
                 "rep" : 0.0
             }
         fileIO('data/leveler/block.json', "save", self.block)
