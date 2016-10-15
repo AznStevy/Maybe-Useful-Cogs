@@ -668,7 +668,7 @@ class Leveler:
         """A list of settings"""
         disabled_servers = []
         private_levels = []
-        disabled_levels = []
+        enabled_levels = []
         locked_channels = []
 
         for server in self.bot.servers:
@@ -678,9 +678,8 @@ class Leveler:
                 for channel in server.channels:
                     if self.settings["lvl_msg_lock"][server.id] == channel.id:
                         locked_channels.append("\n{} -> #{}".format(server.name,channel.name))
-                disabled_servers.append(server.name)
             if "lvl_msg" in self.settings.keys() and server.id in self.settings["lvl_msg"]:
-                disabled_levels.append(server.name)
+                enabled_levels.append(server.name)
             if "private_lvl_msg" in self.settings.keys() and server.id in self.settings["private_lvl_msg"]:
                 private_levels.append(server.name)
 
@@ -691,7 +690,7 @@ class Leveler:
         if "badge_type" in self.settings.keys():
             msg += "Badge type: {}\n".format(self.settings["badge_type"])
         msg += "Disabled Servers: {}\n".format(", ".join(disabled_servers))
-        msg += "Disabled Level Messages: {}\n".format(", ".join(disabled_levels))
+        msg += "Enabled Level Messages: {}\n".format(", ".join(enabled_levels))
         msg += "Private Level Messages: {}\n".format(", ".join(private_levels))
         msg += "Channel Locks: {}\n".format(", ".join(locked_channels))
         msg += "```"
@@ -1841,7 +1840,6 @@ class Leveler:
             if float(curr_time) - float(self.block[user.id]["chat"]) >= 120 and not any(text.startswith(x) for x in prefix):
                 await self._process_exp(message, random.randint(15, 20))
                 self.block[user.id]["chat"] = time.time()
-                fileIO('data/leveler/block.json', "save", self.block)
         except:
             pass        
 
@@ -1887,7 +1885,6 @@ class Leveler:
                     t.start()
                     await self.bot.send_typing(channel)        
                     await self.bot.send_file(channel, 'data/leveler/gen/level{}.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
-                    os.remove('data/leveler/gen/level{}.png'.format(user.id))
                     self._clear_folder()
         else:
             self.users[user.id]["servers"][server.id]["current_exp"] += exp
