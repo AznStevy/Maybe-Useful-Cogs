@@ -1880,9 +1880,7 @@ class Leveler:
                     await self.bot.send_typing(channel)        
                     await self.bot.send_message(channel, content='**{} just gained a level{}! (LEVEL {})**'.format(name, server_identifier, self.users[user.id]["servers"][server.id]["level"]))
                 else:
-                    t = threading.Thread(target = await self.draw_levelup(user, server))
-                    self.threads.append(t)
-                    t.start()
+                    await self.draw_levelup(user, server)
                     await self.bot.send_typing(channel)        
                     await self.bot.send_file(channel, 'data/leveler/gen/level{}.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
                     self._clear_folder()
