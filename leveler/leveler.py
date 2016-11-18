@@ -110,8 +110,7 @@ class Leveler:
         em.add_field(name="Credits: ", value = format(credits))
         em.add_field(name="Info: ", value = test_empty(userinfo["info"]))
         em.add_field(name="Badges: ", value = test_empty(", ".join(userinfo["badges"])))
-        em.set_author(name="User profile for {}".format(user.name))
-        # em.set_thumbnail(url=user.avatar_url)
+        em.set_author(name="User profile for {}".format(user.name), url=user.avatar_url, icon_url=user.avatar_url)
         return em
 
     @commands.command(pass_context=True, no_pm=True)
@@ -159,7 +158,7 @@ class Leveler:
             total_server_exp += self._required_exp(i)
         total_server_exp += userinfo["servers"][server.id]["current_exp"]
         em.add_field(name="Server Exp", value = total_server_exp)
-        em.set_author(name="Rank and Statistics for {}".format(user.name)) 
+        em.set_author(name="Rank and Statistics for {}".format(user.name), url=user.avatar_url, icon_url=user.avatar_url)
         return em
 
     # should the user be mentioned based on settings?
