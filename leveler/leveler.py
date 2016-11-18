@@ -1836,8 +1836,8 @@ class Leveler:
         user = message.author
         # creates user if doesn't exist, bots are not logged.
         await self._create_user(user, server)
-        userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
         curr_time = time.time()
+        userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
 
         if server.id in self.settings["disabled_servers"]:
             return
@@ -1850,8 +1850,6 @@ class Leveler:
 
         if float(curr_time) - float(userinfo["chat_block"]) >= 120 and not any(text.startswith(x) for x in prefix):
             await self._process_exp(message, userinfo, random.randint(15, 20))
-            userinfo["chat_block"] = time.time()
-            fileIO("data/leveler/users/{}/info.json".format(user.id), "save", userinfo)      
 
     async def _process_exp(self, message, userinfo, exp:int):
         server = message.author.server
@@ -1862,15 +1860,19 @@ class Leveler:
         required = self._required_exp(userinfo["servers"][server.id]["level"])
         userinfo["total_exp"] += exp
         if userinfo["servers"][server.id]["current_exp"] + exp >= required:
+            print ("LEVEL UP TRIGGERED")
             userinfo["servers"][server.id]["level"] += 1
             userinfo["servers"][server.id]["current_exp"] = userinfo["servers"][server.id]["current_exp"] + exp - required
-            
-            # catch old implementation
+            userinfo["chat_block"] = time.time()
+            fileIO("data/leveler/users/{}/info.json".format(user.id), "save", userinfo)
+         
             if not isinstance(self.settings["lvl_msg"], list):
                 self.settings["lvl_msg"] = []
-                fileIO('data/leveler/settings.json', "save", self.settings)
+
+            print(server.id in self.settings["lvl_msg"])
 
             if server.id in self.settings["lvl_msg"]: # if lvl msg is enabled
+                print("3") 
                 # channel lock implementation
                 if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
                     channel_id = self.settings["lvl_msg_lock"][server.id]
@@ -1884,18 +1886,21 @@ class Leveler:
                     channel = user
                     name = "You"
 
+                print("Level Up")
                 if "text_only" in self.settings and server.id in self.settings["text_only"]:
                     await self.bot.send_typing(channel)
                     em = discord.Embed(description='**{} just gained a level{}! (LEVEL {})**'.format(name, server_identifier, userinfo["servers"][server.id]["level"]), colour=user.colour)
                     await self.bot.send_message(channel, '', embed = em)
                 else:
+                    print("DRAW Level Up")
                     await self.draw_levelup(user, server)
                     await self.bot.send_typing(channel)   
                     await self.bot.send_file(channel, 'data/leveler/users/{}/level.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
-            fileIO("data/leveler/users/{}/info.json".format(user.id), "save", userinfo)
         else:
+            userinfo["chat_block"] = time.time()
             userinfo["servers"][server.id]["current_exp"] += exp
             fileIO("data/leveler/users/{}/info.json".format(user.id), "save", userinfo)
+        fileIO('data/leveler/settings.json', "save", self.settings)
 
     async def _find_server_rank(self, user, server):
         targetid = user.id
