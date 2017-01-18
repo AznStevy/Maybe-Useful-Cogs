@@ -1829,27 +1829,30 @@ class Leveler:
     async def on_message(self, message): 
         await self._handle_on_message(message)
 
-    async def _handle_on_message(self, message):
-        text = message.content
-        channel = message.channel
-        server = message.author.server
-        user = message.author
-        # creates user if doesn't exist, bots are not logged.
-        await self._create_user(user, server)
-        curr_time = time.time()
-        userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
+	async def _handle_on_message(self, message):
+		try:
+			text = message.content
+			channel = message.channel
+			server = message.server
+			user = message.author
+			# creates user if doesn't exist, bots are not logged.
+			await self._create_user(user, server)
+			curr_time = time.time()
+			userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
 
-        if server.id in self.settings["disabled_servers"]:
-            return
-        if user.bot:
-            return
+			if server.id in self.settings["disabled_servers"]:
+				return
+			if user.bot:
+				return
 
-        # check if chat_block exists
-        if "chat_block" not in userinfo:
-            userinfo["chat_block"] = 0
+			# check if chat_block exists
+			if "chat_block" not in userinfo:
+				userinfo["chat_block"] = 0
 
-        if float(curr_time) - float(userinfo["chat_block"]) >= 120 and not any(text.startswith(x) for x in prefix):
-            await self._process_exp(message, userinfo, random.randint(15, 20))
+			if float(curr_time) - float(userinfo["chat_block"]) >= 120 and not any(text.startswith(x) for x in prefix):
+				await self._process_exp(message, userinfo, random.randint(15, 20))
+		except AttributeError as e:
+			pass
 
     async def _process_exp(self, message, userinfo, exp:int):
         server = message.author.server
@@ -1955,35 +1958,38 @@ class Leveler:
             rank+=1
 
     # handles user creation, adding new server, blocking
-    async def _create_user(self, user, server):
-        if not os.path.exists("data/leveler/users/{}".format(user.id)):
-            os.makedirs("data/leveler/users/{}".format(user.id))
-            new_account = {
-                "servers": {},
-                "total_exp": 0,
-                "profile_background": self.backgrounds["profile"]["default"],
-                "rank_background": self.backgrounds["rank"]["default"],
-                "levelup_background": self.backgrounds["levelup"]["default"],
-                "title": "",
-                "info": "I am a mysterious person.",
-                "rep": 0,
-                "badges":[],
-                "rep_color": [],
-                "badge_col_color": [],
-                "rep_block": 0,
-                "chat_block": 0,
-                "profile_block": 0,
-                "rank_block": 0
-            }
-            fileIO("data/leveler/users/{}/info.json".format(user.id), "save", new_account)
+	async def _create_user(self, user, server):
+		try:
+			if not os.path.exists("data/leveler/users/{}".format(user.id)):
+				os.makedirs("data/leveler/users/{}".format(user.id))
+				new_account = {
+					"servers": {},
+					"total_exp": 0,
+					"profile_background": self.backgrounds["profile"]["default"],
+					"rank_background": self.backgrounds["rank"]["default"],
+					"levelup_background": self.backgrounds["levelup"]["default"],
+					"title": "",
+					"info": "I am a mysterious person.",
+					"rep": 0,
+					"badges":[],
+					"rep_color": [],
+					"badge_col_color": [],
+					"rep_block": 0,
+					"chat_block": 0,
+					"profile_block": 0,
+					"rank_block": 0
+				}
+				fileIO("data/leveler/users/{}/info.json".format(user.id), "save", new_account)
 
-        userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
-        if server.id not in userinfo["servers"]:
-            userinfo["servers"][server.id] = {
-                "level": 0,
-                "current_exp": 0
-            }
-            fileIO("data/leveler/users/{}/info.json".format(user.id), "save", userinfo)
+			userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
+			if server.id not in userinfo["servers"]:
+				userinfo["servers"][server.id] = {
+					"level": 0,
+					"current_exp": 0
+				}
+				fileIO("data/leveler/users/{}/info.json".format(user.id), "save", userinfo)
+		except AttributeError as e:
+			pass
 
     def _truncate_text(self, text, max_length):
         if len(text) > max_length:
