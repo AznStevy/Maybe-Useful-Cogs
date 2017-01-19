@@ -206,7 +206,7 @@ class Leveler:
 
         msg += "```ruby\n"
         rank = 1
-        labels = ["?", "?", "?", "?", "?", "?", " ", " ", " ", " "]
+        labels = ["♔", "♕", "♖", "♗", "♘", "♙", " ", " ", " ", " "]
         for user in sorted_list[:10]:
             msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank-1], u"?", user[0])
             msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[1]))
