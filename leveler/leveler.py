@@ -6,7 +6,6 @@ import platform, asyncio, string, operator, random, textwrap
 import os, re, aiohttp
 from .utils.dataIO import fileIO
 from cogs.utils import checks
-import psycopg2 as p
 
 try:
     import scipy
@@ -47,11 +46,6 @@ class Leveler:
         self.settings = fileIO("data/leveler/settings.json", "load")
         bot_settings = fileIO("data/red/settings.json", "load")
         self.owner = bot_settings["OWNER"]
-
-        # set up database
-        self.conn = p.connect("dbname='leveler' user='sxu' password='Moonbuggy6497!'")
-        self.cur = self.conn.cursor()
-        # check_data()
 
     @commands.command(pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
