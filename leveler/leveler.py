@@ -50,6 +50,7 @@ class Leveler:
     @commands.command(pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
         """Displays a user profile."""
+        start_time = time.time()
         if user == None:
             user = ctx.message.author
         channel = ctx.message.channel
@@ -78,6 +79,7 @@ class Leveler:
                 await self.bot.send_file(channel, 'data/leveler/users/{}/profile.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
                 userinfo["profile_block"] = curr_time
                 fileIO('data/leveler/users/{}/info.json'.format(user.id), "save", userinfo)
+                await self.bot.say("_Took: {0:.3g}ms_.".format((time.time()-start_time)*1000))
             else:
                 await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time)))
 
@@ -792,9 +794,7 @@ class Leveler:
         userinfo["total_exp"] -= userinfo["servers"][server.id]["current_exp"]
 
         # add in new exp
-        total_exp = 0
-        for i in range(level):
-            total_exp += self._required_exp(i)
+        total_exp += self._level_exp(level)
         userinfo["servers"][server.id]["current_exp"] = 0
         userinfo["servers"][server.id]["level"] = level
         userinfo["total_exp"] += total_exp
@@ -1941,11 +1941,11 @@ class Leveler:
 
         for userid in os.listdir(user_directory):
             userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
-            try:
-                for server in self.bot.servers:
+            for server in self.bot.servers:
+                try:
                     users.append((userid, userinfo["total_exp"]))
-            except KeyError:
-                pass            
+                except KeyError:
+                    pass            
         sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
         rank = 1
@@ -2008,6 +2008,9 @@ class Leveler:
         if level < 0:
             return 0
         return 139*level+65
+
+    def _level_exp(self, level: int):
+        return level*65 + 139*level*(level-1)//2
 # ------------------------------ setup ----------------------------------------    
 def check_folders():
     if not os.path.exists("data/leveler"):
