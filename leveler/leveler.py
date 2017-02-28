@@ -6,6 +6,8 @@ import platform, asyncio, string, operator, random, textwrap
 import os, re, aiohttp
 from .utils.dataIO import fileIO
 from cogs.utils import checks
+import psycopg2 as p
+
 try:
     import scipy
     import scipy.misc
@@ -45,6 +47,11 @@ class Leveler:
         self.settings = fileIO("data/leveler/settings.json", "load")
         bot_settings = fileIO("data/red/settings.json", "load")
         self.owner = bot_settings["OWNER"]
+
+        # set up database
+        self.conn = p.connect("dbname='leveler' user='sxu' password='Moonbuggy6497!'")
+        self.cur = self.conn.cursor()
+        # check_data()
 
     @commands.command(pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
@@ -1387,7 +1394,7 @@ class Leveler:
             priority_badges.append((badge, priority_num))
         sorted_badges = sorted(priority_badges, key=operator.itemgetter(1), reverse=True)
 
-        # TODO: simplify this. it shouldn't be this complicated... sacrifice conciseness for customizability
+        # TODO: simplify this. it shouldn't be this complicated... sacrifices conciseness for customizability
         if "badge_type" not in self.settings.keys() or self.settings["badge_type"] == "circles":
             # circles require antialiasing
             vert_pos = 187
@@ -1872,10 +1879,7 @@ class Leveler:
             if not isinstance(self.settings["lvl_msg"], list):
                 self.settings["lvl_msg"] = []
 
-            print(server.id in self.settings["lvl_msg"])
-
             if server.id in self.settings["lvl_msg"]: # if lvl msg is enabled
-                print("3") 
                 # channel lock implementation
                 if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
                     channel_id = self.settings["lvl_msg_lock"][server.id]
@@ -1889,13 +1893,11 @@ class Leveler:
                     channel = user
                     name = "You"
 
-                print("Level Up")
                 if "text_only" in self.settings and server.id in self.settings["text_only"]:
                     await self.bot.send_typing(channel)
                     em = discord.Embed(description='**{} just gained a level{}! (LEVEL {})**'.format(name, server_identifier, userinfo["servers"][server.id]["level"]), colour=user.colour)
                     await self.bot.send_message(channel, '', embed = em)
                 else:
-                    print("DRAW Level Up")
                     await self.draw_levelup(user, server)
                     await self.bot.send_typing(channel)   
                     await self.bot.send_file(channel, 'data/leveler/users/{}/level.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
@@ -1908,21 +1910,23 @@ class Leveler:
     async def _find_server_rank(self, user, server):
         targetid = user.id
         users = []
+
         for userid in os.listdir(user_directory):
+            server_exp = 0
             userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
-            if "servers" in userinfo and server.id in userinfo["servers"]:
-                temp_user = find(lambda m: m.id == userid, server.members)
-                server_exp = 0
+            try:
                 for i in range(userinfo["servers"][server.id]["level"]):
                     server_exp += self._required_exp(i)
                 server_exp += userinfo["servers"][server.id]["current_exp"]
-                if temp_user != None:
-                    users.append((userid, temp_user.name, server_exp))
-        sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
+            except KeyError:
+                pass
+            users.append((userid, server_exp))
+
+        sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
         rank = 1
-        for user in sorted_list:
-            if user[0] == targetid:
+        for a_user in sorted_list:
+            if a_user[0] == targetid:
                 return rank
             rank+=1
 
@@ -1940,16 +1944,15 @@ class Leveler:
 
     async def _find_global_rank(self, user, server):
         users = []
-        # this is also terrible...
+
         for userid in os.listdir(user_directory):
             userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
-            for server in self.bot.servers:
-                temp_user = find(lambda m: m.id == userid, server.members)
-                if temp_user != None:
-                    break
-            if temp_user != None:
-                users.append((userid, temp_user.name, userinfo["total_exp"]))
-        sorted_list = sorted(users, key=operator.itemgetter(2), reverse=True)
+            try:
+                for server in self.bot.servers:
+                    users.append((userid, userinfo["total_exp"]))
+            except KeyError:
+                pass            
+        sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
         rank = 1
         for stats in sorted_list:
@@ -2084,7 +2087,6 @@ def check_files():
 def setup(bot):
     check_folders()
     check_files()
-
     n = Leveler(bot)
     bot.add_listener(n.on_message,"on_message")
     bot.add_cog(n)
