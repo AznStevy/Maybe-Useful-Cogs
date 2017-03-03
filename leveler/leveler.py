@@ -55,31 +55,38 @@ class Leveler:
         channel = ctx.message.channel
         server = user.server
         curr_time = time.time()
+
         # creates user if doesn't exist
         await self._create_user(user, server)
         userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
 
+        # check cooldown first
+        if "profile_block" not in userinfo:
+            userinfo["profile_block"] = 0
+
+        cooldown = 10
+        elapsed_time = curr_time - userinfo["profile_block"]
+        if elapsed_time > cooldown:   
+            pass
+        else:
+            await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time)))
+            return     
+
+        # check if disabled
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
             return
 
+        # no cooldown for text only
         if "text_only" in self.settings and server.id in self.settings["text_only"]:
             em = await self.profile_text(user, server, userinfo)
             await self.bot.send_message(channel, '', embed = em)
-        else :
-            if "profile_block" not in userinfo:
-                userinfo["profile_block"] = 0
-
-            cooldown = 10
-            elapsed_time = curr_time - userinfo["profile_block"]
-            if elapsed_time > cooldown:
-                await self.draw_profile(user, server)
-                await self.bot.send_typing(channel)         
-                await self.bot.send_file(channel, 'data/leveler/users/{}/profile.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
-                userinfo["profile_block"] = curr_time
-                fileIO('data/leveler/users/{}/info.json'.format(user.id), "save", userinfo)
-            else:
-                await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time)))
+        else:
+            await self.draw_profile(user, server)
+            await self.bot.send_typing(channel)         
+            await self.bot.send_file(channel, 'data/leveler/users/{}/profile.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
+            userinfo["profile_block"] = curr_time
+            fileIO('data/leveler/users/{}/info.json'.format(user.id), "save", userinfo)
 
     async def profile_text(self, user, server, userinfo):
         def test_empty(text):
@@ -91,15 +98,11 @@ class Leveler:
         em = discord.Embed(description='', colour=user.colour)
         em.add_field(name="Title:", value = test_empty(userinfo["title"]))
         em.add_field(name="Reps:", value= userinfo["rep"])
-        em.add_field(name="Global Rank:", value = await self._find_global_rank(user, server))
-        em.add_field(name="Server Rank:", value = await self._find_server_rank(user, server))
+        em.add_field(name="Global Rank:", value = '#{}'.format(await self._find_global_rank(user, server)))
+        em.add_field(name="Server Rank:", value = '#{}'.format(await self._find_server_rank(user, server)))
         em.add_field(name="Server Level:", value = format(userinfo["servers"][server.id]["level"]))
         em.add_field(name="Total Exp:", value = userinfo["total_exp"])
-        total_server_exp = 0
-        for i in range(userinfo["servers"][server.id]["level"]):
-            total_server_exp += self._required_exp(i)
-        total_server_exp += userinfo["servers"][server.id]["current_exp"]
-        em.add_field(name="Server Exp:", value = format(total_server_exp))
+        em.add_field(name="Server Exp:", value = await self._find_server_exp(user, server))
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -108,10 +111,11 @@ class Leveler:
                 credits = 0
         except:
             credits = 0
-        em.add_field(name="Credits: ", value = format(credits))
+        em.add_field(name="Credits: ", value = "${}".format(credits))
         em.add_field(name="Info: ", value = test_empty(userinfo["info"]))
-        em.add_field(name="Badges: ", value = test_empty(", ".join(userinfo["badges"])))
-        em.set_author(name="User profile for {}".format(user.name), url=user.avatar_url, icon_url=user.avatar_url)
+        em.add_field(name="Badges: ", value = test_empty(", ".join(userinfo["badges"])).replace("_", " "))
+        em.set_author(name="Profile for {}".format(user.name), url = user.avatar_url)
+        em.set_thumbnail(url=user.avatar_url)
         return em
 
     @commands.command(pass_context=True, no_pm=True)
@@ -122,44 +126,47 @@ class Leveler:
         channel = ctx.message.channel
         server = user.server
         curr_time = time.time()
+
         # creates user if doesn't exist
         await self._create_user(user, server)
         userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
 
+        # check cooldown first
+        if "rank_block" not in userinfo:
+            userinfo["profile_block"] = 0
+            
+        cooldown = 10
+        elapsed_time = curr_time - userinfo["rank_block"]
+        if elapsed_time > cooldown:   
+            pass
+        else:
+            await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time)))
+            return     
+
+        # check if disabled
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
             return
 
+        # no cooldown for text only
         if "text_only" in self.settings and server.id in self.settings["text_only"]:
-            em = await self.rank_text(user, server)
+            em = await self.rank_text(user, server, userinfo)
             await self.bot.send_message(channel, '', embed = em)
         else:
-            if "rank_block" not in userinfo:
-                userinfo["rank_block"] = 0
+            await self.draw_rank(user, server)
+            await self.bot.send_typing(channel)         
+            await self.bot.send_file(channel, 'data/leveler/users/{}/rank.png'.format(user.id), content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
+            userinfo["rank_block"] = curr_time
+            fileIO('data/leveler/users/{}/info.json'.format(user.id), "save", userinfo)
 
-            cooldown = 10
-            elapsed_time = curr_time - userinfo["rank_block"]
-            if elapsed_time > cooldown:
-                await self.draw_rank(user, server)
-                await self.bot.send_typing(channel)            
-                await self.bot.send_file(channel, 'data/leveler/users/{}/rank.png'.format(user.id), content='**Ranking & Statistics for {}**'.format(self._is_mention(user)))
-                userinfo["rank_block"] = curr_time
-                fileIO('data/leveler/users/{}/info.json'.format(user.id), "save", userinfo)
-            else:
-                await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time))) 
-
-    async def rank_text(self, user, server):
-        userinfo = fileIO("data/leveler/users/{}/info.json".format(user.id), "load")
+    async def rank_text(self, user, server, userinfo):
         em = discord.Embed(description='', colour=user.colour)
-        em.add_field(name="Server Rank", value = await self._find_server_rank(user, server))
+        em.add_field(name="Server Rank", value = '#{}'.format(await self._find_server_rank(user, server)))
         em.add_field(name="Reps", value = userinfo["rep"])
         em.add_field(name="Server Level", value = userinfo["servers"][server.id]["level"])
-        total_server_exp = 0
-        for i in range(userinfo["servers"][server.id]["level"]):
-            total_server_exp += self._required_exp(i)
-        total_server_exp += userinfo["servers"][server.id]["current_exp"]
-        em.add_field(name="Server Exp", value = total_server_exp)
-        em.set_author(name="Rank and Statistics for {}".format(user.name), url=user.avatar_url, icon_url=user.avatar_url)
+        em.add_field(name="Server Exp", value = await self._find_server_exp(user, server))
+        em.set_author(name="Rank and Statistics for {}".format(user.name), url = user.avatar_url)
+        em.set_thumbnail(url=user.avatar_url)
         return em
 
     # should the user be mentioned based on settings?
@@ -1824,10 +1831,6 @@ class Leveler:
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/users/{}/level.png'.format(user.id),'PNG', quality=100)
 
-    # loads the new text into the model
-    async def on_message(self, message): 
-        await self._handle_on_message(message)
-
     async def _handle_on_message(self, message):
         try:
             text = message.content
@@ -1862,7 +1865,6 @@ class Leveler:
         required = self._required_exp(userinfo["servers"][server.id]["level"])
         userinfo["total_exp"] += exp
         if userinfo["servers"][server.id]["current_exp"] + exp >= required:
-            print ("LEVEL UP TRIGGERED")
             userinfo["servers"][server.id]["level"] += 1
             userinfo["servers"][server.id]["current_exp"] = userinfo["servers"][server.id]["current_exp"] + exp - required
             userinfo["chat_block"] = time.time()
@@ -2020,13 +2022,16 @@ def check_folders():
         transfer_info()
 
 def transfer_info():
-    users = fileIO("data/leveler/users.json", "load")
-    for user_id in users:
-        os.makedirs("data/leveler/users/{}".format(user_id))
-        # create info.json
-        f = "data/leveler/users/{}/info.json".format(user_id)
-        if not fileIO(f, "check"):
-            fileIO(f, "save", users[user_id])        
+    try:
+        users = fileIO("data/leveler/users.json", "load")
+        for user_id in users:
+            os.makedirs("data/leveler/users/{}".format(user_id))
+            # create info.json
+            f = "data/leveler/users/{}/info.json".format(user_id)
+            if not fileIO(f, "check"):
+                fileIO(f, "save", users[user_id])
+    except:
+        pass      
 
 def check_files():
     default = {
@@ -2083,5 +2088,5 @@ def setup(bot):
     check_files()
     n = Leveler(bot)
 
-    bot.add_listener(n._handle_on_message)
+    bot.add_listener(n._handle_on_message, "on_message")
     bot.add_cog(n)
