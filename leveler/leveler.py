@@ -50,7 +50,6 @@ class Leveler:
     @commands.command(pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
         """Displays a user profile."""
-        start_time = time.time()
         if user == None:
             user = ctx.message.author
         channel = ctx.message.channel
@@ -79,7 +78,6 @@ class Leveler:
                 await self.bot.send_file(channel, 'data/leveler/users/{}/profile.png'.format(user.id), content='**User profile for {}**'.format(self._is_mention(user)))
                 userinfo["profile_block"] = curr_time
                 fileIO('data/leveler/users/{}/info.json'.format(user.id), "save", userinfo)
-                await self.bot.say("_Took: {0:.3g}ms_.".format((time.time()-start_time)*1000))
             else:
                 await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time)))
 
