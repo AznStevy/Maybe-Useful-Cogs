@@ -1941,11 +1941,10 @@ class Leveler:
 
         for userid in os.listdir(user_directory):
             userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
-            for server in self.bot.servers:
-                try:
-                    users.append((userid, userinfo["total_exp"]))
-                except KeyError:
-                    pass            
+            try:
+                users.append((userid, userinfo["total_exp"]))
+            except KeyError:    
+                pass
         sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
         rank = 1
@@ -2085,5 +2084,6 @@ def setup(bot):
     check_folders()
     check_files()
     n = Leveler(bot)
-    bot.add_listener(n.on_message,"on_message")
+
+    bot.add_listener(n._handle_on_message)
     bot.add_cog(n)
