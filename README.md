@@ -10,7 +10,7 @@ Because I wanted to make them.
 
 Oh.
 
-**Support** 
+**_Support_** 
 
 If you would like some support for these cogs because nothing ever works, you can talk to me in my testing/spam server, [bot testing](https://discord.gg/T5HHf7k). I don't bite, I promise :3
 
@@ -21,3 +21,5 @@ __Leveler Support__ - `pip3 install scipy` is known to not work on Windows (Linu
 2) Google! It's your friend!
 
 3) Come to the [support server](https://discord.gg/T5HHf7k) to complain or just to hang out c:
+
+__Support Me__ - If you would like to give donations to a broke uni student, you can visit my [patreon page](https://www.patreon.com/stevy).
