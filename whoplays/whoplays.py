@@ -14,7 +14,8 @@ class WhoPlays:
         if len(game) <= 2:
             await self.bot.say("You need at least 3 characters.")
             return     
-              
+
+        user = ctx.message.author
         server = ctx.message.server
         members = server.members
 
@@ -22,20 +23,20 @@ class WhoPlays:
         for member in members:
             if member != None and member.game != None and member.game.name != None and not member.bot:
                 if game.lower() in member.game.name.lower():
-                    playing_game += "+ {} ({})\n".format(member.name, member.game.name)            
+                    playing_game += "▸ {} ({})\n".format(member.name, member.game.name)            
 
         if playing_game == "":
             await self.bot.say("No one is playing that game.")
         else:
-            msg = "```python\n"
-            msg += "These are the people who are playing {}: \n".format(game)
-            msg += playing_game
-            msg += "```"           
-            await self.bot.say(msg)
+            msg = playing_game
+            em = discord.Embed(description=msg, colour=user.colour)
+            em.set_author(name="These are the people who are playing {}: \n".format(game))
+            await self.bot.say(embed = em)
 
     @commands.command(pass_context=True, no_pm=True)
     async def cgames(self, ctx):
         """Shows the currently most played games"""
+        user = ctx.message.author
         server = ctx.message.server
         members = server.members
 
@@ -52,19 +53,16 @@ class WhoPlays:
             await self.bot.say("Surprisingly, no one is playing anything.")
         else:            
             # create display
-            msg = "```These are the server's most played games at the moment: \n\n"
-            msg += "{:<25s}{:>25s}\n".format("Game:", "# Playing:")
+            msg = ""
             max_games = min(len(sorted_list), 10)
             for i in range(max_games):
                 game, freq = sorted_list[i]
-                if len(game) > 25:
-                    trunc_game = game [0:21] + "..."
-                    msg+= "{:<25s}{:>25d}\n".format(trunc_game, freq_list[game])
-                else:
-                    msg+= "{:<25s}{:>25d}\n".format(game, freq_list[game])
-            msg += "```" 
-            await self.bot.say(msg)         
+                msg+= "▸ {}: __{}__\n".format(game, freq_list[game])
 
+            em = discord.Embed(description=msg, colour=user.colour)
+            em.set_author(name="These are the server's most played games at the moment:")
+
+            await self.bot.say(embed = em)         
 
 def setup(bot):
     n = WhoPlays(bot)
