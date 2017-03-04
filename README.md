@@ -2,13 +2,25 @@
 A few cogs for [Twentysix's Red-DiscordBot](https://github.com/Twentysix26/Red-DiscordBot).
 To add, do `[p]cog repo add stevy https://github.com/AznStevy/Maybe-Useful-Cogs/`
 
+**About Cogs**
+
+>Osu - I play the game and have a discord server, so I thought it would be nice to have an osu cog.
+
+>Leveler - A replica of [Tatsumaki's](https://www.tatsumaki.xyz/) level-up system using python.
+
+>Discomegle - More people/servers, more fun. You are put into a pool that the bot keeps track of and you can talk anonymously to a partner.
+
+>Markov - Markov. It is what it is.
+
+>Whoplays - Look at what games people in the server are playing.
+
 **Why...** 
 
-Because I wanted to make them.
+>Because I wanted to make them.
 
 **Do you suck?** 
 
-Oh.
+>Oh.
 
 **_Support_** 
 
