@@ -53,20 +53,25 @@ class Osu:
     async def osu(self, ctx, *info):
         """Gives osu user stats. Usage: [p]osu username gamemode or [p]osu gamemode"""
         # handle input
-        username, gamemode = self._handle_input(info)
-        user_output = await self._process_user_info(ctx, username, gamemode)
-        await self.bot.say(embed=user_output)
+        try:
+            username, gamemode = self._handle_input(info)
+            user_output = await self._process_user_info(ctx, username, gamemode)
+            await self.bot.say(embed=user_output)
+        except:
+            await self.bot.say(help_msg[0])
 
     @commands.command(pass_context=True, no_pm=True)
     async def osutop(self, ctx, *info):
         """Gives top plays. Usage: [p]osutop username gamemode or [p]osutop gamemode"""
-        # handle input
-        username, gamemode = self._handle_input(info)
-        msg, top_plays = await self._process_user_top(ctx, username, gamemode)
-        await self.bot.say(msg)
-        for play in top_plays:
-            await self.bot.say(embed=play)
-
+        try:        
+            # handle input
+            username, gamemode = self._handle_input(info)
+            msg, top_plays = await self._process_user_top(ctx, username, gamemode)
+            await self.bot.say(msg)
+            for play in top_plays:
+                await self.bot.say(embed=play)
+        except:
+            await self.bot.say(help_msg[0])
     def _handle_input(self, info):
         # handle game mode
 
@@ -134,22 +139,19 @@ class Osu:
         server = user.server
 
         # gives the final input for osu username
-        try:
-            test_username = await self._process_username(ctx, username)
-            if test_username:
-                username = test_username
-            else:
-                return
+        test_username = await self._process_username(ctx, username)
+        if test_username:
+            username = test_username
+        else:
+            return
 
-            # testing if username is osu username
-            userinfo = list(await get_user(key, username, gamemode)) # get user info from osu api
-            if userinfo: # if there is something returned
-                em = await self._get_user_info(user, userinfo[0], gamemode)                
-                return em
-            else:
-                await self.bot.say("Player not found :cry:")
-        except:
-            await self.bot.say(help_msg[0])            
+        # testing if username is osu username
+        userinfo = list(await get_user(key, username, gamemode)) # get user info from osu api
+        if userinfo: # if there is something returned
+            em = await self._get_user_info(user, userinfo[0], gamemode)                
+            return em
+        else:
+            await self.bot.say("Player not found :cry:")      
 
     # Gets information to proccess the top play version of the image
     async def _process_user_top(self, ctx, username, gamemode: int):
@@ -157,25 +159,23 @@ class Osu:
         channel = ctx.message.channel
         user = ctx.message.author
         server = user.server
-        try:
-            # gives the final input for osu username
-            test_username = await self._process_username(ctx, username)
-            if test_username:
-                username = test_username
-            else:
-                return
 
-            # get userinfo
-            userinfo = list(await get_user(key, username, gamemode))
-            userbest = list(await get_user_best(key, username, gamemode, self.num_best_plays))
-            if userinfo:                          
-                await self.bot.send_typing(channel)
-                top_plays = await self._get_user_top(user, userinfo[0],userbest, gamemode)
-                return top_plays
-            else:
-                await self.bot.say("Player not found :cry:")
-        except:
-            await self.bot.say(help_msg[0])
+        # gives the final input for osu username
+        test_username = await self._process_username(ctx, username)
+        if test_username:
+            username = test_username
+        else:
+            return
+
+        # get userinfo
+        userinfo = list(await get_user(key, username, gamemode))
+        userbest = list(await get_user_best(key, username, gamemode, self.num_best_plays))
+        if userinfo:                          
+            await self.bot.send_typing(channel)
+            top_plays = await self._get_user_top(user, userinfo[0],userbest, gamemode)
+            return top_plays
+        else:
+            await self.bot.say("Player not found :cry:")
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def _process_username(self, ctx, username):
