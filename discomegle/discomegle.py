@@ -4,7 +4,6 @@ import aiohttp
 import asyncio
 import random
 from __main__ import send_cmd_help
-from bs4 import BeautifulSoup
 from .utils.dataIO import dataIO, fileIO
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
@@ -16,6 +15,7 @@ class Discomegle:
         self.bot = bot
         self.pool = {} # queue of users.id -> user channel
         self.link = {} # userid -> {target id, target user channel}
+        self.colour = 0xAAAAAA
 
     @commands.command(pass_context=True, no_pm=True)
     async def discomegle(self, ctx):
@@ -24,17 +24,15 @@ class Discomegle:
         channel = ctx.message.channel
         server = user.server
 
-        msg = "```x1\n"
-        msg += "In a private message to this bot: ```\n"   
-        msg += "```x1\n"
-        msg += prefix+"joinpool: Joins the pool\n"   
-        msg += prefix+"next: Changes partners\n" 
-        msg += prefix+"leavepool: Leaves the pool or conversation\n"  
-        msg += prefix+"check: Checks who's there\n" 
-        msg += "```" 
-        await self.bot.say(msg)
+        msg = ""  
+        msg += "▸ **{}joinpool**: Joins the pool\n".format(prefix)   
+        msg += "▸ **{}next**: Changes partners\n".format(prefix) 
+        msg += "▸ **{}leavepool**: Leaves the pool or conversation\n".format(prefix)   
+        msg += "▸ **{}check**: Checks who's there\n".format(prefix)  
 
-
+        em = discord.Embed(description=msg, colour=user.colour)
+        em.set_author(name="In a private message to this bot:")
+        await self.bot.say(embed = em)
 
     async def direct_message(self, message):
         msg = message.content
@@ -43,7 +41,10 @@ class Discomegle:
 
         if channel.is_private and not msg.startswith(prefix) and user.id in self.link:
             target_channel = self.link[user.id]["TARGET_CHANNEL"]
-            await self.bot.send_message(target_channel, "**PARTNER: **{}".format(msg))
+            em = discord.Embed(description=msg, colour=self.colour)
+            em.set_author(name="Partner")
+            await self.bot.send_message(target_channel, embed = em)
+
         else:
             if channel.is_private:
                 if msg == (prefix + "joinpool"):
@@ -58,9 +59,10 @@ class Discomegle:
     async def add_to_pool(self, message):
         user = message.author
         channel =  message.channel
-
         self.pool[user.id] = channel
-        await self.bot.send_message(channel, "**You have been added to the pool.**")  
+
+        em = discord.Embed(description="**You have been added to the pool.**", colour=self.colour)
+        await self.bot.send_message(channel, embed = em)
 
     async def remove_from_pool(self, message):
         user = message.author
@@ -68,7 +70,8 @@ class Discomegle:
 
         if user.id in self.pool.keys():
             self.pool.pop(user.id)
-            await self.bot.send_message(channel, "**Leaving discomegle pool.**")
+            em = discord.Embed(description="**Leaving discomegle pool.**", colour=self.colour)
+            await self.bot.send_message(channel, embed = em)
         elif user.id in self.link.keys():
             # put partner back into pool
             partner_id = self.link[user.id]["TARGET_ID"]
@@ -76,10 +79,15 @@ class Discomegle:
             self.pool[partner_id] = partner_channel
             self.link.pop(partner_id)
             self.link.pop(user.id)
-            await self.bot.send_message(partner_channel, "**Your partner has disconnected.**")
-            await self.bot.send_message(channel, "**Leaving discomegle conversation and pool.**")
+
+            em = discord.Embed(description="**Your partner has disconnected.**", colour=self.colour)
+            await self.bot.send_message(partner_channel, embed = em)
+
+            em = discord.Embed(description="**You are not in the pool or a conversation.**", colour=self.colour)
+            await self.bot.send_message(channel, embed = em)
         else:
-            await self.bot.send_message(channel, "**You are not in the pool or a conversation.**")            
+            em = discord.Embed(description="**Leaving discomegle conversation and pool.**", colour=self.colour)
+            await self.bot.send_message(channel, embed = em)           
 
     # puts both users back in the pool, but will go to same person if pool is small
     async def get_next_user(self, message):
@@ -95,23 +103,30 @@ class Discomegle:
             
             self.link.pop(partner_id)
             self.link.pop(user.id)
-            await self.bot.send_message(partner_channel, "**Your partner has disconnected.**")
-            await self.bot.send_message(channel, "**Switching Users.**")
+
+            em = discord.Embed(description="**Your partner has disconnected.**", colour=self.colour)
+            await self.bot.send_message(partner_channel, embed = em)
+
+            em = discord.Embed(description="**Switching Users.**", colour=self.colour)
+            await self.bot.send_message(channel, embed = em)
+
         elif user.id in self.pool.keys():
-            await self.bot.send_message(channel, "**You're still in the pool. Please wait.**")
+            em = discord.Embed(description="**You're still in the pool. Please wait.**", colour=self.colour)
+            await self.bot.send_message(channel, embed = em)
         else:
-            await self.bot.send_message(channel, "**Your are not in the pool. Please do `{}joinpool`.**".format(prefix))                   
+            em = discord.Embed(description="**You are not in the pool. Please do `{}joinpool`.**", colour=self.colour)
+            await self.bot.send_message(channel, embed = em)                 
 
     async def get_info(self, message):
         channel =  message.channel
 
-        msg = "```xl\n"
-        msg += "Total Users: {}\n".format(len(self.pool) + len(self.link) )
-        msg += "Users in conversation (should be even): {}\n".format(len(self.link))
-        msg += "Unpaired users: {}".format(len(self.pool))
-        msg += "```"
-        await self.bot.send_message(channel, msg)
+        msg = ""
+        msg += "▸ Total Users: __{}__\n".format(len(self.pool) + len(self.link) )
+        msg += "▸ Users in conversation (should be even): __{}__\n".format(len(self.link))
+        msg += "▸ Unpaired users: __{}__".format(len(self.pool))
 
+        em = discord.Embed(description=msg, colour=self.colour)
+        await self.bot.send_message(channel, embed = em) 
 
     async def create_link(self):
         while self == self.bot.get_cog('Discomegle'):
@@ -127,8 +142,13 @@ class Discomegle:
 
                 self.link[user_one_id] = {"TARGET_ID": user_two_id, "TARGET_CHANNEL": user_two_channel}
                 self.link[user_two_id] = {"TARGET_ID": user_one_id, "TARGET_CHANNEL": user_one_channel}
-                await self.bot.send_message(user_one_channel, "**You have been paired. You can now start talking with your partner.**")   
-                await self.bot.send_message(user_two_channel, "**You have been paired. You can now start talking with your partner.**")    
+
+                em = discord.Embed(description="**You have been paired. You can now start talking with your partner.**", colour=self.colour)
+                await self.bot.send_message(user_one_channel, embed = em)  
+
+                em = discord.Embed(description="**You have been paired. You can now start talking with your partner.**", colour=self.colour)
+                await self.bot.send_message(user_two_channel, embed = em)  
+
             await asyncio.sleep(5)
 
 def setup(bot):
