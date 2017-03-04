@@ -453,7 +453,7 @@ class Osu:
         tags = beatmap[0]['tags']
         if tags == "":
             tags = "-"
-        desc = '**BPM:** {} **Length:** {}m {}s\n **Tags:** {}\n-------------'.format(beatmap[0]['bpm'], m, s, tags)
+        desc = ' **Length:** {}m {}s  **BPM:** {}\n **Tags:** {}\n-------------'.format(m, s, beatmap[0]['bpm'], tags)
         em = discord.Embed(description = desc, colour=0xeeeeee)
         em.set_author(name="{} - {}".format(beatmap[0]['title'], beatmap[0]['artist']), url=beatmap_url)
 
@@ -466,8 +466,8 @@ class Osu:
 
         for i, diff in map_order:
             beatmap_info = ""    
-            beatmap_info += "**▸Difficulty:** {:.2f}★ **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['max_combo'])
-            beatmap_info += "**▸AR:** {} **▸OD:** {} **▸HP:** {} **▸CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
+            beatmap_info += "**▸Difficulty:** {:.2f}★  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['max_combo'])
+            beatmap_info += "**▸AR:** {}  **▸OD:** {}  **▸HP:** {}  **▸CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
             em.add_field(name = "[{}] by {}\n".format(beatmap[i]['version'],beatmap[i]['creator']), value = beatmap_info)
 
         page = urllib.request.urlopen(beatmap_url)
