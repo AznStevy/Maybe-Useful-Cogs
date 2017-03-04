@@ -88,7 +88,7 @@ class Osu:
         await self._process_user_top(ctx, username, 3)
 
     @osuset.command(pass_context=True, no_pm=True)
-    async def user(self, ctx, *username):
+    async def user(self, ctx, *, username):
         """Sets user information given an osu! username"""
         user = ctx.message.author
         channel = ctx.message.channel
