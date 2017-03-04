@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord.utils import find
 from __main__ import send_cmd_help
-import random
+import random, time
 import aiohttp
 import re, operator
 import urllib.request
@@ -14,9 +14,7 @@ from cogs.utils import checks
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
-            "No linked account ({}osuset user) or not using `{}command username gamemode`".format(prefix, prefix),
-            "It doesn't seem that you have an account linked. Do **{}osuset user**.".format(prefix),
-            "It doesn't seem that the discord user has an account linked."
+            "**No linked account ({}osuset user) or not using **`{}command username gamemode`".format(prefix, prefix)
             ]
 
 class Osu:
@@ -50,53 +48,47 @@ class Osu:
             await self.bot.whisper("API Key details added.")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def osu(self, ctx, *info):
-        """Gives osu user stats. Usage: [p]osu username gamemode or [p]osu gamemode"""
-        # handle input
-        try:
-            username, gamemode = self._handle_input(info)
-            user_output = await self._process_user_info(ctx, username, gamemode)
-            await self.bot.say(embed=user_output)
-        except:
-            await self.bot.say(help_msg[0])
+    async def osu(self, ctx, *username):
+        """Gives osu user stats."""
+        await self._process_user_info(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def osutop(self, ctx, *info):
-        """Gives top plays. Usage: [p]osutop username gamemode or [p]osutop gamemode"""
-        try:        
-            # handle input
-            username, gamemode = self._handle_input(info)
-            msg, top_plays = await self._process_user_top(ctx, username, gamemode)
-            await self.bot.say(msg)
-            for play in top_plays:
-                await self.bot.say(embed=play)
-        except:
-            await self.bot.say(help_msg[0])
-    def _handle_input(self, info):
-        # handle game mode
+    async def osutop(self, ctx, *username):
+        """Gives top osu plays."""
+        await self._process_user_top(ctx, username, 0)
 
-        gamemodes = ['osu', 'taiko','ctb','mania']
+    @commands.command(pass_context=True, no_pm=True)
+    async def taiko(self, ctx, *username):
+        """Gives osu user stats."""
+        await self._process_user_info(ctx, username, 1)
 
-        gamemode = 0
-        if len(info) == 0:
-            username = None
-        elif len(info) == 1:
-            if info[0] in gamemodes:
-                print("in gamemodes")
-                gamemode = gamemodes.index(info[0])
-                username = None
-            else:
-                username = str(info[0])
-        else: 
-            username = info[0]
-            if info[1] in gamemodes:
-                gamemode = gamemodes.index(info[1].lower())
+    @commands.command(pass_context=True, no_pm=True)
+    async def taikotop(self, ctx, *username):
+        """Gives top osu plays."""
+        await self._process_user_top(ctx, username, 1)
 
-        ret = (username, gamemode)
-        return ret
+    @commands.command(pass_context=True, no_pm=True)
+    async def ctb(self, ctx, *username):
+        """Gives osu user stats."""
+        await self._process_user_info(ctx, username, 2)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def ctbtop(self, ctx, *username):
+        """Gives top osu plays."""
+        await self._process_user_top(ctx, username, 2)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def mania(self, ctx, *username):
+        """Gives osu user stats."""
+        await self._process_user_info(ctx, username, 3)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def maniatop(self, ctx, *username):
+        """Gives top osu plays."""
+        await self._process_user_top(ctx, username, 3)
 
     @osuset.command(pass_context=True, no_pm=True)
-    async def user(self, ctx, *, username):
+    async def user(self, ctx, *username):
         """Sets user information given an osu! username"""
         user = ctx.message.author
         channel = ctx.message.channel
@@ -132,26 +124,44 @@ class Osu:
                 await self.bot.say("{} doesn't exist in the osu! database.".format(username))
 
     # Gets json information to proccess the small version of the image
-    async def _process_user_info(self, ctx, username, gamemode: int):
+    async def _process_user_info(self, ctx, usernames, gamemode: int):
         key = self.osu_api_key["osu_api_key"]
         channel = ctx.message.channel
         user = ctx.message.author
         server = user.server
 
+        if not usernames:
+            usernames = [None]
+
         # gives the final input for osu username
-        test_username = await self._process_username(ctx, username)
-        if test_username:
-            username = test_username
-        else:
-            return
+        final_usernames = []
+        for username in usernames:
+            test_username = await self._process_username(ctx, username)
+            final_usernames.append(test_username)
 
         # testing if username is osu username
-        userinfo = list(await get_user(key, username, gamemode)) # get user info from osu api
-        if userinfo: # if there is something returned
-            em = await self._get_user_info(user, userinfo[0], gamemode)                
-            return em
-        else:
-            await self.bot.say("Player not found :cry:")      
+        all_user_info = []
+        sequence = []
+        
+        count_valid = 0
+        for i in range(len(final_usernames)):
+            userinfo = list(await get_user(key, final_usernames[i], gamemode)) # get user info from osu api
+            try:
+                if userinfo != None and userinfo[0]:
+                    all_user_info.append(userinfo[0])
+                    sequence.append((count_valid, int(userinfo[0]["pp_rank"])))
+                    count_valid = count_valid + 1
+            except:
+                await self.bot.say("**{} has not played enough.**".format(final_usernames[i]))
+
+        sequence = sorted(sequence, key=operator.itemgetter(1))
+
+        all_players = []
+        for i, pp in sequence:
+            all_players.append(await self._get_user_info(user, all_user_info[i], gamemode))
+
+        for player in all_players:
+            await self.bot.say(embed=player)  
 
     # Gets information to proccess the top play version of the image
     async def _process_user_top(self, ctx, username, gamemode: int):
@@ -159,6 +169,11 @@ class Osu:
         channel = ctx.message.channel
         user = ctx.message.author
         server = user.server
+
+        if not username:
+            username = None
+        else:
+            username = username[0]
 
         # gives the final input for osu username
         test_username = await self._process_username(ctx, username)
@@ -170,12 +185,13 @@ class Osu:
         # get userinfo
         userinfo = list(await get_user(key, username, gamemode))
         userbest = list(await get_user_best(key, username, gamemode, self.num_best_plays))
-        if userinfo:                          
-            await self.bot.send_typing(channel)
-            top_plays = await self._get_user_top(user, userinfo[0],userbest, gamemode)
-            return top_plays
+        if userinfo and userbest:                          
+            msg, top_plays = await self._get_user_top(user, userinfo[0], userbest, gamemode)
+            await self.bot.say(msg)
+            for play in top_plays:
+                await self.bot.say(embed=play)
         else:
-            await self.bot.say("Player not found :cry:")
+            await self.bot.say("**{} was not found or not enough plays** :cry:".format(username))
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def _process_username(self, ctx, username):
@@ -245,28 +261,22 @@ class Osu:
         profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
         flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
 
-        gamemode_text = ""
-        if gamemode == 0:
-            gamemode_text = "Osu! Standard"
-        elif gamemode == 1:
-            gamemode_text = "Taiko"
-        elif gamemode == 2:
-            gamemode_text = "Catch the Beat!"
-        elif gamemode == 3:
-            gamemode_text = "Osu! Mania"
+        gamemode_text = self._get_gamemode(gamemode)
 
+        try:
+            em = discord.Embed(description='', colour=server_user.colour)
+            em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url)
+            em.set_thumbnail(url=profile_url)
 
-        em = discord.Embed(description='', colour=server_user.colour)
-        em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url)
-        em.set_thumbnail(url=profile_url)
-
-        info = ""
-        info += "**▸ Global Rank:** *#{} (#{})*\n".format(user['pp_rank'], user['pp_country_rank'])
-        info += "**▸ Total PP:** *{}*\n".format(user['pp_raw'])
-        info += "**▸ Playcount:** *{}*\n".format(user['playcount'])
-        info += "**▸ Hit Accuracy:** *{}%*".format(user['accuracy'][0:5])
-        em.description = info
-        return em  
+            info = ""
+            info += "**▸ Global Rank:** *#{} (#{})*\n".format(user['pp_rank'], user['pp_country_rank'])
+            info += "**▸ Total PP:** *{}*\n".format(user['pp_raw'])
+            info += "**▸ Playcount:** *{}*\n".format(user['playcount'])
+            info += "**▸ Hit Accuracy:** *{}%*".format(user['accuracy'][0:5])
+            em.description = info
+            return em 
+        except:
+            return None
 
     # Gives a user profile image with some information
     async def _get_user_top(self, server_user, user, userbest, gamemode:int):
@@ -276,15 +286,7 @@ class Osu:
         osu_logo_url = 'http://puu.sh/pT7JR/577b0cc30c.png'
         flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
 
-        gamemode_text = ""
-        if gamemode == 0:
-            gamemode_text = "Osu! Standard"
-        elif gamemode == 1:
-            gamemode_text = "Taiko"
-        elif gamemode == 2:
-            gamemode_text = "Catch the Beat!"
-        elif gamemode == 3:
-            gamemode_text = "Osu! Mania"
+        gamemode_text = self._get_gamemode(gamemode)
 
         # get best plays map information and scores
         best_beatmaps = []
@@ -295,10 +297,11 @@ class Osu:
             best_beatmaps.append(beatmap)
             best_acc.append(self.calculate_acc(score,gamemode))
 
+        num_plays = min(self.num_best_plays, 5)
         all_plays = []
-        msg = "**Top {} {} Plays for {}:**".format(self.num_best_plays, gamemode_text, user['username'])
+        msg = "**Top {} {} Plays for {}:**".format(num_plays, gamemode_text, user['username'])
 
-        for i in range(self.num_best_plays):
+        for i in range(num_plays):
             info = ""
             info += "**▸ Accuracy:** {0:.2f}%\n".format(float(best_acc[i]))
             info += "**▸ PP: **{0:.2f}\n".format(float(userbest[i]['pp']))
@@ -316,12 +319,22 @@ class Osu:
             map_image_url = 'http:{}'.format(map_image[0])
 
             em = discord.Embed(description=info, colour=server_user.colour)
-            em.set_author(name="{}) {} [{}] +{} ({} Rank)".format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], ",".join(mods),userbest[i]['rank']), url = beatmap_url)
+            em.set_author(name="{}. {} [{}] +{} ({} Rank)".format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], ",".join(mods),userbest[i]['rank']), url = beatmap_url)
             em.set_thumbnail(url=map_image_url)
             all_plays.append(em)
 
         return (msg, all_plays)
-                        
+
+    def _get_gamemode(self, gamemode:int):
+        if gamemode == 1:
+            gamemode_text = "Taiko"
+        elif gamemode == 2:
+            gamemode_text = "Catch the Beat!"
+        elif gamemode == 3:
+            gamemode_text = "Osu! Mania"
+        else:
+            gamemode_text = "Osu! Standard"
+        return gamemode_text      
 
     def calculate_acc(self, beatmap, gamemode:int):
         if gamemode == 0:
@@ -453,7 +466,7 @@ class Osu:
         tags = beatmap[0]['tags']
         if tags == "":
             tags = "-"
-        desc = ' **Length:** {}m {}s  **BPM:** {}\n **Tags:** {}\n-------------'.format(m, s, beatmap[0]['bpm'], tags)
+        desc = ' **Length:** {}m {}s  **BPM:** {}\n **Tags:** {}\n_-----------------_'.format(m, s, beatmap[0]['bpm'], tags)
         em = discord.Embed(description = desc, colour=0xeeeeee)
         em.set_author(name="{} - {}".format(beatmap[0]['title'], beatmap[0]['artist']), url=beatmap_url)
 
@@ -468,7 +481,7 @@ class Osu:
             beatmap_info = ""    
             beatmap_info += "**▸Difficulty:** {:.2f}★  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['max_combo'])
             beatmap_info += "**▸AR:** {}  **▸OD:** {}  **▸HP:** {}  **▸CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
-            em.add_field(name = "[{}] by {}\n".format(beatmap[i]['version'],beatmap[i]['creator']), value = beatmap_info)
+            em.add_field(name = "__[{}] by {}__\n".format(beatmap[i]['version'],beatmap[i]['creator']), value = beatmap_info)
 
         page = urllib.request.urlopen(beatmap_url)
         soup = BeautifulSoup(page.read())
