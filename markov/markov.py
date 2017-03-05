@@ -38,18 +38,22 @@ class Markov:
                 markov_text = msg + " "
                 current_word = first_word
 
-            while '?' not in markov_text and '\r' not in markov_text and '.' not in markov_text and prefix not in markov_text and len(markov_text) < 200:
-                try:
+            tries = 0
+            while '?' not in markov_text and '\r' not in markov_text and '.' not in markov_text and prefix not in markov_text and len(markov_text) < 200 and tries < 20:
+                if current_word in self.model[server.id][channel.id]:
                     new_word = random.choice(self.model[server.id][channel.id][current_word])
                     current_word = new_word
                     markov_text += new_word + " "
-                except:
-                    break
-            em = discord.Embed(description='', colour=user.colour)
-            em.set_author(name="Generated Text", icon_url = user.avatar_url)
-            em.description = markov_text
-
-            await self.bot.say(embed = em)
+                else:
+                    current_word = random.choice(list(self.model[server.id][channel.id].keys())) # first word
+                    tries = tries + 1
+            try:
+                em = discord.Embed(description='', colour=user.colour)
+                em.set_author(name="Generated Text", icon_url = user.avatar_url)
+                em.description = markov_text
+                await self.bot.say(embed = em)
+            except:
+                await self.bot.say("Something went wrong :C")                
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
