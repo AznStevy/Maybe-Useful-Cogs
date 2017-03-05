@@ -14,7 +14,8 @@ from cogs.utils import checks
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
-            "**No linked account ({}osuset user) or not using **`{}command username gamemode`".format(prefix, prefix)
+            "**No linked account ({}osuset user) or not using **`{}command username gamemode`".format(prefix, prefix),
+            "**No linked account**"
             ]
 
 class Osu:
@@ -108,7 +109,7 @@ class Osu:
                     "default_gamemode": 0,
                 }
 
-                self.user_settings[server.id][user.id] = newuser
+                self.user_settings[user.id] = newuser
                 fileIO('data/osu/user_settings.json', "save", self.user_settings)
                 await self.bot.say("{}, your account has been linked to osu! username `{}`".format(user.mention, osu_user[0]["username"]))
             except:
@@ -116,8 +117,8 @@ class Osu:
         else:
             try:
                 osu_user = list(await get_user(key, username, 1))
-                self.user_settings[server.id][user.id]["osu_username"] = username
-                self.user_settings[server.id][user.id]["osu_user_id"] = osu_user[0]["user_id"]
+                self.user_settings[user.id]["osu_username"] = username
+                self.user_settings[user.id]["osu_user_id"] = osu_user[0]["user_id"]
                 fileIO('data/osu/user_settings.json', "save", self.user_settings)
                 await self.bot.say("{}, your osu! username has been edited to `{}`".format(user.mention, osu_user[0]["username"]))
             except:
@@ -137,7 +138,8 @@ class Osu:
         final_usernames = []
         for username in usernames:
             test_username = await self._process_username(ctx, username)
-            final_usernames.append(test_username)
+            if test_username != None:
+                final_usernames.append(test_username)
 
         # testing if username is osu username
         all_user_info = []
@@ -146,12 +148,12 @@ class Osu:
         count_valid = 0
         for i in range(len(final_usernames)):
             userinfo = list(await get_user(key, final_usernames[i], gamemode)) # get user info from osu api
-            try:
-                if userinfo != None and userinfo[0]:
+            if userinfo != None and len(userinfo) > 0:
+                if "pp_rank" in userinfo[0] and userinfo[0]["pp_rank"] != None:
                     all_user_info.append(userinfo[0])
                     sequence.append((count_valid, int(userinfo[0]["pp_rank"])))
                     count_valid = count_valid + 1
-            except:
+            else:
                 await self.bot.say("**{} has not played enough.**".format(final_usernames[i]))
 
         sequence = sorted(sequence, key=operator.itemgetter(1))
@@ -161,7 +163,10 @@ class Osu:
             all_players.append(await self._get_user_info(user, all_user_info[i], gamemode))
 
         for player in all_players:
-            await self.bot.say(embed=player)  
+            try:
+                await self.bot.say(embed=player)
+            except:
+                pass
 
     # Gets information to proccess the top play version of the image
     async def _process_user_top(self, ctx, username, gamemode: int):
@@ -189,7 +194,10 @@ class Osu:
             msg, top_plays = await self._get_user_top(user, userinfo[0], userbest, gamemode)
             await self.bot.say(msg)
             for play in top_plays:
-                await self.bot.say(embed=play)
+                try:
+                    await self.bot.say(embed=play)
+                except:
+                    pass
         else:
             await self.bot.say("**{} was not found or not enough plays** :cry:".format(username))
 
@@ -203,17 +211,17 @@ class Osu:
         # if nothing is given, must rely on if there's account
         if not username:
             if self._check_user_exists(user):
-                username = self.user_settings[server.id][user.id]["osu_username"]
+                username = self.user_settings[user.id]["osu_username"]
             else:
                 await self.bot.say("It doesn't seem that you have an account linked. Do **{}osuset user**.".format(prefix))
-                return # bad practice, but too lazy to make it nice
+                return None # bad practice, but too lazy to make it nice
         # if it's a discord user, first check to see if they are in database and choose that username
         # then see if the discord username is a osu username, then try the string itself
         elif find(lambda m: m.name == username, channel.server.members) is not None:
             target = find(lambda m: m.name == username, channel.server.members)
             try:
                 self._check_user_exists(target)
-                username = self.user_settings[server.id][target.id]["osu_username"]
+                username = self.user_settings[target.id]["osu_username"]
             except:
                 if await get_user(key, username, 0):
                     username = str(target)
@@ -225,21 +233,19 @@ class Osu:
         elif "@" in username:   
             user_id = username.replace("@", "").replace("<","").replace(">","")
             try:
-                if self.user_settings[server.id][user_id]:
-                    username = self.user_settings[server.id][user_id]["osu_username"]
+                if self.user_settings[user_id]:
+                    username = self.user_settings[user_id]["osu_username"]
             except:
                 await self.bot.say(help_msg[2])
                 return
         else:
             username = str(username)
+
         return username
 
     # Checks if user exists
     def _check_user_exists(self, user):
-        if user.server.id not in self.user_settings:
-            self.user_settings[user.server.id] = {}
-
-        if user.id not in self.user_settings[user.server.id]:
+        if user.id not in self.user_settings:
             return False
         return True
 
