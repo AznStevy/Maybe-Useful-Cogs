@@ -17,7 +17,7 @@ except:
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
 except:
-    raise RuntimeError("You don't have pillow installed. run 'pip3 install pillow' and try again")
+    raise RuntimeError("You don't have PIL installed. run 'pip3 install pil' and try again")
 import time
 
 # fonts
@@ -133,7 +133,7 @@ class Leveler:
 
         # check cooldown first
         if "rank_block" not in userinfo:
-            userinfo["profile_block"] = 0
+            userinfo["rank_block"] = 0
             
         cooldown = 10
         elapsed_time = curr_time - userinfo["rank_block"]
@@ -799,7 +799,7 @@ class Leveler:
         userinfo["total_exp"] -= userinfo["servers"][server.id]["current_exp"]
 
         # add in new exp
-        total_exp += self._level_exp(level)
+        total_exp = self._level_exp(level)
         userinfo["servers"][server.id]["current_exp"] = 0
         userinfo["servers"][server.id]["level"] = level
         userinfo["total_exp"] += total_exp
