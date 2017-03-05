@@ -26,7 +26,8 @@ class Osu:
         self.osu_api_key = fileIO("data/osu/apikey.json", "load")
         self.user_settings = fileIO("data/osu/user_settings.json", "load")
         self.num_best_plays = 5
-        self.max_map_disp = 5
+        self.num_max_prof = 8
+        self.max_map_disp = 3
 
     @commands.group(pass_context=True)
     async def osuset(self, ctx):
@@ -50,7 +51,7 @@ class Osu:
 
     @commands.command(pass_context=True, no_pm=True)
     async def osu(self, ctx, *username):
-        """Gives osu user stats."""
+        """Gives osu user(s) stats."""
         await self._process_user_info(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
@@ -60,32 +61,32 @@ class Osu:
 
     @commands.command(pass_context=True, no_pm=True)
     async def taiko(self, ctx, *username):
-        """Gives osu user stats."""
+        """Gives taiko user(s) stats."""
         await self._process_user_info(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
     async def taikotop(self, ctx, *username):
-        """Gives top osu plays."""
+        """Gives top taiko plays."""
         await self._process_user_top(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
     async def ctb(self, ctx, *username):
-        """Gives osu user stats."""
+        """Gives ctb user(s) stats."""
         await self._process_user_info(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
     async def ctbtop(self, ctx, *username):
-        """Gives top osu plays."""
+        """Gives ctb osu plays."""
         await self._process_user_top(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
     async def mania(self, ctx, *username):
-        """Gives osu user stats."""
+        """Gives mania user(s) stats."""
         await self._process_user_info(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
     async def maniatop(self, ctx, *username):
-        """Gives top osu plays."""
+        """Gives top mania plays."""
         await self._process_user_top(ctx, username, 3)
 
     @osuset.command(pass_context=True, no_pm=True)
@@ -162,7 +163,11 @@ class Osu:
         for i, pp in sequence:
             all_players.append(await self._get_user_info(user, all_user_info[i], gamemode))
 
-        for player in all_players:
+        disp_num = min(self.num_max_prof, len(all_players))
+        if disp_num < len(all_players):
+            await self.bot.say("Found {} users, but displaying top {}.".format(len(all_players), disp_num))
+
+        for player in all_players[0:disp_num]:
             try:
                 await self.bot.say(embed=player)
             except:
@@ -270,8 +275,9 @@ class Osu:
         gamemode_text = self._get_gamemode(gamemode)
 
         try:
+            user_url = 'https://osu.ppy.sh/u/' + user['user_id']
             em = discord.Embed(description='', colour=server_user.colour)
-            em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url)
+            em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url, url = user_url)
             em.set_thumbnail(url=profile_url)
 
             info = ""
@@ -445,18 +451,29 @@ class Osu:
     # processes user input for the beatmap
     async def process_beatmap(self, message):
         key = self.osu_api_key["osu_api_key"]
-        try:
-            # process the the idea from a url in msg
-            url = re.search("(?P<url>https?://[^\s]+)", message.content).group("url")
-            if url.find('https://osu.ppy.sh/s/') != -1:
-                beatmap_id = url.replace('https://osu.ppy.sh/s/','')
-                beatmap_info = await get_beatmapset(key, beatmap_id)
-            elif url.find('https://osu.ppy.sh/b/') != -1:
-                beatmap_id = url.replace('https://osu.ppy.sh/b/','')
-                beatmap_info = await get_beatmap(key, beatmap_id)
-            await self.disp_beatmap(message, beatmap_info, url)
-        except:
-            await self.bot.send_message(message.channel, "That beatmap doesn't exist.")   
+
+        # process the the idea from a url in msg
+        all_urls = []
+        original_message = message.content
+        while original_message.find('https://') != -1:
+            url = re.search("(?P<url>https?://[^\s]+)", original_message).group("url")
+            all_urls.append(url)
+            original_message = original_message.replace(url, '')
+            print(all_urls)
+
+        print(all_urls)
+
+        for url in all_urls:
+            try:
+                if url.find('https://osu.ppy.sh/s/') != -1:
+                    beatmap_id = url.replace('https://osu.ppy.sh/s/','')
+                    beatmap_info = await get_beatmapset(key, beatmap_id)
+                elif url.find('https://osu.ppy.sh/b/') != -1:
+                    beatmap_id = url.replace('https://osu.ppy.sh/b/','')
+                    beatmap_info = await get_beatmap(key, beatmap_id)
+                await self.disp_beatmap(message, beatmap_info, url)
+            except:
+                await self.bot.send_message(message.channel, "That beatmap doesn't exist.")   
 
     # displays the beatmap properly
     async def disp_beatmap(self, message, beatmap, beatmap_url:str):
