@@ -5,18 +5,25 @@ from discord.utils import find
 from __main__ import send_cmd_help
 import random, time
 import aiohttp
+import asyncio
 import re, operator
 import urllib.request
-from bs4 import BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+except:
+    raise RuntimeError("bs4 required: pip install beautifulsoup4")
 from .utils.dataIO import fileIO
 from cogs.utils import checks
-
+import logging
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
             "**No linked account ({}osuset user) or not using **`{}command username gamemode`".format(prefix, prefix),
             "**No linked account**"
             ]
+
+log = logging.getLogger("red.osu")
+log.setLevel(logging.DEBUG)
 
 class Osu:
     """Cog to give osu! stats for all gamemodes."""
@@ -25,12 +32,21 @@ class Osu:
         self.bot = bot
         self.osu_api_key = fileIO("data/osu/apikey.json", "load")
         self.user_settings = fileIO("data/osu/user_settings.json", "load")
+        self.track = fileIO("data/osu/track.json", "load")        
         self.num_best_plays = 5
         self.num_max_prof = 8
         self.max_map_disp = 3
+        self.num_track_plays = 15
 
     @commands.group(pass_context=True)
     async def osuset(self, ctx):
+        """Where you can define some settings"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+            return
+
+    @commands.group(pass_context=True)
+    async def osutrack(self, ctx):
         """Where you can define some settings"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
@@ -440,6 +456,7 @@ class Osu:
             mod_list.append('NF')
         return mod_list
 
+    # ---------------------------- Detect Beatmaps ------------------------------
     # called by listener
     async def find_beatmap(self, message):
         if message.author.id == self.bot.user.id:
@@ -459,9 +476,6 @@ class Osu:
             url = re.search("(?P<url>https?://[^\s]+)", original_message).group("url")
             all_urls.append(url)
             original_message = original_message.replace(url, '')
-            print(all_urls)
-
-        print(all_urls)
 
         for url in all_urls:
             try:
@@ -513,6 +527,162 @@ class Osu:
         em.set_thumbnail(url=map_image_url)
         await self.bot.send_message(message.channel, embed = em)
 
+    # --------------------- Tracking Section -------------------------------
+    @osutrack.command(pass_context=True, no_pm=True)
+    async def add(self, ctx, username:str, channel=None):
+        """Adds a player to track for top scores."""
+        if channel == None:
+            channel = ctx.message.channel
+        server = ctx.message.server
+
+        key = self.osu_api_key["osu_api_key"]
+        userinfo = list(await get_user(key, username, 0))
+        if len(userinfo) == 0:
+            await self.bot.say("{} does not exist in the osu! database.".format(username))
+            return
+
+        if username not in self.track:
+            self.track[username] = {}
+
+            if server.id not in self.track[username]:
+                self.track[username]["servers"] = {}
+                self.track[username]["servers"][server.id] = {}
+
+                # add channels that care about the user
+                if "channel" not in self.track[username]["servers"][server.id]:
+                    self.track[username]["servers"][server.id]["channel"] = channel.id
+                    # get top 10 plays
+                    user_plays = {}
+                    user_plays["osu"] = await get_user_best(key, username, 0, self.num_track_plays)
+                    user_plays["taiko"] = await get_user_best(key, username, 1, self.num_track_plays)
+                    user_plays["ctb"] = await get_user_best(key, username, 2, self.num_track_plays)
+                    user_plays["mania"] = await get_user_best(key, username, 3, self.num_track_plays)
+                    self.track[username]["plays"] = user_plays
+
+                    # add current userinfo
+                    self.track[username]["userinfo"] = userinfo[0]
+                    await self.bot.say("**{} added. Will now track on #{}**".format(username, channel.name))
+                    fileIO("data/osu/track.json", "save", self.track)
+        else:
+            if server.id in self.track[username]["servers"]:
+                if channel.id == self.track[username]["servers"][server.id]["channel"]:
+                    await self.bot.say("**Already tracking {} on #{}.**".format(username, channel.name))
+                else:
+                    self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
+                    await self.bot.say("**{} now tracking on #{}**".format(username, channel.name))
+                    fileIO("data/osu/track.json", "save", self.track)
+            else:
+                if server.id not in self.track[username]["servers"]:
+                    self.track[username]["servers"][server.id] = {}
+                self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
+                await self.bot.say("**{} added. Will now track on #{}**".format(username, channel.name))
+                fileIO("data/osu/track.json", "save", self.track)
+
+    @osutrack.command(pass_context=True, no_pm=True)
+    async def remove(self, ctx, username:str, channel=None):
+        """Removes a player to track for top scores."""
+        if channel == None:
+            channel = ctx.message.channel
+        server = ctx.message.server
+
+        if username in self.track and "servers" in self.track[username] and server.id in self.track[username]["servers"]:
+            if channel.id == self.track[username]["servers"][server.id]["channel"]:
+                del self.track[username]["servers"][server.id]
+                if len(self.track[username]["servers"].keys()) == 0:
+                    del self.track[username]                  
+                await self.bot.say("**No longer tracking {} in #{}.**".format(username, channel.name))
+                fileIO("data/osu/track.json", "save", self.track)             
+            else:
+                await self.bot.say("**{} is not currently being tracked in #{}.**".format(username, channel.name))                 
+        else:
+            await self.bot.say("**{} is not currently being tracked.**".format(username))                
+
+    # used to track top plays of specified users
+    async def play_tracker(self):
+        key = self.osu_api_key["osu_api_key"]
+        while self == self.bot.get_cog('Osu'):
+
+            # get all keys() to grab all current tracking users
+            log.debug("looping through all users")
+            for username in self.track.keys():
+                log.debug("checking {}".format(username))
+                # if the user's current top 10 scores are different from new top 10
+                current_plays = self.track[username]["plays"]
+                current_info = self.track[username]["userinfo"]
+                new_plays = {}
+                new_plays["osu"] = await get_user_best(key, username, 0, self.num_track_plays)
+                new_plays["taiko"] = await get_user_best(key, username, 1, self.num_track_plays)
+                new_plays["ctb"] = await get_user_best(key, username, 2, self.num_track_plays)
+                new_plays["mania"] = await get_user_best(key, username, 3, self.num_track_plays)
+
+                # gamemode = word
+                for gamemode in current_plays:
+                    log.debug("examining gamemode {}".format(gamemode))
+                    old_best = current_plays[gamemode]
+                    new_best = new_plays[gamemode]
+
+                    if old_best != new_best:
+                        log.debug("new score detected")
+                        # loop to check what's different
+                        for i in range(len(new_best)):
+                            if i >= len(old_best) or old_best[i] != new_best[i]:
+                                top_play_num = i+1
+                                play = new_best[i]
+                                play_map = await get_beatmap(key, new_best[i]['beatmap_id'])
+                                new_user_info = list(await get_user(key, username, 0))
+                                new_user_info = new_user_info[0]
+                                # send appropriate message to channel
+
+                                log.debug("creating top play")
+                                em = self._create_top_play(top_play_num, play, play_map, self.track[username]["userinfo"], new_user_info)
+                                log.debug("sending embed")
+                                for server_id in self.track[username]['servers'].keys():
+                                    server = find(lambda m: m.id == server_id, self.bot.servers)                                    
+                                    channel = find(lambda m: m.id == self.track[username]['servers'][server_id]["channel"], server.channels)
+                                    await self.bot.send_message(channel, embed = em)
+                        self.track[username]["plays"][gamemode] = new_best
+                        fileIO("data/osu/track.json", "save", self.track)                        
+
+            log.debug("sleep 60 seconds")
+            await asyncio.sleep(60)
+
+    def _create_top_play(self, top_play_num, play, beatmap, old_user_info, new_user_info):
+        beatmap_url = 'https://osu.ppy.sh/b/' + play['beatmap_id']
+        user_url = 'https://osu.ppy.sh/u/' + new_user_info['user_id']
+        profile_url = 'http://s.ppy.sh/a/{}.png'.format(new_user_info['user_id'])
+        beatmap = beatmap[0]
+
+        # get infomation
+        log.debug("getting change information")
+        dpp = float(new_user_info['pp_raw']) - float(new_user_info['pp_raw'])
+        dgrank = float(new_user_info['pp_rank']) - float(new_user_info['pp_rank']) 
+        dcrank = float(new_user_info['pp_country_rank']) - float(new_user_info['pp_country_rank'])
+        m, s = divmod(int(beatmap['total_length']), 60)
+        mods = self.mod_calculation(play['enabled_mods'])
+        if not mods:
+            mods = []
+            mods.append('No Mod')
+        em = discord.Embed(description='', colour=0xeeeeee)
+        acc = self.calculate_acc(play, int(beatmap['mode']))
+
+        # grab beatmap image
+        log.debug("getting map image")
+        page = urllib.request.urlopen(beatmap_url)
+        soup = BeautifulSoup(page.read())
+        map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
+        map_image_url = 'http:{}'.format(map_image[0])
+        em.set_thumbnail(url=map_image_url)
+        log.debug("creating embed")
+        em.set_author(name="New #{} for {} in {}".format(top_play_num, new_user_info['username'], self._get_gamemode(int(beatmap['mode']))), icon_url = profile_url, url = user_url)
+
+        info = ""
+        info += "▸ [{}[{}]]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
+        info += "▸ +{} _**{:.2f}%**_ (**{}** Rank)\n".format(','.join(mods), float(acc), play['rank'])
+        info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, s, beatmap['bpm'])
+        info += "▸ {} ▸ x{} ▸ **{:.2f}pp** (+{:.2f})\n".format(play['score'], play['maxcombo'], float(play['pp']), float(dpp))
+        info += "▸ #{} → #{} ({}#{} → #{})".format(new_user_info['pp_rank'], new_user_info['pp_rank'], new_user_info['country'], new_user_info['pp_country_rank'], new_user_info['pp_country_rank'])
+        em.description = info
+        return em
 
 ###-------------------------Python wrapper for osu! api-------------------------
 
@@ -666,10 +836,18 @@ def check_files():
         print("Adding data/osu/user_settings.json...")
         fileIO(user_file, "save", {})
 
+    # creates file for player tracking
+    user_file = "data/osu/track.json"
+    if not fileIO(user_file, "check"):
+        print("Adding data/osu/track.json...")
+        fileIO(user_file, "save", {})
+
 def setup(bot):
     check_folders()
     check_files()
 
     n = Osu(bot)
+    loop = asyncio.get_event_loop()
+    loop.create_task(n.play_tracker())
     bot.add_listener(n.find_beatmap, "on_message")    
     bot.add_cog(n)
