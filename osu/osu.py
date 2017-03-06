@@ -142,7 +142,7 @@ class Osu:
                 await self.bot.say("{} doesn't exist in the osu! database.".format(username))
 
     # Gets json information to proccess the small version of the image
-    async def _process_user_info(self, ctx, usernames, gamemode: int):
+    async def _process_user_info(self, ctx, usernames, gamemode:int):
         key = self.osu_api_key["osu_api_key"]
         channel = ctx.message.channel
         user = ctx.message.author
@@ -430,7 +430,7 @@ class Osu:
     # gives a list of the ranked mods given a peppy number lol
     def mod_calculation(self, number):
         number = int(number)
-        mod_list =[]
+        mod_list = []
 
         if number >= 16384:
             number -= 16384
@@ -470,26 +470,45 @@ class Osu:
             mod_list.append('NF')
         return mod_list
 
-    # ---------------------------- Detect Beatmaps ------------------------------
+    # ---------------------------- Detect Links ------------------------------
     # called by listener
-    async def find_beatmap(self, message):
+    async def find_link(self, message):
         if message.author.id == self.bot.user.id:
             return
 
-        if 'https://osu.ppy.sh/s/' in message.content or 'https://osu.ppy.sh/b/' in message.content:
-            await self.process_beatmap(message)
+        if "https://" in message.content:
+            # process the the idea from a url in msg
+            all_urls = []
+            original_message = message.content
+            while original_message.find('https://') != -1:
+                url = re.search("(?P<url>https?://[^\s]+)", original_message).group("url")
+                all_urls.append(url)
+                original_message = original_message.replace(url, '')
+
+            if 'https://osu.ppy.sh/u/' in message.content:
+                await self.process_user_url(all_urls, message)
+
+            if 'https://osu.ppy.sh/s/' in message.content or 'https://osu.ppy.sh/b/' in message.content:
+                await self.process_beatmap(all_urls, message)
+
+    # processes user input for user profile link
+    async def process_user_url(self, all_urls, message):
+        key = self.osu_api_key["osu_api_key"]
+        user = message.author
+
+        for url in all_urls:
+            try:
+                if url.find('https://osu.ppy.sh/u/') != -1:
+                    user_id = url.replace('https://osu.ppy.sh/u/','')
+                    user_info = await get_user(key, user_id, 0)
+                    em = await self._get_user_info(user, user_info[0], 0)
+                    await self.bot.send_message(message.channel, embed = em)                
+            except:
+                await self.bot.send_message(message.channel, "That user doesn't exist.")
 
     # processes user input for the beatmap
-    async def process_beatmap(self, message):
+    async def process_beatmap(self, all_urls, message):
         key = self.osu_api_key["osu_api_key"]
-
-        # process the the idea from a url in msg
-        all_urls = []
-        original_message = message.content
-        while original_message.find('https://') != -1:
-            url = re.search("(?P<url>https?://[^\s]+)", original_message).group("url")
-            all_urls.append(url)
-            original_message = original_message.replace(url, '')
 
         for url in all_urls:
             try:
@@ -627,10 +646,9 @@ class Osu:
                 # if the user's current top 10 scores are different from new top 10
                 current_plays = self.track[username]["plays"]
                 new_plays = {}
-                new_plays["osu"] = await get_user_best(key, username, 0, self.num_track_plays)
-                new_plays["taiko"] = await get_user_best(key, username, 1, self.num_track_plays)
-                new_plays["ctb"] = await get_user_best(key, username, 2, self.num_track_plays)
-                new_plays["mania"] = await get_user_best(key, username, 3, self.num_track_plays)
+                modes = ["osu", "taiko", "ctb", "mania"]
+                for mode in modes:
+                    new_plays[mode] = await get_user_best(key, username, self._get_gamemode_number(mode), self.num_track_plays)
 
                 # gamemode = word
                 for gamemode in current_plays:
@@ -658,13 +676,14 @@ class Osu:
                                     server = find(lambda m: m.id == server_id, self.bot.servers)                                    
                                     channel = find(lambda m: m.id == self.track[username]['servers'][server_id]["channel"], server.channels)
                                     await self.bot.send_message(channel, embed = em)
-                                break  
                         self.track[username]["plays"][gamemode] = new_best
                         self.track[username]["userinfo"][gamemode] = new_user_info
                         fileIO("data/osu/track.json", "save", self.track)           
-
-            log.debug("sleep 60 seconds")
-            await asyncio.sleep(60)
+            try:
+                log.debug("sleep 60 seconds")
+                await asyncio.sleep(60)
+            except:
+                pass
 
     def _create_top_play(self, top_play_num, play, beatmap, old_user_info, new_user_info):
         beatmap_url = 'https://osu.ppy.sh/b/' + play['beatmap_id']
@@ -869,5 +888,5 @@ def setup(bot):
     n = Osu(bot)
     loop = asyncio.get_event_loop()
     loop.create_task(n.play_tracker())
-    bot.add_listener(n.find_beatmap, "on_message")    
+    bot.add_listener(n.find_link, "on_message")    
     bot.add_cog(n)
