@@ -527,9 +527,9 @@ class Osu:
         # process time
         num_disp = min(len(beatmap), self.max_map_disp)
         if (len(beatmap)>self.max_map_disp):
-            await self.bot.send_message(message.channel, "Found {} maps, but only displaying {}.\n".format(len(beatmap), self.max_map_disp))            
+            msg = "Found {} maps, but only displaying {}.\n".format(len(beatmap), self.max_map_disp)         
         else:
-            await self.bot.send_message(message.channel, "Found {} map(s).\n".format(len(beatmap)))
+            msg = "Found {} map(s).\n".format(len(beatmap))
 
         beatmap_msg = ""
         m, s = divmod(int(beatmap[0]['total_length']), 60)
@@ -558,7 +558,7 @@ class Osu:
         map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
         map_image_url = 'http:{}'.format(map_image[0]).replace(" ", "%")
         em.set_thumbnail(url=map_image_url)
-        await self.bot.send_message(message.channel, embed = em)
+        await self.bot.send_message(message.channel, msg, embed = em)
 
     # --------------------- Tracking Section -------------------------------
     @osutrack.command(pass_context=True, no_pm=True)
