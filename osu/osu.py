@@ -529,6 +529,7 @@ class Osu:
 
     # --------------------- Tracking Section -------------------------------
     @osutrack.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_messages=True)
     async def add(self, ctx, username:str, channel=None):
         """Adds a player to track for top scores."""
         if channel == None:
@@ -579,6 +580,7 @@ class Osu:
                 fileIO("data/osu/track.json", "save", self.track)
 
     @osutrack.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_messages=True)
     async def remove(self, ctx, username:str, channel=None):
         """Removes a player to track for top scores."""
         if channel == None:
