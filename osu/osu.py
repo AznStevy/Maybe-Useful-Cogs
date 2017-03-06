@@ -373,7 +373,7 @@ class Osu:
             gamemode_text = 3
         else:
             gamemode_text = 0
-        return gamemode_text   
+        return int(gamemode_text) 
 
     def calculate_acc(self, beatmap, gamemode:int):
         if gamemode == 0:
