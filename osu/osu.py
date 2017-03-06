@@ -362,7 +362,18 @@ class Osu:
             gamemode_text = "Osu! Mania"
         else:
             gamemode_text = "Osu! Standard"
-        return gamemode_text      
+        return gamemode_text
+
+    def _get_gamemode_number(self, gamemode:str):
+        if gamemode == "taiko":
+            gamemode_text = 1
+        elif gamemode == "ctb":
+            gamemode_text = 2
+        elif gamemode == "mania":
+            gamemode_text = 3
+        else:
+            gamemode_text = 0
+        return gamemode_text   
 
     def calculate_acc(self, beatmap, gamemode:int):
         if gamemode == 0:
@@ -554,14 +565,16 @@ class Osu:
                     self.track[username]["servers"][server.id]["channel"] = channel.id
                     # get top 10 plays
                     user_plays = {}
-                    user_plays["osu"] = await get_user_best(key, username, 0, self.num_track_plays)
-                    user_plays["taiko"] = await get_user_best(key, username, 1, self.num_track_plays)
-                    user_plays["ctb"] = await get_user_best(key, username, 2, self.num_track_plays)
-                    user_plays["mania"] = await get_user_best(key, username, 3, self.num_track_plays)
+                    modes = ["osu", "taiko", "ctb", "mania"]
+                    for mode in modes:
+                        user_plays[mode] = await get_user_best(key, username, self._get_gamemode_number(mode), self.num_track_plays)
                     self.track[username]["plays"] = user_plays
 
                     # add current userinfo
-                    self.track[username]["userinfo"] = userinfo[0]
+                    if "userinfo" not in self.track[username]:
+                        self.track[username]["userinfo"] = {}
+                    for mode in modes:
+                        self.track[username]["userinfo"][mode] = list(await get_user(key, username, self._get_gamemode_number(mode)))[0]                    
                     await self.bot.say("**{} added. Will now track on #{}**".format(username, channel.name))
                     fileIO("data/osu/track.json", "save", self.track)
         else:
@@ -610,7 +623,6 @@ class Osu:
                 log.debug("checking {}".format(username))
                 # if the user's current top 10 scores are different from new top 10
                 current_plays = self.track[username]["plays"]
-                current_info = self.track[username]["userinfo"]
                 new_plays = {}
                 new_plays["osu"] = await get_user_best(key, username, 0, self.num_track_plays)
                 new_plays["taiko"] = await get_user_best(key, username, 1, self.num_track_plays)
@@ -622,6 +634,7 @@ class Osu:
                     log.debug("examining gamemode {}".format(gamemode))
                     old_best = current_plays[gamemode]
                     new_best = new_plays[gamemode]
+                    current_info = self.track[username]["userinfo"][gamemode]
 
                     if old_best != new_best:
                         log.debug("new score detected")
@@ -631,12 +644,12 @@ class Osu:
                                 top_play_num = i+1
                                 play = new_best[i]
                                 play_map = await get_beatmap(key, new_best[i]['beatmap_id'])
-                                new_user_info = list(await get_user(key, username, 0))
+                                new_user_info = list(await get_user(key, username, self._get_gamemode_number(gamemode)))
                                 new_user_info = new_user_info[0]
                                 # send appropriate message to channel
 
                                 log.debug("creating top play")
-                                em = self._create_top_play(top_play_num, play, play_map, self.track[username]["userinfo"], new_user_info)
+                                em = self._create_top_play(top_play_num, play, play_map, self.track[username]["userinfo"][gamemode], new_user_info)
                                 log.debug("sending embed")
                                 for server_id in self.track[username]['servers'].keys():
                                     server = find(lambda m: m.id == server_id, self.bot.servers)                                    
@@ -656,9 +669,9 @@ class Osu:
 
         # get infomation
         log.debug("getting change information")
-        dpp = float(new_user_info['pp_raw']) - float(new_user_info['pp_raw'])
-        dgrank = float(new_user_info['pp_rank']) - float(new_user_info['pp_rank']) 
-        dcrank = float(new_user_info['pp_country_rank']) - float(new_user_info['pp_country_rank'])
+        dpp = float(new_user_info['pp_raw']) - float(old_user_info['pp_raw'])
+        dgrank = float(new_user_info['pp_rank']) - float(old_user_info['pp_rank']) 
+        dcrank = float(new_user_info['pp_country_rank']) - float(old_user_info['pp_country_rank'])
         m, s = divmod(int(beatmap['total_length']), 60)
         mods = self.mod_calculation(play['enabled_mods'])
         if not mods:
@@ -682,6 +695,7 @@ class Osu:
         info += "▸ +{} _**{:.2f}%**_ (**{}** Rank)\n".format(','.join(mods), float(acc), play['rank'])
         info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, s, beatmap['bpm'])
         info += "▸ {} ▸ x{} ▸ **{:.2f}pp**\n".format(play['score'], play['maxcombo'], float(play['pp']))
+        info += "▸ #{} → #{} ({}#{} → #{})".format(old_user_info['pp_rank'], new_user_info['pp_rank'], old_user_info['country'], old_user_info['pp_country_rank'], old_user_info['pp_country_rank'])
         em.description = info
         return em
 
