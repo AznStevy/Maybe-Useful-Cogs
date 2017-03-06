@@ -679,8 +679,7 @@ class Osu:
         info += "▸ [{}[{}]]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
         info += "▸ +{} _**{:.2f}%**_ (**{}** Rank)\n".format(','.join(mods), float(acc), play['rank'])
         info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, s, beatmap['bpm'])
-        info += "▸ {} ▸ x{} ▸ **{:.2f}pp** (+{:.2f})\n".format(play['score'], play['maxcombo'], float(play['pp']), float(dpp))
-        info += "▸ #{} → #{} ({}#{} → #{})".format(new_user_info['pp_rank'], new_user_info['pp_rank'], new_user_info['country'], new_user_info['pp_country_rank'], new_user_info['pp_country_rank'])
+        info += "▸ {} ▸ x{} ▸ **{:.2f}pp**\n".format(play['score'], play['maxcombo'], float(play['pp']))
         em.description = info
         return em
 
