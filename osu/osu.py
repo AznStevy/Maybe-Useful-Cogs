@@ -655,9 +655,10 @@ class Osu:
                                     server = find(lambda m: m.id == server_id, self.bot.servers)                                    
                                     channel = find(lambda m: m.id == self.track[username]['servers'][server_id]["channel"], server.channels)
                                     await self.bot.send_message(channel, embed = em)
+                                break  
                         self.track[username]["plays"][gamemode] = new_best
-                        fileIO("data/osu/track.json", "save", self.track)
-                        break             
+                        self.track[username]["userinfo"][gamemode] = new_user_info
+                        fileIO("data/osu/track.json", "save", self.track)           
 
             log.debug("sleep 60 seconds")
             await asyncio.sleep(60)
