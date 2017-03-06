@@ -300,7 +300,7 @@ class Osu:
 
             info = ""
             info += "**▸ Global Rank:** #{} (#{})\n".format(user['pp_rank'], user['pp_country_rank'])
-            info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent)            
+            info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent*100)            
             info += "**▸ Total PP:** {}\n".format(user['pp_raw'])
             info += "**▸ Playcount:** {}\n".format(user['playcount'])
             info += "**▸ Hit Accuracy:** {}%".format(user['accuracy'][0:5])
