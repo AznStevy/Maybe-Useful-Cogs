@@ -295,12 +295,15 @@ class Osu:
             em = discord.Embed(description='', colour=server_user.colour)
             em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url, url = user_url)
             em.set_thumbnail(url=profile_url)
+            level_int = int(float(user['level']))       
+            level_percent = float(user['level']) - level_int
 
             info = ""
-            info += "**▸ Global Rank:** *#{} (#{})*\n".format(user['pp_rank'], user['pp_country_rank'])
-            info += "**▸ Total PP:** *{}*\n".format(user['pp_raw'])
-            info += "**▸ Playcount:** *{}*\n".format(user['playcount'])
-            info += "**▸ Hit Accuracy:** *{}%*".format(user['accuracy'][0:5])
+            info += "**▸ Global Rank:** #{} (#{})\n".format(user['pp_rank'], user['pp_country_rank'])
+            info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent)            
+            info += "**▸ Total PP:** {}\n".format(user['pp_raw'])
+            info += "**▸ Playcount:** {}\n".format(user['playcount'])
+            info += "**▸ Hit Accuracy:** {}%".format(user['accuracy'][0:5])
             em.description = info
             return em 
         except:
