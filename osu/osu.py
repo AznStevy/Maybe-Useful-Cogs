@@ -23,7 +23,7 @@ help_msg = [
             ]
 
 log = logging.getLogger("red.osu")
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 
 class Osu:
     """Cog to give osu! stats for all gamemodes."""
