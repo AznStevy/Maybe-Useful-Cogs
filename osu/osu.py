@@ -164,6 +164,9 @@ class Osu:
         if not usernames:
             usernames = [None]
 
+        # get rid of duplicates
+        usernames = list(set(usernames))
+
         # gives the final input for osu username
         final_usernames = []
         for username in usernames:
@@ -498,6 +501,9 @@ class Osu:
                 all_urls.append(url)
                 original_message = original_message.replace(url, '')
 
+            # get rid of duplicates
+            all_urls = list(set(all_urls))
+            
             if 'https://osu.ppy.sh/u/' in message.content:
                 await self.process_user_url(all_urls, message)
 
