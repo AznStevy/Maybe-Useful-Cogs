@@ -38,12 +38,25 @@ class Osu:
         self.max_map_disp = 3
         self.num_track_plays = 15
 
+    # ---------------------------- Settings ------------------------------------
     @commands.group(pass_context=True)
     async def osuset(self, ctx):
         """Where you can define some settings"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
+
+    @osuset.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def tracking(self, ctx, *, option:str=None):
+        """ Planned for disabling """
+        pass
+
+    @osuset.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def api(self, ctx, *, option:str=None):
+        """osu or ripple"""
+        pass
 
     @commands.group(pass_context=True)
     async def osutrack(self, ctx):
@@ -252,7 +265,7 @@ class Osu:
         # @ implies its a discord user (if not, it will just say user not found in the next section)
         # if not found, then oh well.
         elif "@" in username:   
-            user_id = username.replace("@", "").replace("<","").replace(">","")
+            user_id = username.replace("@", "").replace("<","").replace(">","").replace(prefix, "")
             try:
                 if self.user_settings[user_id]:
                     username = self.user_settings[user_id]["osu_username"]
@@ -563,6 +576,12 @@ class Osu:
     # --------------------- Tracking Section -------------------------------
     @osutrack.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_messages=True)
+    async def list(self, ctx, *, option:str=None):
+        # Planned for channels and overall
+        pass
+
+    @osutrack.command(pass_context=True, no_pm=True)
+    @checks.mod_or_permissions(manage_messages=True)
     async def add(self, ctx, username:str, channel=None):
         """Adds a player to track for top scores."""
         if channel == None:
@@ -824,7 +843,7 @@ def parameterize_key(key):
     if (len(key) == 40):
         return "k=" + key
     else:
-        print("Invalid Key")   
+        print("Invalid Key")
 
 def parameterize_limit(limit):
     ## Default case: 10 scores
