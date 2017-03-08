@@ -32,7 +32,8 @@ class Osu:
         self.bot = bot
         self.osu_api_key = fileIO("data/osu/apikey.json", "load")
         self.user_settings = fileIO("data/osu/user_settings.json", "load")
-        self.track = fileIO("data/osu/track.json", "load")        
+        self.track = fileIO("data/osu/track.json", "load")
+        self.api_url = fileIO("data/osu/api_preference.json", "load")       
         self.num_best_plays = 5
         self.num_max_prof = 8
         self.max_map_disp = 3
@@ -56,7 +57,17 @@ class Osu:
     @checks.is_owner()
     async def api(self, ctx, *, option:str=None):
         """osu or ripple"""
-        pass
+        if not choice.lower() == "official" and not choice.lower() == "ripple":
+            await self.bot.say("The two choices are `official` and `ripple`")
+            return
+        elif choice.lower() == "official":
+            self.api_url["url"] = "osu.ppy.sh"
+            fileIO("data/osu/api_preference.json", "save", self.api_url)
+            await self.bot.say("Switched to {} server.".format(choice))
+        elif choice.lower() == "ripple":
+            self.api_url["url"] = "ripple.moe"
+            fileIO("data/osu/api_preference.json", "save", self.api_url)
+            await self.bot.say("Switched to {} server.".format(choice))
 
     @commands.group(pass_context=True)
     async def osutrack(self, ctx):
@@ -301,13 +312,18 @@ class Osu:
 
     # Gives a small user profile
     async def _get_user_info(self, server_user, user, gamemode: int):
-        profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
+        if self.api_url["url"] == "ripple.moe":
+            profile_url = 'http://a.ripple.moe/{}.png'.format(user['user_id'])
+            pp_country_rank = ""
+        elif self.api_url["url"] == "osu.ppy.sh":
+            profile_url ='http://s.ppy.sh/a/{}.png'.format(user['user_id'])
+            pp_country_rank = " (#"+user['pp_country_rank']+")"
         flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
 
         gamemode_text = self._get_gamemode(gamemode)
 
         try:
-            user_url = 'https://osu.ppy.sh/u/' + user['user_id']
+            user_url = 'https://{}/u/'.format(self.api_url["url"]) + user['user_id']
             em = discord.Embed(description='', colour=server_user.colour)
             em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url, url = user_url)
             em.set_thumbnail(url=profile_url)
@@ -315,7 +331,7 @@ class Osu:
             level_percent = float(user['level']) - level_int
 
             info = ""
-            info += "**▸ Global Rank:** #{} (#{})\n".format(user['pp_rank'], user['pp_country_rank'])
+            info += "**▸ Global Rank:** #{} (#{})\n".format(user['pp_rank'], pp_country_rank)
             info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent*100)            
             info += "**▸ Total PP:** {}\n".format(user['pp_raw'])
             info += "**▸ Playcount:** {}\n".format(user['playcount'])
@@ -329,7 +345,10 @@ class Osu:
     async def _get_user_top(self, server_user, user, userbest, gamemode:int):
         key = self.osu_api_key["osu_api_key"]
 
-        profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
+        if self.api_url["url"] == "ripple.moe":
+            profile_url = 'http://a.ripple.moe/{}.png'.format(user['user_id'])
+        elif self.api_url["url"] == "osu.ppy.sh":
+            profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
         osu_logo_url = 'http://puu.sh/pT7JR/577b0cc30c.png'
         flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
 
@@ -713,8 +732,11 @@ class Osu:
 
     def _create_top_play(self, top_play_num, play, beatmap, old_user_info, new_user_info):
         beatmap_url = 'https://osu.ppy.sh/b/' + play['beatmap_id']
-        user_url = 'https://osu.ppy.sh/u/' + new_user_info['user_id']
-        profile_url = 'http://s.ppy.sh/a/{}.png'.format(new_user_info['user_id'])
+        user_url = 'https://{}/u/'.format(api_url["url"]) + new_user_info['user_id']
+        if self.api_url["url"] == "ripple.moe":
+            profile_url = 'http://a.ripple.moe/{}.png'.format(user['user_id'])
+        elif self.api_url["url"] == "osu.ppy.sh":
+            profile_url ='http://s.ppy.sh/a/{}.png'.format(user['user_id'])
         beatmap = beatmap[0]
 
         # get infomation
@@ -783,7 +805,7 @@ async def get_scores(key, beatmap_id, user_id, mode):
     url_params.append(parameterize_mode(mode))
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_scores?")) as resp:
+        async with session.get(build_request(url_params, "https://{}/api/get_scores?".format(api_url["url"]))) as resp:
             return await resp.json()
 
 async def get_user(key, user_id, mode): 
@@ -794,7 +816,7 @@ async def get_user(key, user_id, mode):
     url_params.append(parameterize_mode(mode))
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_user?")) as resp:
+        async with session.get(build_request(url_params, "https://{}/api/get_user?".format(api_url["url"]))) as resp:
             return await resp.json()
 
 async def get_user_best(key, user_id, mode, limit):
@@ -806,7 +828,7 @@ async def get_user_best(key, user_id, mode, limit):
     url_params.append(parameterize_limit(limit)) 
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_user_best?")) as resp:
+        async with session.get(build_request(url_params, "https://{}/api/get_user_best?".format(api_url["url"]))) as resp:
             return await resp.json()
 
 # Returns the user's ten most recent plays.
@@ -818,7 +840,7 @@ async def get_user_recent(key, user_id, mode, type):
     url_params.append(parameterize_mode(mode)) 
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_user_recent?")) as resp:
+        async with session.get(build_request(url_params, "https://{}/api/get_user_recent?".format(api_url["url"]))) as resp:
             return await resp.json()
 
 # Returns the full API request URL using the provided base URL and parameters.
@@ -906,6 +928,12 @@ def check_files():
     if not fileIO(user_file, "check"):
         print("Adding data/osu/track.json...")
         fileIO(user_file, "save", {})
+        
+    # creates file for server to use
+    preference_file = "data/osu/api_preference.json"
+    if not fileIO(preference_file, "check"):
+        print("Adding data/osu/api_preference.json...")
+        fileIO(preference_file, "save", {"url": "osu.ppy.sh"})
 
 def setup(bot):
     check_folders()
