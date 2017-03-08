@@ -600,83 +600,102 @@ class Osu:
 
     # --------------------- Tracking Section -------------------------------
     @osutrack.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_messages=True)
-    async def list(self, ctx, *, option:str=None):
+    async def list(self, ctx):
         # Planned for channels and overall
-        pass
+        server = ctx.message.server
+        channel = ctx.message.channel
+        user = ctx.message.author
+
+        em = discord.Embed(colour=user.colour)
+        em.set_author(name="Osu! Players Currently Tracked in {}".format(server.name), icon_url = server.icon_url)
+        channel_users = {}
+
+        for username in self.track.keys():
+            if server.id in self.track[username]["servers"]:
+                target_channel = find(lambda m: m.id == self.track[username]['servers'][server.id]["channel"], server.channels)
+                if target_channel.name not in channel_users:
+                    channel_users[target_channel.name] = []
+                channel_users[target_channel.name].append(username)
+        for channel_name in channel_users.keys():
+            em.add_field(name = "__#{}__".format(channel_name), value = ", ".join(channel_users[channel_name]))
+        await self.bot.say(embed = em)
 
     @osutrack.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_messages=True)
-    async def add(self, ctx, username:str, channel=None):
+    async def add(self, ctx, *usernames):
         """Adds a player to track for top scores."""
-        if channel == None:
-            channel = ctx.message.channel
         server = ctx.message.server
+        channel = ctx.message.channel
 
         key = self.osu_api_key["osu_api_key"]
-        userinfo = list(await get_user(key, username, 0))
-        if len(userinfo) == 0:
-            await self.bot.say("{} does not exist in the osu! database.".format(username))
-            return
+        msg = ""
 
-        if username not in self.track:
-            self.track[username] = {}
-
-            if server.id not in self.track[username]:
-                self.track[username]["servers"] = {}
-                self.track[username]["servers"][server.id] = {}
-
-                # add channels that care about the user
-                if "channel" not in self.track[username]["servers"][server.id]:
-                    self.track[username]["servers"][server.id]["channel"] = channel.id
-                    # get top 10 plays
-                    user_plays = {}
-                    modes = ["osu", "taiko", "ctb", "mania"]
-                    for mode in modes:
-                        user_plays[mode] = await get_user_best(key, username, self._get_gamemode_number(mode), self.num_track_plays)
-                    self.track[username]["plays"] = user_plays
-
-                    # add current userinfo
-                    if "userinfo" not in self.track[username]:
-                        self.track[username]["userinfo"] = {}
-                    for mode in modes:
-                        self.track[username]["userinfo"][mode] = list(await get_user(key, username, self._get_gamemode_number(mode)))[0]                    
-                    await self.bot.say("**{} added. Will now track on #{}**".format(username, channel.name))
-                    fileIO("data/osu/track.json", "save", self.track)
-        else:
-            if server.id in self.track[username]["servers"]:
-                if channel.id == self.track[username]["servers"][server.id]["channel"]:
-                    await self.bot.say("**Already tracking {} on #{}.**".format(username, channel.name))
-                else:
-                    self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
-                    await self.bot.say("**{} now tracking on #{}**".format(username, channel.name))
-                    fileIO("data/osu/track.json", "save", self.track)
+        for username in usernames:
+            userinfo = list(await get_user(key, username, 0))
+            if len(userinfo) == 0:
+                msg+="`{}` does not exist in the osu! database.\n".format(username)
             else:
-                if server.id not in self.track[username]["servers"]:
-                    self.track[username]["servers"][server.id] = {}
-                self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
-                await self.bot.say("**{} added. Will now track on #{}**".format(username, channel.name))
-                fileIO("data/osu/track.json", "save", self.track)
+                if username not in self.track:
+                    self.track[username] = {}
+
+                    if server.id not in self.track[username]:
+                        self.track[username]["servers"] = {}
+                        self.track[username]["servers"][server.id] = {}
+
+                        # add channels that care about the user
+                        if "channel" not in self.track[username]["servers"][server.id]:
+                            self.track[username]["servers"][server.id]["channel"] = channel.id
+                            # get top 10 plays
+                            user_plays = {}
+                            modes = ["osu", "taiko", "ctb", "mania"]
+                            for mode in modes:
+                                user_plays[mode] = await get_user_best(key, username, self._get_gamemode_number(mode), self.num_track_plays)
+                            self.track[username]["plays"] = user_plays
+
+                            # add current userinfo
+                            if "userinfo" not in self.track[username]:
+                                self.track[username]["userinfo"] = {}
+                            for mode in modes:
+                                self.track[username]["userinfo"][mode] = list(await get_user(key, username, self._get_gamemode_number(mode)))[0]                    
+                            msg+="**`{}` added. Will now track on `#{}`**\n".format(username, channel.name)
+                            fileIO("data/osu/track.json", "save", self.track)
+                else:
+                    if server.id in self.track[username]["servers"]:
+                        if channel.id == self.track[username]["servers"][server.id]["channel"]:
+                            msg+="**Already tracking `{}` on `#{}.`**\n".format(username, channel.name)
+                        else:
+                            self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
+                            msg+="**`{}` now tracking on `#{}`**\n".format(username, channel.name)
+                            fileIO("data/osu/track.json", "save", self.track)
+                    else:
+                        if server.id not in self.track[username]["servers"]:
+                            self.track[username]["servers"][server.id] = {}
+                        self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
+                        msg+="**`{}` added. Will now track on `#{}`**\n".format(username, channel.name)
+                        fileIO("data/osu/track.json", "save", self.track)
+        await self.bot.say(msg)
 
     @osutrack.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_messages=True)
-    async def remove(self, ctx, username:str, channel=None):
+    async def remove(self, ctx, *usernames:str):
         """Removes a player to track for top scores."""
-        if channel == None:
-            channel = ctx.message.channel
         server = ctx.message.server
+        channel = ctx.message.channel
+        msg = ""
 
-        if username in self.track and "servers" in self.track[username] and server.id in self.track[username]["servers"]:
-            if channel.id == self.track[username]["servers"][server.id]["channel"]:
-                del self.track[username]["servers"][server.id]
-                if len(self.track[username]["servers"].keys()) == 0:
-                    del self.track[username]                  
-                await self.bot.say("**No longer tracking {} in #{}.**".format(username, channel.name))
-                fileIO("data/osu/track.json", "save", self.track)             
+        for username in usernames:
+            if username in self.track and "servers" in self.track[username] and server.id in self.track[username]["servers"]:
+                if channel.id == self.track[username]["servers"][server.id]["channel"]:
+                    del self.track[username]["servers"][server.id]
+                    if len(self.track[username]["servers"].keys()) == 0:
+                        del self.track[username]                  
+                    msg+="**No longer tracking `{}` in `#{}`.**\n".format(username, channel.name)
+                    fileIO("data/osu/track.json", "save", self.track)             
+                else:
+                    msg+="**`{}` is not currently being tracked in `#{}`.**\n".format(username, channel.name)                
             else:
-                await self.bot.say("**{} is not currently being tracked in #{}.**".format(username, channel.name))                 
-        else:
-            await self.bot.say("**{} is not currently being tracked.**".format(username))                
+                msg+="**`{}` is not currently being tracked.**\n".format(username)
+        await self.bot.say(msg)              
 
     # used to track top plays of specified users
     async def play_tracker(self):
