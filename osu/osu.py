@@ -331,7 +331,7 @@ class Osu:
             level_percent = float(user['level']) - level_int
 
             info = ""
-            info += "**▸ Global Rank:** #{} (#{})\n".format(user['pp_rank'], pp_country_rank)
+            info += "**▸ Global Rank:** #{} {}\n".format(user['pp_rank'], pp_country_rank)
             info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent*100)            
             info += "**▸ Total PP:** {}\n".format(user['pp_raw'])
             info += "**▸ Playcount:** {}\n".format(user['playcount'])
