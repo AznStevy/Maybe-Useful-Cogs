@@ -781,7 +781,7 @@ async def get_beatmap(key, beatmap_id):
     url_params.append(parameterize_id("b", beatmap_id)) 
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_beatmaps?")) as resp:
+        async with session.get(build_request(url_params, "https://{}/api/get_beatmaps?".format(api_url["url"]))) as resp:
             return await resp.json()
 
 # Gets the beatmap set
@@ -792,7 +792,7 @@ async def get_beatmapset(key, set_id):
     url_params.append(parameterize_id("s", set_id)) 
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://osu.ppy.sh/api/get_beatmaps?")) as resp:
+        async with session.get(build_request(url_params, "https://{}/api/get_beatmaps?".format(api_url["url"]))) as resp:
             return await resp.json()
 
 # Grabs the scores
