@@ -382,7 +382,7 @@ class Osu:
             page = urllib.request.urlopen(beatmap_url)
             soup = BeautifulSoup(page.read())
             map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
-            map_image_url = 'http:{}'.format(map_image[0])
+            map_image_url = 'http:{}'.format(map_image[0]).replace(" ","%")
 
             em = discord.Embed(description=info, colour=server_user.colour)
             em.set_author(name="{}. {} [{}] +{} ({} Rank)".format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], ",".join(mods),userbest[i]['rank']), url = beatmap_url)
