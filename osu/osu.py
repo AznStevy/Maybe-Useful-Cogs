@@ -775,6 +775,7 @@ class Osu:
 
 # Gets the beatmap
 async def get_beatmap(key, beatmap_id):
+    api_url = fileIO("data/osu/api_preference.json", "load")
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -786,6 +787,7 @@ async def get_beatmap(key, beatmap_id):
 
 # Gets the beatmap set
 async def get_beatmapset(key, set_id):
+    api_url = fileIO("data/osu/api_preference.json", "load")
     url_params = []
 
     url_params.append(parameterize_key(key))
