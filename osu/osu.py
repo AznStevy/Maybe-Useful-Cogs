@@ -797,6 +797,7 @@ async def get_beatmapset(key, set_id):
 
 # Grabs the scores
 async def get_scores(key, beatmap_id, user_id, mode):
+    api_url = fileIO("data/osu/api_preference.json", "load")
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -809,6 +810,7 @@ async def get_scores(key, beatmap_id, user_id, mode):
             return await resp.json()
 
 async def get_user(key, user_id, mode): 
+    api_url = fileIO("data/osu/api_preference.json", "load")
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -820,6 +822,7 @@ async def get_user(key, user_id, mode):
             return await resp.json()
 
 async def get_user_best(key, user_id, mode, limit):
+    api_url = fileIO("data/osu/api_preference.json", "load")
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -833,6 +836,7 @@ async def get_user_best(key, user_id, mode, limit):
 
 # Returns the user's ten most recent plays.
 async def get_user_recent(key, user_id, mode, type):
+    api_url = fileIO("data/osu/api_preference.json", "load")
     url_params = []
 
     url_params.append(parameterize_key(key))
