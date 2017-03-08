@@ -56,7 +56,7 @@ class Osu:
     @osuset.command(pass_context=True, no_pm=True)
     @checks.is_owner()
     async def api(self, ctx, *, choice):
-        """osu or ripple"""
+        """official or ripple"""
         if not choice.lower() == "official" and not choice.lower() == "ripple":
             await self.bot.say("The two choices are `official` and `ripple`")
             return
