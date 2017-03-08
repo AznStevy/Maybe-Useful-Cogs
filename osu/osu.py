@@ -35,6 +35,7 @@ class Osu:
         self.track = fileIO("data/osu/track.json", "load")
         self.api_url = fileIO("data/osu/api_preference.json", "load")       
         self.num_best_plays = 5
+        self.num_recent_plays = 1
         self.num_max_prof = 8
         self.max_map_disp = 3
         self.num_track_plays = 15
@@ -98,6 +99,11 @@ class Osu:
     async def osutop(self, ctx, *username):
         """Gives top osu plays."""
         await self._process_user_top(ctx, username, 0)
+        
+    @commands.command(pass_context=True, no_pm=True)
+    async def osurecent(self, ctx, *username):
+        """Gives most recent osu play."""
+        await self._process_user_recent(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
     async def taiko(self, ctx, *username):
@@ -108,6 +114,11 @@ class Osu:
     async def taikotop(self, ctx, *username):
         """Gives top taiko plays."""
         await self._process_user_top(ctx, username, 1)
+        
+    @commands.command(pass_context=True, no_pm=True)
+    async def taikorecent(self, ctx, *username):
+        """Gives most recent taiko play."""
+        await self._process_user_recent(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
     async def ctb(self, ctx, *username):
@@ -118,6 +129,11 @@ class Osu:
     async def ctbtop(self, ctx, *username):
         """Gives ctb osu plays."""
         await self._process_user_top(ctx, username, 2)
+        
+    @commands.command(pass_context=True, no_pm=True)
+    async def ctbrecent(self, ctx, *username):
+        """Gives most recent ctb play."""
+        await self._process_user_recent(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
     async def mania(self, ctx, *username):
@@ -128,6 +144,11 @@ class Osu:
     async def maniatop(self, ctx, *username):
         """Gives top mania plays."""
         await self._process_user_top(ctx, username, 3)
+        
+    @commands.command(pass_context=True, no_pm=True)
+    async def maniarecent(self, ctx, *username):
+        """Gives most recent mania play."""
+        await self._process_user_recent(ctx, username, 3)
 
     @osuset.command(pass_context=True, no_pm=True)
     async def user(self, ctx, *, username):
@@ -248,6 +269,41 @@ class Osu:
                     pass
         else:
             await self.bot.say("**{} was not found or not enough plays** :cry:".format(username))
+            
+    # Gets information to proccess the recent plays of a user
+    async def _process_user_recent(self, ctx, username, gamemode: int):
+        key = self.osu_api_key["osu_api_key"]
+        channel = ctx.message.channel
+        user = ctx.message.author
+        server = user.server
+
+        gamemode_text = self._get_gamemode(gamemode)
+
+        if not username:
+            username = None
+        else:
+            username = username[0]
+
+        # gives the final input for osu username
+        test_username = await self._process_username(ctx, username)
+        if test_username:
+            username = test_username
+        else:
+            return
+
+        userinfo = list(await get_user(key, username, gamemode))
+        userrecent = list(await get_user_recent(key, username, gamemode, self.num_recent_plays))
+        if userinfo and userrecent:                          
+            msg, top_plays = await self._get_user_recent(user, userinfo[0], userrecent, gamemode)
+            await self.bot.say(msg)
+            for play in top_plays:
+                try:
+                    await self.bot.say(embed=play)
+                except:
+                    pass
+        else:
+            await self.bot.say("**{} was not found or has not played any {} maps recently** :cry:".format(username, gamemode_text))
+
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def _process_username(self, ctx, username):
@@ -390,7 +446,56 @@ class Osu:
             all_plays.append(em)
 
         return (msg, all_plays)
+    
+    async def _get_user_recent(self, server_user, user, userrecent, gamemode:int):
+        key = self.osu_api_key["osu_api_key"]
 
+        if self.api_url["url"] == "ripple.moe":
+            profile_url = 'http://a.ripple.moe/{}.png'.format(user['user_id'])
+        elif self.api_url["url"] == "osu.ppy.sh":
+            profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
+        osu_logo_url = 'http://puu.sh/pT7JR/577b0cc30c.png'
+        flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
+
+        gamemode_text = self._get_gamemode(gamemode)
+
+        # get best plays map information and scores
+        recent_beatmaps = []
+        recent_acc = []
+        for i in range(self.num_recent_plays):
+            beatmap = list(await get_beatmap(key, beatmap_id=userrecent[i]['beatmap_id']))[0]
+            score = list(await get_scores(key, userrecent[i]['beatmap_id'], user['user_id'], gamemode))[0]
+            recent_beatmaps.append(beatmap)
+            recent_acc.append(self.calculate_acc(score, gamemode))
+
+        num_plays = min(self.num_recent_plays, 5)
+        all_plays = []
+        msg = "**Most recent {} play from {}:**".format(gamemode_text, user['username'])
+
+        for i in range(num_plays):
+            info = ""
+            info += "**▸ Rank:** {}\n".format(userrecent[i]['rank'])
+            info += "**▸ Accuracy:** {0:.2f}%\n".format(float(recent_acc[i]))
+            info += "**▸ Stars: **{0:.2f}★\n".format(float(recent_beatmaps[i]['difficultyrating']))
+            mods = self.mod_calculation(userrecent[i]['enabled_mods'])
+            if not mods:
+                mods = []
+                mods.append('No Mod')
+            beatmap_url = 'https://{}/b/'.format(self.api_url["url"]) + recent_beatmaps[i]['beatmap_id']
+
+            # grab beatmap image
+            page = urllib.request.urlopen(beatmap_url)
+            soup = BeautifulSoup(page.read())
+            map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
+            map_image_url = 'http:{}'.format(map_image[0]).replace(" ", "%")
+
+            em = discord.Embed(description=info, colour=server_user.colour)
+            em.set_author(name="{} [{}] +{}".format(recent_beatmaps[i]['title'], recent_beatmaps[i]['version'], ",".join(mods)), url = beatmap_url)
+            em.set_thumbnail(url=map_image_url)
+            all_plays.append(em)
+
+        return (msg, all_plays)
+    
     def _get_gamemode(self, gamemode:int):
         if gamemode == 1:
             gamemode_text = "Taiko"
