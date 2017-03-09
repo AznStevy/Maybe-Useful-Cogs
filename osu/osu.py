@@ -463,7 +463,7 @@ class Osu:
         info = ""
         info += "▸ **Rank:** {} ▸ **Combo:** x{}\n".format(userrecent['rank'], userrecent['maxcombo'])
         info += "▸ **Score:** {} ▸ **Misses:** {}\n".format(userrecent['score'], userrecent['countmiss'])
-        info += "▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n".format(float(acc), float(beatmap['difficultyrating']))
+        info += "▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}[★]({})\n".format(float(acc), float(beatmap['difficultyrating']), beatmap_url)
 
         # grab beatmap image
         page = urllib.request.urlopen(beatmap_url)
