@@ -19,7 +19,7 @@ import logging
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
             "**No linked account ({}osuset user) or not using **`{}command username gamemode`".format(prefix, prefix),
-            "**No linked account**"
+            "**No linked account ({}osuset user)**".format(prefix)
             ]
 
 log = logging.getLogger("red.osu")
@@ -91,6 +91,29 @@ class Osu:
         fileIO("data/osu/api_preference.json", "save", self.api_preference)
         await self.bot.say("**Switched to `{}` server on `{}`.**".format(choice, server.name))
 
+    @osuset.command(pass_context=True, no_pm=True)
+    async def default(self, ctx, mode:str):
+        """ Set your default gamemode """
+        user = ctx.message.author
+        server = ctx.message.server
+
+        modes = ["osu", "taiko", "ctb", "mania"]
+        if mode.lower() in modes:
+            gamemode = modes.index(mode.lower())
+        elif int(mode) >= 0 & int(mode) <= 3:
+            gamemode = int(mode)
+        else:
+            await self.bot.say("**Please enter a valid gamemode.**")
+            return
+
+        if user.id in self.user_settings:
+            self.user_settings[user.id]['default_gamemode'] = gamemode
+            await self.bot.say("**`{}`'s default gamemode has been set to `{}`.**".format(user.name, modes[gamemode]))
+        else:
+            await self.bot.say(help_msg[1])
+            return
+        fileIO('data/osu/user_settings.json', "save", self.user_settings)
+
     @commands.group(pass_context=True)
     async def osutrack(self, ctx):
         """Where you can define some settings"""
@@ -150,6 +173,11 @@ class Osu:
     async def maniatop(self, ctx, *username):
         """Gives top mania plays."""
         await self._process_user_top(ctx, username, 3)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def recent(self, ctx, *username):
+        """Gives top mania plays."""
+        await self._process_user_recent(ctx, username)
 
     @osuset.command(pass_context=True, no_pm=True)
     async def user(self, ctx, *, username):
@@ -244,6 +272,45 @@ class Osu:
                 await self.bot.say(embed=player)
             except:
                 pass
+
+    # Gets the user's most recent score
+    async def _process_user_recent(self, ctx, username):
+        key = self.osu_api_key["osu_api_key"]
+        channel = ctx.message.channel
+        user = ctx.message.author
+        server = user.server
+
+        if not username:
+            username = None
+        else:
+            username = username[0]
+
+        # determine api to use
+        if server.id not in self.api_preference or self.api_preference[server.id] == self.api_preference["type"]["default"]:
+            api = self.api_preference["type"]["default"]
+        elif self.api_preference[server.id] == self.api_preference["type"]["ripple"]:
+            api = self.api_preference["type"]["ripple"]      
+
+        # gives the final input for osu username
+        test_username = await self._process_username(ctx, username)
+        if test_username:
+            username = test_username
+        else:
+            return
+
+        # determine gamemode
+        if self._check_user_exists(user):
+            gamemode = self.user_settings[user.id]['default_gamemode']
+        else:
+            gamemode = 0
+
+        # get userinfo
+        userinfo = list(await get_user(key, api, username, gamemode))[0]
+        userrecent = list(await get_user_recent(key, api, username, gamemode))[0]
+                         
+        msg, recent_play = await self._get_recent(ctx, api, userinfo, userrecent, gamemode)
+        await self.bot.say(msg, embed=recent_play)
+
 
     # Gets information to proccess the top play version of the image
     async def _process_user_top(self, ctx, username, gamemode: int):
@@ -348,24 +415,69 @@ class Osu:
 
         gamemode_text = self._get_gamemode(gamemode)
 
-        #try:
-        user_url = 'https://{}/u/{}'.format(api, user['user_id'])
-        em = discord.Embed(description='', colour=server_user.colour)
-        em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url, url = user_url)
-        em.set_thumbnail(url=profile_url)
-        level_int = int(float(user['level']))       
-        level_percent = float(user['level']) - level_int
+        try:
+            user_url = 'https://{}/u/{}'.format(api, user['user_id'])
+            em = discord.Embed(description='', colour=server_user.colour)
+            em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url, url = user_url)
+            em.set_thumbnail(url=profile_url)
+            level_int = int(float(user['level']))       
+            level_percent = float(user['level']) - level_int
+
+            info = ""
+            info += "**▸ Global Rank:** #{} {}\n".format(user['pp_rank'], pp_country_rank)
+            info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent*100)            
+            info += "**▸ Total PP:** {}\n".format(user['pp_raw'])
+            info += "**▸ Playcount:** {}\n".format(user['playcount'])
+            info += "**▸ Hit Accuracy:** {}%".format(user['accuracy'][0:5])
+            em.description = info
+            return em 
+        except:
+            return None
+
+    async def _get_recent(self, ctx, api, user, userrecent, gamemode:int):
+        server_user = ctx.message.author
+        server = ctx.message.server
+        key = self.osu_api_key["osu_api_key"]
+
+        if api == self.api_preference["type"]["default"]:
+            profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
+        elif api == self.api_preference["type"]["ripple"]:
+            profile_url = 'http://a.ripple.moe/{}.png'.format(user['user_id'])
+
+        flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
+
+        # get best plays map information and scores
+        beatmap = list(await get_beatmap(key, api, beatmap_id=userrecent['beatmap_id']))[0]
+        score = list(await get_scores(key, api, userrecent['beatmap_id'], user['user_id'], gamemode))
+        if not score:
+            return ("**No recent score for `{}` in user's default gamemode (`{}`)**".format(user['username'], self._get_gamemode(gamemode)), None)
+        score = score[0]
+        acc = self.calculate_acc(score, gamemode)
+        mods = self.mod_calculation(userrecent['enabled_mods'])
+        if not mods:
+            mods = []
+            mods.append('No Mod')
+        beatmap_url = 'https://osu.ppy.sh/b/{}'.format(beatmap['beatmap_id'])
+
+        msg = "**Most Recent {} Play for {}:**".format(self._get_gamemode(gamemode), user['username'])
 
         info = ""
-        info += "**▸ Global Rank:** #{} {}\n".format(user['pp_rank'], pp_country_rank)
-        info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent*100)            
-        info += "**▸ Total PP:** {}\n".format(user['pp_raw'])
-        info += "**▸ Playcount:** {}\n".format(user['playcount'])
-        info += "**▸ Hit Accuracy:** {}%".format(user['accuracy'][0:5])
-        em.description = info
-        return em 
-        #except:
-         #   return None
+        info += "▸ **Rank:** {} ▸ **Combo:** x{}\n".format(userrecent['rank'], userrecent['maxcombo'])
+        info += "▸ **Score:** {} ▸ **Misses:** {}\n".format(userrecent['score'], userrecent['countmiss'])
+        info += "▸ **Accuracy:** {:.2f}% ▸ **Stars:** {:.2f}★\n".format(float(acc), float(beatmap['difficultyrating']))
+
+        # grab beatmap image
+        page = urllib.request.urlopen(beatmap_url)
+        soup = BeautifulSoup(page.read())
+        map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
+        map_image_url = 'http:{}'.format(map_image[0]).replace(" ","%")
+
+        em = discord.Embed(description=info, colour=server_user.colour)
+        em.set_author(name="{} [{}] +{}".format(beatmap['title'], beatmap['version'], ",".join(mods)), url = beatmap_url)
+        em.set_thumbnail(url=map_image_url)
+        em.set_footer(text = userrecent['date'])
+
+        return (msg, em)
 
     # Gives a user profile image with some information
     async def _get_user_top(self, ctx, api, user, userbest, gamemode:int):
@@ -375,10 +487,8 @@ class Osu:
 
         if api == self.api_preference["type"]["default"]:
             profile_url = 'http://s.ppy.sh/a/{}.png'.format(user['user_id'])
-            game_server = "Official"
         elif api == self.api_preference["type"]["ripple"]:
             profile_url = 'http://a.ripple.moe/{}.png'.format(user['user_id'])
-            game_server = "Ripple"
 
         flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
 
@@ -417,9 +527,6 @@ class Osu:
             em = discord.Embed(description=info, colour=server_user.colour)
             em.set_author(name="{}. {} [{}] +{} ({} Rank)".format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], ",".join(mods),userbest[i]['rank']), url = beatmap_url)
             em.set_thumbnail(url=map_image_url)
-
-            if i == num_plays:
-                em.set_footer("On Osu! {}".format(game_server))
 
             all_plays.append(em)
 
@@ -896,7 +1003,7 @@ async def get_user_best(key, api:str, user_id, mode, limit):
             return await resp.json()
 
 # Returns the user's ten most recent plays.
-async def get_user_recent(key, api:str, user_id, mode, type):
+async def get_user_recent(key, api:str, user_id, mode):
     url_params = []
 
     url_params.append(parameterize_key(key))
