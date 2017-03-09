@@ -472,7 +472,7 @@ class Osu:
         map_image_url = 'http:{}'.format(map_image[0]).replace(" ","%")
 
         em = discord.Embed(description=info, colour=server_user.colour)
-        em.set_author(name="{} [{}] +{}".format(beatmap['title'], beatmap['version'], ",".join(mods)), url = beatmap_url)
+        em.set_author(name="{} [{}] +{}".format(beatmap['title'], beatmap['version'], ",".join(mods)), url = beatmap_url, icon_url = profile_url)
         em.set_thumbnail(url=map_image_url)
         em.set_footer(text = userrecent['date'])
 
