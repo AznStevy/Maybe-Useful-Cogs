@@ -729,7 +729,7 @@ class Osu:
             await self.bot.say("Please enter a user")
             return
 
-        for username in final_usernames:
+        for username in usernames:
             if username in self.track and "servers" in self.track[username] and server.id in self.track[username]["servers"]:
                 if channel.id == self.track[username]["servers"][server.id]["channel"]:
                     del self.track[username]["servers"][server.id]
