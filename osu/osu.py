@@ -718,8 +718,8 @@ class Osu:
 
         for i, diff in map_order:
             beatmap_info = ""    
-            beatmap_info += "**▸Difficulty:** {:.2f}★  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['max_combo'])
-            beatmap_info += "**▸AR:** {}  **▸OD:** {}  **▸HP:** {}  **▸CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
+            beatmap_info += "**▸ Difficulty:** {:.2f}[★]({})  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap_url, beatmap[i]['max_combo'])
+            beatmap_info += "**▸ AR:** {} **▸ OD:** {} **▸ HP:** {} **▸ CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
             em.add_field(name = "__[{}] by {}__\n".format(beatmap[i]['version'],beatmap[i]['creator']), value = beatmap_info)
 
         page = urllib.request.urlopen(beatmap_url)
@@ -926,7 +926,7 @@ class Osu:
         info = ""
         info += "▸ [{}[{}]]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
         info += "▸ +{} **{:.2f}%** (**{}** Rank)\n".format(','.join(mods), float(acc), play['rank'])
-        info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, str(s).zfill(2), beatmap['bpm'])
+        info += "▸ **{:.2f}[★]({})** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), beatmap_url, m, str(s).zfill(2), beatmap['bpm'])
         info += "▸ {} ▸ x{} ▸ **{:.2f}pp**\n".format(play['score'], play['maxcombo'], float(play['pp']))
         info += "▸ #{} → #{} ({}#{} → #{})".format(old_user_info['pp_rank'], new_user_info['pp_rank'], old_user_info['country'], old_user_info['pp_country_rank'], old_user_info['pp_country_rank'])
         em.description = info
