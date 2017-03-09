@@ -503,7 +503,7 @@ class Osu:
         num_plays = min(self.num_best_plays, 5)
         all_plays = []
         msg = "**Top {} {} Plays for {}:**".format(num_plays, gamemode_text, user['username'])
-        stevy_you_suck = ''
+        desc = ''
 
         for i in range(num_plays):
             mods = self.mod_calculation(userbest[i]['enabled_mods'])
@@ -517,8 +517,8 @@ class Osu:
             info += '▸ **Rank:** {} ▸ **PP:** {:.2f}\n'.format(userbest[i]['rank'], float(userbest[i]['pp']))
             info += '▸ **Score:** {} ▸ **Combo:** x{}\n'.format(userbest[i]['score'], userbest[i]['maxcombo'])
             info += '▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n\n'.format(float(best_acc[i]), float(best_beatmaps[i]['difficultyrating']))
-            stevy_you_suck += info
-        em = discord.Embed(description=stevy_you_suck, colour=server_user.colour)
+            desc += info
+        em = discord.Embed(description=desc, colour=server_user.colour)
         em.set_thumbnail(url=profile_url)
         return (msg, em)
 
