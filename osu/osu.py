@@ -463,7 +463,7 @@ class Osu:
         info = ""
         info += "▸ **Rank:** {} ▸ **Combo:** x{}\n".format(userrecent['rank'], userrecent['maxcombo'])
         info += "▸ **Score:** {} ▸ **Misses:** {}\n".format(userrecent['score'], userrecent['countmiss'])
-        info += "▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}[★]({})\n".format(float(acc), float(beatmap['difficultyrating']), beatmap_url)
+        info += "▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n".format(float(acc), float(beatmap['difficultyrating']))
 
         # grab beatmap image
         page = urllib.request.urlopen(beatmap_url)
@@ -503,9 +503,7 @@ class Osu:
         num_plays = min(self.num_best_plays, 5)
         all_plays = []
         msg = "**Top {} {} Plays for {}:**".format(num_plays, gamemode_text, user['username'])
-
-        em = discord.Embed(colour=server_user.colour)
-        em.set_thumbnail(url=profile_url)
+        stevy_you_suck = ''
 
         for i in range(num_plays):
             mods = self.mod_calculation(userbest[i]['enabled_mods'])
@@ -514,12 +512,14 @@ class Osu:
                 mods.append('No Mod')
             beatmap_url = 'https://osu.ppy.sh/b/{}'.format(best_beatmaps[i]['beatmap_id'])
 
-            info = ""
-            info += "▸ **Rank:** {} ▸ **PP:** {:.2f}\n".format(userbest[i]['rank'], float(userbest[i]['pp']))
-            info += "▸ **Score:** {} ▸ **Combo:** x{}\n".format(userbest[i]['score'], userbest[i]['maxcombo'])
-            info += "▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}[★]({})\n".format(float(best_acc[i]), float(best_beatmaps[i]['difficultyrating']), beatmap_url)
-            em.add_field(name="{}. __{} [{}]__ +{}".format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], ",".join(mods)), value = info, inline = False)
-
+            info = ''
+            info += '***{}. [__{} [{}]__]({}) +{}\n***'.format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], beatmap_url, ','.join(mods))
+            info += '▸ **Rank:** {} ▸ **PP:** {:.2f}\n'.format(userbest[i]['rank'], float(userbest[i]['pp']))
+            info += '▸ **Score:** {} ▸ **Combo:** x{}\n'.format(userbest[i]['score'], userbest[i]['maxcombo'])
+            info += '▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n\n'.format(float(best_acc[i]), float(best_beatmaps[i]['difficultyrating']))
+            stevy_you_suck += info
+        em = discord.Embed(description=stevy_you_suck, colour=server_user.colour)
+        em.set_thumbnail(url=profile_url)
         return (msg, em)
 
     def _get_gamemode(self, gamemode:int):
@@ -718,8 +718,8 @@ class Osu:
 
         for i, diff in map_order:
             beatmap_info = ""    
-            beatmap_info += "**▸ Difficulty:** {:.2f}[★]({})  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap_url, beatmap[i]['max_combo'])
-            beatmap_info += "**▸ AR:** {} **▸ OD:** {} **▸ HP:** {} **▸ CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
+            beatmap_info += "**▸Difficulty:** {:.2f}★  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['max_combo'])
+            beatmap_info += "**▸AR:** {}  **▸OD:** {}  **▸HP:** {}  **▸CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
             em.add_field(name = "__[{}] by {}__\n".format(beatmap[i]['version'],beatmap[i]['creator']), value = beatmap_info)
 
         page = urllib.request.urlopen(beatmap_url)
@@ -926,7 +926,7 @@ class Osu:
         info = ""
         info += "▸ [{}[{}]]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
         info += "▸ +{} **{:.2f}%** (**{}** Rank)\n".format(','.join(mods), float(acc), play['rank'])
-        info += "▸ **{:.2f}[★]({})** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), beatmap_url, m, str(s).zfill(2), beatmap['bpm'])
+        info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, str(s).zfill(2), beatmap['bpm'])
         info += "▸ {} ▸ x{} ▸ **{:.2f}pp**\n".format(play['score'], play['maxcombo'], float(play['pp']))
         info += "▸ #{} → #{} ({}#{} → #{})".format(old_user_info['pp_rank'], new_user_info['pp_rank'], old_user_info['country'], old_user_info['pp_country_rank'], old_user_info['pp_country_rank'])
         em.description = info
