@@ -175,7 +175,7 @@ class Osu:
         await self._process_user_top(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def osurecent(self, ctx, *username):
+    async def recent(self, ctx, *username):
         """Gives top mania plays."""
         await self._process_user_recent(ctx, username)
 
@@ -305,7 +305,11 @@ class Osu:
             gamemode = 0
 
         # get userinfo
-        userinfo = list(await get_user(key, api, username, gamemode))[0]
+        userinfo = list(await get_user(key, api, username, gamemode))
+        if not userinfo:
+            await self.bot.say("**`{}` was not found or not enough plays** :cry:".format(username))
+            return
+        userinfo = userinfo[0]
         userrecent = list(await get_user_recent(key, api, username, gamemode))[0]
                          
         msg, recent_play = await self._get_recent(ctx, api, userinfo, userrecent, gamemode)
@@ -342,14 +346,9 @@ class Osu:
         userbest = list(await get_user_best(key, api, username, gamemode, self.num_best_plays))
         if userinfo and userbest:                          
             msg, top_plays = await self._get_user_top(ctx, api, userinfo[0], userbest, gamemode)
-            await self.bot.say(msg)
-            for play in top_plays:
-                try:
-                    await self.bot.say(embed=play)
-                except:
-                    pass
+            await self.bot.say(msg, embed=top_plays)
         else:
-            await self.bot.say("**{} was not found or not enough plays** :cry:".format(username))
+            await self.bot.say("**`{}` was not found or not enough plays** :cry:".format(username))
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def _process_username(self, ctx, username):
@@ -490,8 +489,6 @@ class Osu:
         elif api == self.api_preference["type"]["ripple"]:
             profile_url = 'http://a.ripple.moe/{}.png'.format(user['user_id'])
 
-        flag_url = 'https://new.ppy.sh//images/flags/{}.png'.format(user['country']) 
-
         gamemode_text = self._get_gamemode(gamemode)
 
         # get best plays map information and scores
@@ -507,30 +504,23 @@ class Osu:
         all_plays = []
         msg = "**Top {} {} Plays for {}:**".format(num_plays, gamemode_text, user['username'])
 
+        em = discord.Embed(colour=server_user.colour)
+        em.set_thumbnail(url=profile_url)
+
         for i in range(num_plays):
-            info = ""
-            info += "**▸ Accuracy:** {0:.2f}%\n".format(float(best_acc[i]))
-            info += "**▸ PP: **{0:.2f}\n".format(float(userbest[i]['pp']))
-            info += "**▸ Stars: **{0:.2f}★\n".format(float(best_beatmaps[i]['difficultyrating']))
             mods = self.mod_calculation(userbest[i]['enabled_mods'])
             if not mods:
                 mods = []
                 mods.append('No Mod')
-            beatmap_url = 'https://osu.ppy.sh/b/' + best_beatmaps[i]['beatmap_id']
+            beatmap_url = 'https://osu.ppy.sh/b/{}'.format(best_beatmaps[i]['beatmap_id'])
 
-            # grab beatmap image
-            page = urllib.request.urlopen(beatmap_url)
-            soup = BeautifulSoup(page.read())
-            map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
-            map_image_url = 'http:{}'.format(map_image[0]).replace(" ","%")
+            info = ""
+            info += "▸ **Rank:** {} ▸ **PP:** {:.2f}\n".format(userbest[i]['rank'], float(userbest[i]['pp']))
+            info += "▸ **Score:** {} ▸ **Combo:** x{}\n".format(userbest[i]['score'], userbest[i]['maxcombo'])
+            info += "▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}[★]({})\n".format(float(best_acc[i]), float(best_beatmaps[i]['difficultyrating']), beatmap_url)
+            em.add_field(name="{}. __{} [{}]__ +{}".format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], ",".join(mods)), value = info, inline = False)
 
-            em = discord.Embed(description=info, colour=server_user.colour)
-            em.set_author(name="{}. {} [{}] +{} ({} Rank)".format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], ",".join(mods),userbest[i]['rank']), url = beatmap_url)
-            em.set_thumbnail(url=map_image_url)
-
-            all_plays.append(em)
-
-        return (msg, all_plays)
+        return (msg, em)
 
     def _get_gamemode(self, gamemode:int):
         if gamemode == 1:
