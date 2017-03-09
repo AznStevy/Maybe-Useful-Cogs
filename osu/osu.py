@@ -175,7 +175,7 @@ class Osu:
         await self._process_user_top(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def recent(self, ctx, *username):
+    async def osurecent(self, ctx, *username):
         """Gives top mania plays."""
         await self._process_user_recent(ctx, username)
 
