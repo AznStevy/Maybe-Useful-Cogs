@@ -110,10 +110,13 @@ class Osu:
         em.set_author(name="Current Settings for {}".format(server.name), icon_url = server.icon_url)
 
         # determine api to use
-        if server.id not in self.osu_settings or "api" not in self.osu_settings[server.id] or self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
+        try:
+            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["official"]:
+                api = "Official Osu! API"
+            elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
+                api = "Ripple API"
+        except: # catch all just in case..
             api = "Official Osu! API"
-        elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-            api = "Ripple API"
 
         # determine
         if server.id not in self.osu_settings or "tracking" not in self.osu_settings[server.id] or self.osu_settings[server.id]["tracking"] == True:                              
@@ -289,10 +292,13 @@ class Osu:
         usernames = list(set(usernames))
 
         # determine api to use
-        if server.id not in self.osu_settings or "api" not in self.osu_settings[server.id] or self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
+        try:
+            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["official"]:
+                api = self.osu_settings["type"]["default"]
+            elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
+                api = self.osu_settings["type"]["ripple"]
+        except: # catch all just in case..
             api = self.osu_settings["type"]["default"]
-        elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-            api = self.osu_settings["type"]["ripple"] 
 
         # gives the final input for osu username
         final_usernames = []
@@ -345,10 +351,13 @@ class Osu:
             username = username[0]
 
         # determine api to use
-        if server.id not in self.osu_settings or "api" not in self.osu_settings[server.id] or self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
-            api = self.osu_settings["type"]["default"]
-        elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-            api = self.osu_settings["type"]["ripple"]     
+        try:
+            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["official"]:
+                api = self.osu_settings["type"]["default"]
+            elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
+                api = self.osu_settings["type"]["ripple"]
+        except: # catch all just in case..
+            api = self.osu_settings["type"]["default"]   
 
         # gives the final input for osu username
         test_username = await self._process_username(ctx, username)
@@ -388,11 +397,12 @@ class Osu:
             username = username[0]
 
         # determine api to use
-        if server.id not in self.osu_settings or "api" not in self.osu_settings[server.id] or self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
-            api = self.osu_settings["type"]["default"]
-        elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-            api = self.osu_settings["type"]["ripple"]
-        else: # catch all just in case..
+        try:
+            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["official"]:
+                api = self.osu_settings["type"]["default"]
+            elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
+                api = self.osu_settings["type"]["ripple"]
+        except: # catch all just in case..
             api = self.osu_settings["type"]["default"]
 
         # gives the final input for osu username
@@ -557,8 +567,6 @@ class Osu:
             score = list(await get_scores(key, api, userbest[i]['beatmap_id'], user['user_id'], gamemode))[0]
             best_beatmaps.append(beatmap)
             best_acc.append(self.calculate_acc(score,gamemode))
-
-        print(best_beatmaps)
 
         all_plays = []
         msg = "**Top {} {} Plays for {}:**".format(self.num_best_plays, gamemode_text, user['username'])
