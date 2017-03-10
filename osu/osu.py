@@ -34,8 +34,6 @@ class Osu:
         self.user_settings = fileIO("data/osu/user_settings.json", "load")
         self.track = fileIO("data/osu/track.json", "load")
         self.osu_settings = fileIO("data/osu/osu_settings.json", "load")
-        self.num_track_plays = self.osu_settings["num_track"]      
-        self.num_best_plays = self.osu_settings["num_best_plays"]
         self.num_max_prof = 8
         self.max_map_disp = 3
 
@@ -414,7 +412,7 @@ class Osu:
 
         # get userinfo
         userinfo = list(await get_user(key, api, username, gamemode))
-        userbest = list(await get_user_best(key, api, username, gamemode, self.num_best_plays))
+        userbest = list(await get_user_best(key, api, username, gamemode, self.osu_settings['num_best_plays']))
         if userinfo and userbest:                          
             msg, top_plays = await self._get_user_top(ctx, api, userinfo[0], userbest, gamemode)
             await self.bot.say(msg, embed=top_plays)
@@ -562,16 +560,16 @@ class Osu:
         # get best plays map information and scores
         best_beatmaps = []
         best_acc = []
-        for i in range(self.num_best_plays):
+        for i in range(self.osu_settings['num_best_plays']):
             beatmap = list(await get_beatmap(key, api, beatmap_id=userbest[i]['beatmap_id']))[0]
             score = list(await get_scores(key, api, userbest[i]['beatmap_id'], user['user_id'], gamemode))[0]
             best_beatmaps.append(beatmap)
             best_acc.append(self.calculate_acc(score,gamemode))
 
         all_plays = []
-        msg = "**Top {} {} Plays for {}:**".format(self.num_best_plays, gamemode_text, user['username'])
+        msg = "**Top {} {} Plays for {}:**".format(self.osu_settings['num_best_plays'], gamemode_text, user['username'])
         desc = ''
-        for i in range(self.num_best_plays):
+        for i in range(self.osu_settings['num_best_plays']):
             mods = self.mod_calculation(userbest[i]['enabled_mods'])
             if not mods:
                 mods = []
@@ -925,7 +923,7 @@ class Osu:
                 new_plays = {}
                 modes = ["osu", "taiko", "ctb", "mania"]
                 for mode in modes:
-                    new_plays[mode] = await get_user_best(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(mode), self.num_track_plays)
+                    new_plays[mode] = await get_user_best(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(mode), self.osu_settings["num_track"])
 
                 # gamemode = word
                 for gamemode in self.track[username]["plays"].keys():
@@ -952,7 +950,7 @@ class Osu:
                             log.debug("sending embed")
                             for server_id in self.track[username]['servers'].keys():
                                 server = find(lambda m: m.id == server_id, self.bot.servers)
-                                if server_id not in self.osu_settings or "tracking" not in self.server_setting[server_id] or self.server_setting[server_id]["tracking"] == True:                              
+                                if server_id not in self.osu_settings or "tracking" not in self.osu_settings[server_id] or self.osu_settings[server_id]["tracking"] == True:                              
                                     channel = find(lambda m: m.id == self.track[username]['servers'][server_id]["channel"], server.channels)
                                     await self.bot.send_message(channel, embed = em)
 
