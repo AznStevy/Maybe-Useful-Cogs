@@ -466,8 +466,9 @@ class Osu:
                     return
         # @ implies its a discord user (if not, it will just say user not found in the next section)
         # if not found, then oh well.
-        elif "@" in username:   
-            user_id = username.replace("@", "").replace("<","").replace(">","").replace(prefix, "")
+        elif "@" in username:
+            user_id = re.findall("\d+", username)
+            user_id = user_id[0]
             try:
                 if self.user_settings[user_id]:
                     username = self.user_settings[user_id]["osu_username"]
@@ -519,7 +520,7 @@ class Osu:
             info += "**▸ Playcount:** {}\n".format(user['playcount'])
             info += "**▸ Hit Accuracy:** {}%".format(user['accuracy'][0:5])
             em.description = info
-            em.set_footer(text = "On Osu! {}".format(self._get_api_name(api)))
+            em.set_footer(text = "On Osu! {} Server".format(self._get_api_name(api)))
             return em 
         except:
             return None
@@ -605,7 +606,7 @@ class Osu:
             info += '▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n\n'.format(float(best_acc[i]), float(best_beatmaps[i]['difficultyrating']))
             desc += info
         em = discord.Embed(description=desc, colour=server_user.colour)
-        em.set_footer(text = "On Osu! {}".format(self._get_api_name(api)))
+        em.set_footer(text = "On Osu! {} Server".format(self._get_api_name(api)))
         em.set_thumbnail(url=profile_url)
 
         return (msg, em)
