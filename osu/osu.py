@@ -936,7 +936,7 @@ class Osu:
 
                     # loop to check what's different
                     for i in range(len(new_timestamps)):
-                        if new_timestamps[i] > last_check:
+                        if new_timestamps[i] != None and new_timestamps[i] > last_check:
                             #print("Comparing new {} to old {}".format(new_timestamps[i], last_check))
                             top_play_num = i+1
                             play = new_plays[gamemode][i]
@@ -958,7 +958,8 @@ class Osu:
                             self.track[username]["plays"][gamemode] = new_timestamps[i].strftime('%Y-%m-%d %H:%M:%S')
                             self.track[username]["userinfo"][gamemode] = new_user_info
                             fileIO("data/osu/track.json", "save", self.track)
-                            break 
+                            break
+
             try:
                 log.debug("sleep 60 seconds")
                 await asyncio.sleep(60)
