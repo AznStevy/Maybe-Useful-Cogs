@@ -21,6 +21,7 @@ help_msg = [
             "**No linked account ({}osuset user [username]) or not using **`{}command [username] [gamemode]`".format(prefix, prefix),
             "**No linked account ({}osuset user [username])**".format(prefix)
             ]
+modes = ["osu", "taiko", "ctb", "mania"]
 
 log = logging.getLogger("red.osu")
 log.setLevel(logging.INFO)
@@ -157,7 +158,6 @@ class Osu:
         user = ctx.message.author
         server = ctx.message.server
 
-        modes = ["osu", "taiko", "ctb", "mania"]
         if mode.lower() in modes:
             gamemode = modes.index(mode.lower())
         elif int(mode) >= 0 and int(mode) <= 3:
@@ -235,7 +235,7 @@ class Osu:
 
     @commands.command(pass_context=True, no_pm=True)
     async def recent(self, ctx, *username):
-        """Gives recent plays of player with respect to user's default gamemode."""
+        """Gives recent plays of player with respect to user's default gamemode. [p]recent [username] (gamemode:optional)"""
         await self._process_user_recent(ctx, username)
 
     @osuset.command(pass_context=True, no_pm=True)
@@ -332,16 +332,27 @@ class Osu:
             await self.bot.say(embed=player)
 
     # Gets the user's most recent score
-    async def _process_user_recent(self, ctx, username):
+    async def _process_user_recent(self, ctx, inputs):
         key = self.osu_api_key["osu_api_key"]
         channel = ctx.message.channel
         user = ctx.message.author
         server = user.server
 
-        if not username:
+        # handle input
+        gamemode = -1
+        if len(inputs) == 2:
+            username = str(inputs[0])
+            if str(inputs[1]).lower() in modes:
+                gamemode = self._get_gamemode_number(inputs[1])
+            elif int(inputs[1]) < 0 or int(inputs[1])> 3:
+                gamemode = int(inputs[1])
+            else:
+                await self.bot.say("**Please use the format {}recent [username] [gamemode].**".format(prefix))
+                return
+        elif not inputs:
             username = None
         else:
-            username = username[0]
+            username = inputs[0]
 
         # determine api to use
         try:
@@ -359,11 +370,15 @@ class Osu:
         else:
             return
 
-        # determine gamemode
-        if self._check_user_exists(user):
-            gamemode = self.user_settings[user.id]['default_gamemode']
-        else:
-            gamemode = 0
+        # determines which recent gamemode to display
+        if gamemode == -1:
+            target_id = self._get_discord_id(username, api)
+            if target_id != -1:
+                gamemode = self.user_settings[target_id]['default_gamemode']              
+            elif target_id == -1 and self._check_user_exists(user):
+                gamemode = self.user_settings[user.id]['default_gamemode']
+            else:          
+                gamemode = 0
 
         # get userinfo
         userinfo = list(await get_user(key, api, username, gamemode))
@@ -376,6 +391,17 @@ class Osu:
             userrecent = userrecent[0]
             msg, recent_play = await self._get_recent(ctx, api, userinfo, userrecent, gamemode)
             await self.bot.say(msg, embed=recent_play)
+
+    def _get_discord_id(self, username:str, api:str):
+        if api == self.osu_settings["type"]["ripple"]:
+            name_type = "ripple_username"
+        else:
+            name_type = "osu_username"
+
+        for user_id in self.user_settings.keys():
+            if self.user_settings[user_id] and username in self.user_settings[user_id][name_type]:
+                return user_id
+        return -1
 
 
     # Gets information to proccess the top play version of the image
@@ -850,7 +876,6 @@ class Osu:
                             self.track[username]["servers"][server.id]["channel"] = channel.id
                             # get top 10 plays
                             user_plays = {}
-                            modes = ["osu", "taiko", "ctb", "mania"]
                             for mode in modes:
                                 recent_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -919,7 +944,6 @@ class Osu:
                 log.debug("checking {}".format(username))
                 # if the user's current top 10 scores are different from new top 10
                 new_plays = {}
-                modes = ["osu", "taiko", "ctb", "mania"]
                 for mode in modes:
                     new_plays[mode] = await get_user_best(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(mode), self.osu_settings["num_track"])
 
