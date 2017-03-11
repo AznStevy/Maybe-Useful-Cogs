@@ -160,19 +160,18 @@ class Osu:
         modes = ["osu", "taiko", "ctb", "mania"]
         if mode.lower() in modes:
             gamemode = modes.index(mode.lower())
-        elif int(mode) >= 0 & int(mode) <= 3:
+        elif int(mode) >= 0 and int(mode) <= 3:
             gamemode = int(mode)
         else:
             await self.bot.say("**Please enter a valid gamemode.**")
             return
 
         if user.id in self.user_settings:
-            self.user_settings[user.id]['default_gamemode'] = gamemode
+            self.user_settings[user.id]['default_gamemode'] = int(gamemode)
             await self.bot.say("**`{}`'s default gamemode has been set to `{}`.**".format(user.name, modes[gamemode]))
+            fileIO('data/osu/user_settings.json', "save", self.user_settings)
         else:
             await self.bot.say(help_msg[1])
-            return
-        fileIO('data/osu/user_settings.json', "save", self.user_settings)
 
     @commands.group(pass_context=True)
     async def osutrack(self, ctx):
@@ -236,7 +235,7 @@ class Osu:
 
     @commands.command(pass_context=True, no_pm=True)
     async def recent(self, ctx, *username):
-        """Gives top mania plays."""
+        """Gives recent plays of player with respect to user's default gamemode."""
         await self._process_user_recent(ctx, username)
 
     @osuset.command(pass_context=True, no_pm=True)
@@ -370,7 +369,7 @@ class Osu:
         userinfo = list(await get_user(key, api, username, gamemode))
         userrecent = list(await get_user_recent(key, api, username, gamemode))
         if not userinfo or not userrecent:
-            await self.bot.say("**`{}` was not found or no recent plays.**".format(username))
+            await self.bot.say("**`{}` was not found or no recent plays in `{}`.**".format(username, self._get_gamemode(gamemode)))
             return
         else:
             userinfo = userinfo[0]
