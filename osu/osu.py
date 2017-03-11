@@ -109,12 +109,12 @@ class Osu:
         em.set_author(name="Current Settings for {}".format(server.name), icon_url = server.icon_url)
 
         # determine api to use
-        try:
-            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["official"]:
+        if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
+            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
                 api = "Official Osu! API"
             elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-                api = "Ripple API"
-        except: # catch all just in case..
+                api = "Ripple API"          
+        else:
             api = "Official Osu! API"
 
         # determine
@@ -289,12 +289,12 @@ class Osu:
         usernames = list(set(usernames))
 
         # determine api to use
-        try:
-            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["official"]:
+        if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
+            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
                 api = self.osu_settings["type"]["default"]
             elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-                api = self.osu_settings["type"]["ripple"]
-        except: # catch all just in case..
+                api = self.osu_settings["type"]["ripple"]            
+        else:
             api = self.osu_settings["type"]["default"]
 
         # gives the final input for osu username
@@ -355,13 +355,13 @@ class Osu:
             username = inputs[0]
 
         # determine api to use
-        try:
-            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["official"]:
+        if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
+            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
                 api = self.osu_settings["type"]["default"]
             elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-                api = self.osu_settings["type"]["ripple"]
-        except: # catch all just in case..
-            api = self.osu_settings["type"]["default"]   
+                api = self.osu_settings["type"]["ripple"]            
+        else:
+            api = self.osu_settings["type"]["default"]
 
         # gives the final input for osu username
         test_username = await self._process_username(ctx, username)
@@ -393,10 +393,12 @@ class Osu:
             await self.bot.say(msg, embed=recent_play)
 
     def _get_discord_id(self, username:str, api:str):
-        if api == self.osu_settings["type"]["ripple"]:
-            name_type = "ripple_username"
-        else:
-            name_type = "osu_username"
+        #if api == self.osu_settings["type"]["ripple"]:
+            #name_type = "ripple_username"
+        #else:
+            #name_type = "osu_username"
+        # currently assumes same name
+        name_type = "osu_username"
 
         for user_id in self.user_settings.keys():
             if self.user_settings[user_id] and username in self.user_settings[user_id][name_type]:
@@ -417,12 +419,12 @@ class Osu:
             username = username[0]
 
         # determine api to use
-        try:
-            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["official"]:
+        if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
+            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
                 api = self.osu_settings["type"]["default"]
             elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-                api = self.osu_settings["type"]["ripple"]
-        except: # catch all just in case..
+                api = self.osu_settings["type"]["ripple"]            
+        else:
             api = self.osu_settings["type"]["default"]
 
         # gives the final input for osu username
@@ -535,11 +537,9 @@ class Osu:
 
         # get best plays map information and scores
         beatmap = list(await get_beatmap(key, api, beatmap_id=userrecent['beatmap_id']))[0]
-        score = list(await get_scores(key, api, userrecent['beatmap_id'], user['user_id'], gamemode))
-        if not score:
+        if not userrecent:
             return ("**No recent score for `{}` in user's default gamemode (`{}`)**".format(user['username'], self._get_gamemode(gamemode)), None)
-        score = score[0]
-        acc = self.calculate_acc(score, gamemode)
+        acc = self.calculate_acc(userrecent, gamemode)
         mods = self.mod_calculation(userrecent['enabled_mods'])
         if not mods:
             mods = []
