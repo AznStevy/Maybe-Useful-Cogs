@@ -312,11 +312,10 @@ class Osu:
         count_valid = 0
         for i in range(len(final_usernames)):
             userinfo = list(await get_user(key, api, final_usernames[i], gamemode)) # get user info from osu api
-            if userinfo != None and len(userinfo) > 0:
-                if "pp_rank" in userinfo[0] and userinfo[0]["pp_rank"] != None:
-                    all_user_info.append(userinfo[0])
-                    sequence.append((count_valid, int(userinfo[0]["pp_rank"])))
-                    count_valid = count_valid + 1
+            if userinfo != None and len(userinfo) > 0 and userinfo[0]['pp_raw'] != None:
+                all_user_info.append(userinfo[0])
+                sequence.append((count_valid, int(userinfo[0]["pp_rank"])))
+                count_valid = count_valid + 1
             else:
                 await self.bot.say("**`{}` has not played enough.**".format(final_usernames[i]))
 
@@ -331,10 +330,7 @@ class Osu:
             await self.bot.say("Found {} users, but displaying top {}.".format(len(all_players), disp_num))
 
         for player in all_players[0:disp_num]:
-            try:
-                await self.bot.say(embed=player)
-            except:
-                pass
+            await self.bot.say(embed=player)
 
     # Gets the user's most recent score
     async def _process_user_recent(self, ctx, username):
@@ -372,14 +368,15 @@ class Osu:
 
         # get userinfo
         userinfo = list(await get_user(key, api, username, gamemode))
-        if not userinfo:
-            await self.bot.say("**`{}` was not found or not enough plays** :cry:".format(username))
+        userrecent = list(await get_user_recent(key, api, username, gamemode))
+        if not userinfo or not userrecent:
+            await self.bot.say("**`{}` was not found or no recent plays.**".format(username))
             return
-        userinfo = userinfo[0]
-        userrecent = list(await get_user_recent(key, api, username, gamemode))[0]
-                         
-        msg, recent_play = await self._get_recent(ctx, api, userinfo, userrecent, gamemode)
-        await self.bot.say(msg, embed=recent_play)
+        else:
+            userinfo = userinfo[0]
+            userrecent = userrecent[0]
+            msg, recent_play = await self._get_recent(ctx, api, userinfo, userrecent, gamemode)
+            await self.bot.say(msg, embed=recent_play)
 
 
     # Gets information to proccess the top play version of the image
@@ -417,7 +414,7 @@ class Osu:
             msg, top_plays = await self._get_user_top(ctx, api, userinfo[0], userbest, gamemode)
             await self.bot.say(msg, embed=top_plays)
         else:
-            await self.bot.say("**`{}` was not found or not enough plays** :cry:".format(username))
+            await self.bot.say("**`{}` was not found or not enough plays.**".format(username))
 
     ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def _process_username(self, ctx, username):
@@ -954,7 +951,7 @@ class Osu:
                             else:
                                 old_user_info = None
                                 em = self._create_top_play(top_play_num, play, play_map, old_user_info, new_user_info)
-                                
+
                             log.debug("sending embed")
                             for server_id in self.track[username]['servers'].keys():
                                 server = find(lambda m: m.id == server_id, self.bot.servers)
