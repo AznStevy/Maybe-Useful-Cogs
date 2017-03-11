@@ -18,8 +18,8 @@ import logging
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
-            "**No linked account ({}osuset user) or not using **`{}command username gamemode`".format(prefix, prefix),
-            "**No linked account ({}osuset user)**".format(prefix)
+            "**No linked account ({}osuset user [username]) or not using **`{}command [username] [gamemode]`".format(prefix, prefix),
+            "**No linked account ({}osuset user [username])**".format(prefix)
             ]
 
 log = logging.getLogger("red.osu")
@@ -428,7 +428,7 @@ class Osu:
             if self._check_user_exists(user):
                 username = self.user_settings[user.id]["osu_username"]
             else:
-                await self.bot.say("It doesn't seem that you have an account linked. Do **{}osuset user**.".format(prefix))
+                await self.bot.say("It doesn't seem that you have an account linked. Do **{}osuset user [username]**.".format(prefix))
                 return None # bad practice, but too lazy to make it nice
         # if it's a discord user, first check to see if they are in database and choose that username
         # then see if the discord username is a osu username, then try the string itself
