@@ -817,6 +817,8 @@ class Osu:
                 if target_channel.name not in channel_users:
                     channel_users[target_channel.name] = []
                 channel_users[target_channel.name].append(username)
+
+        channel_users[target_channel.name] = sorted(channel_users[target_channel.name])
         for channel_name in channel_users.keys():
             em.add_field(name = "__#{}__".format(channel_name), value = ", ".join(channel_users[channel_name]))
         await self.bot.say(embed = em)
@@ -948,9 +950,11 @@ class Osu:
                             log.debug("creating top play")
                             if gamemode in self.track[username]["userinfo"]:
                                 old_user_info = self.track[username]["userinfo"]
+                                em = self._create_top_play(top_play_num, play, play_map, old_user_info[gamemode], new_user_info)
                             else:
                                 old_user_info = None
-                            em = self._create_top_play(top_play_num, play, play_map, old_user_info, new_user_info)
+                                em = self._create_top_play(top_play_num, play, play_map, old_user_info, new_user_info)
+                                
                             log.debug("sending embed")
                             for server_id in self.track[username]['servers'].keys():
                                 server = find(lambda m: m.id == server_id, self.bot.servers)
@@ -978,9 +982,6 @@ class Osu:
 
         # get infomation
         log.debug("getting change information")
-        dpp = float(new_user_info['pp_raw']) - float(old_user_info['pp_raw'])
-        dgrank = float(new_user_info['pp_rank']) - float(old_user_info['pp_rank']) 
-        dcrank = float(new_user_info['pp_country_rank']) - float(old_user_info['pp_country_rank'])
         m, s = divmod(int(beatmap['total_length']), 60)
         mods = self.mod_calculation(play['enabled_mods'])
         if not mods:
@@ -1001,10 +1002,10 @@ class Osu:
 
         info = ""
         info += "▸ [{}[{}]]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
-        info += "▸ +{} **{:.2f}%** (**{}** Rank)\n".format(','.join(mods), float(acc), play['rank'])
+        info += "▸ +{} ▸ **{:.2f}%** ▸ **{}** Rank\n".format(','.join(mods), float(acc), play['rank'])
         info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, str(s).zfill(2), beatmap['bpm'])
         if old_user_info != None:
-            dpp = float(new_user_info['pp']) - float(old_user_info['pp'])
+            dpp = float(new_user_info['pp_raw']) - float(old_user_info['pp_raw'])
             info += "▸ {} ▸ x{} ▸ **{:.2f}pp (+{:.2f})**\n".format(play['score'], play['maxcombo'], float(play['pp']), dpp)
             info += "▸ #{} → #{} ({}#{} → #{})".format(old_user_info['pp_rank'], new_user_info['pp_rank'], new_user_info['country'], old_user_info['pp_country_rank'], new_user_info['pp_country_rank'])
         else:
