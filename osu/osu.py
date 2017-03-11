@@ -124,7 +124,7 @@ class Osu:
             tracking = "Disabled"
 
         info = ""
-        info += "**▸ API:** {}\n".format(api)
+        info += "**▸ Default API:** {}\n".format(api)
         info += "**▸ Tracking:** {}\n".format(tracking)
 
         if tracking == "Enabled":
@@ -195,42 +195,42 @@ class Osu:
 
     @commands.command(pass_context=True, no_pm=True)
     async def osu(self, ctx, *username):
-        """Gives osu user(s) stats."""
+        """Gives osu user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
     async def osutop(self, ctx, *username):
-        """Gives top osu plays."""
+        """Gives top osu plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
     async def taiko(self, ctx, *username):
-        """Gives taiko user(s) stats."""
+        """Gives taiko user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
     async def taikotop(self, ctx, *username):
-        """Gives top taiko plays."""
+        """Gives top taiko plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
     async def ctb(self, ctx, *username):
-        """Gives ctb user(s) stats."""
+        """Gives ctb user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
     async def ctbtop(self, ctx, *username):
-        """Gives ctb osu plays."""
+        """Gives ctb osu plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
     async def mania(self, ctx, *username):
-        """Gives mania user(s) stats."""
+        """Gives mania user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
     async def maniatop(self, ctx, *username):
-        """Gives top mania plays."""
+        """Gives top mania plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
@@ -284,18 +284,11 @@ class Osu:
 
         if not usernames:
             usernames = [None]
-
         # get rid of duplicates
         usernames = list(set(usernames))
 
         # determine api to use
-        if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
-            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
-                api = self.osu_settings["type"]["default"]
-            elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-                api = self.osu_settings["type"]["ripple"]            
-        else:
-            api = self.osu_settings["type"]["default"]
+        usernames, api = self._determine_api(server, usernames)
 
         # gives the final input for osu username
         final_usernames = []
@@ -331,6 +324,30 @@ class Osu:
         for player in all_players[0:disp_num]:
             await self.bot.say(embed=player)
 
+    # takes iterable of inputs and determines api, also based on defaults
+    def _determine_api(self, server, inputs):
+        if not inputs or ('-ripple' not in inputs and '-official' not in inputs): # in case not specified
+            if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
+                if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
+                    api = self.osu_settings["type"]["default"]
+                elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
+                    api = self.osu_settings["type"]["ripple"]            
+            else:
+                api = self.osu_settings["type"]["default"]
+        elif '-ripple' in inputs:
+            inputs = list(inputs)
+            inputs.remove('-ripple')
+            api = self.osu_settings["type"]["ripple"]
+        elif '-official' in inputs:
+            inputs = list(inputs)
+            inputs.remove('-official')
+            api = self.osu_settings["type"]["default"]
+
+        if not inputs:
+            inputs = [None]
+
+        return inputs, api       
+
     # Gets the user's most recent score
     async def _process_user_recent(self, ctx, inputs):
         key = self.osu_api_key["osu_api_key"]
@@ -338,30 +355,17 @@ class Osu:
         user = ctx.message.author
         server = user.server
 
-        # handle input
+        # forced handle gamemode
         gamemode = -1
-        if len(inputs) == 2:
-            username = str(inputs[0])
-            if str(inputs[1]).lower() in modes:
-                gamemode = self._get_gamemode_number(inputs[1])
-            elif int(inputs[1]) < 0 or int(inputs[1])> 3:
-                gamemode = int(inputs[1])
-            else:
-                await self.bot.say("**Please use the format {}recent [username] [gamemode].**".format(prefix))
-                return
-        elif not inputs:
-            username = None
-        else:
-            username = inputs[0]
+        for mode in modes:
+            if len(inputs) >= 2 and mode in inputs:
+                gamemode = self._get_gamemode_number(mode)
+            elif len(inputs) == 1 and mode == inputs[0]:
+                gamemode = self._get_gamemode_number(mode)             
 
-        # determine api to use
-        if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
-            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
-                api = self.osu_settings["type"]["default"]
-            elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-                api = self.osu_settings["type"]["ripple"]            
-        else:
-            api = self.osu_settings["type"]["default"]
+        # handle api and username (1)
+        username, api = self._determine_api(server, list(inputs))
+        username = username[0]
 
         # gives the final input for osu username
         test_username = await self._process_username(ctx, username)
@@ -370,7 +374,7 @@ class Osu:
         else:
             return
 
-        # determines which recent gamemode to display
+        # determines which recent gamemode to display based on user
         if gamemode == -1:
             target_id = self._get_discord_id(username, api)
             if target_id != -1:
@@ -413,19 +417,9 @@ class Osu:
         user = ctx.message.author
         server = user.server
 
-        if not username:
-            username = None
-        else:
-            username = username[0]
-
         # determine api to use
-        if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
-            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
-                api = self.osu_settings["type"]["default"]
-            elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
-                api = self.osu_settings["type"]["ripple"]            
-        else:
-            api = self.osu_settings["type"]["default"]
+        username, api = self._determine_api(server, list(username))
+        username = username[0]
 
         # gives the final input for osu username
         test_username = await self._process_username(ctx, username)
@@ -491,6 +485,12 @@ class Osu:
             return False
         return True
 
+    def _get_api_name(self, url:str):
+        if url == self.osu_settings["type"]["ripple"]:
+            return "Ripple"
+        else:
+            return "Official"
+
     # Gives a small user profile
     async def _get_user_info(self, api:str, server, server_user, user, gamemode: int):
         if api == self.osu_settings["type"]["default"]:
@@ -519,6 +519,7 @@ class Osu:
             info += "**▸ Playcount:** {}\n".format(user['playcount'])
             info += "**▸ Hit Accuracy:** {}%".format(user['accuracy'][0:5])
             em.description = info
+            em.set_footer(text = "On Osu! {}".format(self._get_api_name(api)))
             return em 
         except:
             return None
@@ -562,8 +563,7 @@ class Osu:
         em = discord.Embed(description=info, colour=server_user.colour)
         em.set_author(name="{} [{}] +{}".format(beatmap['title'], beatmap['version'], ",".join(mods)), url = beatmap_url, icon_url = profile_url)
         em.set_thumbnail(url=map_image_url)
-        em.set_footer(text = userrecent['date'])
-
+        em.set_footer(text = "{} On Osu! {} Server".format(userrecent['date'], self._get_api_name(api)))
         return (msg, em)
 
     # Gives a user profile image with some information
@@ -605,7 +605,9 @@ class Osu:
             info += '▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n\n'.format(float(best_acc[i]), float(best_beatmaps[i]['difficultyrating']))
             desc += info
         em = discord.Embed(description=desc, colour=server_user.colour)
+        em.set_footer(text = "On Osu! {}".format(self._get_api_name(api)))
         em.set_thumbnail(url=profile_url)
+
         return (msg, em)
 
     def _get_gamemode(self, gamemode:int):
@@ -874,23 +876,18 @@ class Osu:
                         # add channels that care about the user
                         if "channel" not in self.track[username]["servers"][server.id]:
                             self.track[username]["servers"][server.id]["channel"] = channel.id
-                            # get top 10 plays
-                            user_plays = {}
-                            for mode in modes:
-                                recent_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-                                if "plays" not in self.track[username]:
-                                    self.track[username]["plays"] = {}
-
-                                self.track[username]["plays"][mode] = recent_time
 
                             # add current userinfo
                             if "userinfo" not in self.track[username]:
                                 self.track[username]["userinfo"] = {}
                             for mode in modes:
                                 self.track[username]["userinfo"][mode] = list(await get_user(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(mode)))[0]                    
+                            
+                            # add last tracked time
+                            current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            self.track[username]["last_check"] = current_time
+
                             msg+="**`{}` added. Will now track on `#{}`**\n".format(username, channel.name)
-                            fileIO("data/osu/track.json", "save", self.track)
                 else:
                     if server.id in self.track[username]["servers"]:
                         if channel.id == self.track[username]["servers"][server.id]["channel"]:
@@ -898,13 +895,12 @@ class Osu:
                         else:
                             self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
                             msg+="**`{}` now tracking on `#{}`**\n".format(username, channel.name)
-                            fileIO("data/osu/track.json", "save", self.track)
                     else:
                         if server.id not in self.track[username]["servers"]:
                             self.track[username]["servers"][server.id] = {}
                         self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
                         msg+="**`{}` added. Will now track on `#{}`**\n".format(username, channel.name)
-                        fileIO("data/osu/track.json", "save", self.track)
+        fileIO("data/osu/track.json", "save", self.track)
         await self.bot.say(msg)
 
     @osutrack.command(pass_context=True, no_pm=True)
@@ -948,9 +944,9 @@ class Osu:
                     new_plays[mode] = await get_user_best(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(mode), self.osu_settings["num_track"])
 
                 # gamemode = word
-                for gamemode in self.track[username]["plays"].keys():
+                for gamemode in self.track[username]["userinfo"].keys():
                     log.debug("examining gamemode {}".format(gamemode))
-                    last_check = datetime.datetime.strptime(self.track[username]["plays"][gamemode], '%Y-%m-%d %H:%M:%S')
+                    last_check = datetime.datetime.strptime(self.track[username]["last_check"], '%Y-%m-%d %H:%M:%S')
                     new_timestamps = []
                     for new_play in new_plays[gamemode]:
                         new_timestamps.append(datetime.datetime.strptime(new_play['date'], '%Y-%m-%d %H:%M:%S'))
@@ -983,11 +979,10 @@ class Osu:
                                     await self.bot.send_message(channel, embed = em)
 
                             #print("Setting last changed time to {}".format(new_timestamps[i]))                          
-                            self.track[username]["plays"][gamemode] = new_timestamps[i].strftime('%Y-%m-%d %H:%M:%S')
                             self.track[username]["userinfo"][gamemode] = new_user_info
+                            self.track[username]["last_check"] = new_timestamps[i].strftime('%Y-%m-%d %H:%M:%S')
                             fileIO("data/osu/track.json", "save", self.track)
                             break
-
             try:
                 log.debug("sleep 60 seconds")
                 await asyncio.sleep(60)
@@ -1021,7 +1016,7 @@ class Osu:
         em.set_author(name="New #{} for {} in {}".format(top_play_num, new_user_info['username'], self._get_gamemode(int(beatmap['mode']))), icon_url = profile_url, url = user_url)
 
         info = ""
-        info += "▸ [{}[{}]]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
+        info += "▸ [__{} [{}]__]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
         info += "▸ +{} ▸ **{:.2f}%** ▸ **{}** Rank\n".format(','.join(mods), float(acc), play['rank'])
         info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, str(s).zfill(2), beatmap['bpm'])
         if old_user_info != None:
