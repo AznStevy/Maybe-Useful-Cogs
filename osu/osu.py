@@ -936,7 +936,7 @@ class Osu:
 
                     # loop to check what's different
                     for i in range(len(new_timestamps)):
-                        if new_timestamps[i] != None and new_timestamps[i] > last_check:
+                        if last_check != None and new_timestamps[i] != None and new_timestamps[i] > last_check:
                             #print("Comparing new {} to old {}".format(new_timestamps[i], last_check))
                             top_play_num = i+1
                             play = new_plays[gamemode][i]
@@ -946,11 +946,15 @@ class Osu:
 
                             # send appropriate message to channel
                             log.debug("creating top play")
-                            em = self._create_top_play(top_play_num, play, play_map, self.track[username]["userinfo"][gamemode], new_user_info)
+                            if gamemode in self.track[username]["userinfo"]:
+                                old_user_info = self.track[username]["userinfo"]
+                            else:
+                                old_user_info = None
+                            em = self._create_top_play(top_play_num, play, play_map, old_user_info, new_user_info)
                             log.debug("sending embed")
                             for server_id in self.track[username]['servers'].keys():
                                 server = find(lambda m: m.id == server_id, self.bot.servers)
-                                if server_id not in self.osu_settings or "tracking" not in self.osu_settings[server_id] or self.osu_settings[server_id]["tracking"] == True:                              
+                                if server_id not in self.osu_settings or "tracking" not in self.osu_settings[server_id] or self.osu_settings[server_id]["tracking"] == True:
                                     channel = find(lambda m: m.id == self.track[username]['servers'][server_id]["channel"], server.channels)
                                     await self.bot.send_message(channel, embed = em)
 
@@ -999,8 +1003,14 @@ class Osu:
         info += "▸ [{}[{}]]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
         info += "▸ +{} **{:.2f}%** (**{}** Rank)\n".format(','.join(mods), float(acc), play['rank'])
         info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, str(s).zfill(2), beatmap['bpm'])
-        info += "▸ {} ▸ x{} ▸ **{:.2f}pp**\n".format(play['score'], play['maxcombo'], float(play['pp']))
-        info += "▸ #{} → #{} ({}#{} → #{})".format(old_user_info['pp_rank'], new_user_info['pp_rank'], old_user_info['country'], old_user_info['pp_country_rank'], new_user_info['pp_country_rank'])
+        if old_user_info != None:
+            dpp = float(new_user_info['pp']) - float(old_user_info['pp'])
+            info += "▸ {} ▸ x{} ▸ **{:.2f}pp (+{:.2f})**\n".format(play['score'], play['maxcombo'], float(play['pp']), dpp)
+            info += "▸ #{} → #{} ({}#{} → #{})".format(old_user_info['pp_rank'], new_user_info['pp_rank'], new_user_info['country'], old_user_info['pp_country_rank'], new_user_info['pp_country_rank'])
+        else:
+            info += "▸ {} ▸ x{} ▸ **{:.2f}pp**\n".format(play['score'], play['maxcombo'], float(play['pp']))
+            info += "▸ #{} ({}#{})".format(new_user_info['pp_rank'], new_user_info['country'], new_user_info['pp_country_rank'])
+                
         em.description = info
         return em
 
