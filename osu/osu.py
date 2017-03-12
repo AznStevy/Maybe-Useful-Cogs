@@ -808,7 +808,7 @@ class Osu:
             tags = "-"
         desc = ' **Length:** {}:{}  **BPM:** {}\n **Tags:** {}\n_-----------------_'.format(m, str(s).zfill(2), beatmap[0]['bpm'], tags)
         em = discord.Embed(description = desc, colour=0xeeeeee)
-        em.set_author(name="{} - {} by {}".format(beatmap[0]['title'], beatmap[0]['artist'], beatmap[0]['creator']), url=beatmap_url)
+        em.set_author(name="{} - {} by {}".format(beatmap[0]['artist'], beatmap[0]['title'], beatmap[0]['creator']), url=beatmap_url)
 
         # sort maps
         map_order = []
@@ -821,7 +821,7 @@ class Osu:
             beatmap_info = ""    
             beatmap_info += "**▸Difficulty:** {:.2f}★  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['max_combo'])
             beatmap_info += "**▸AR:** {}  **▸OD:** {}  **▸HP:** {}  **▸CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
-            em.add_field(name = "__[{}]__\n".format(beatmap[i]['version']), value = beatmap_info)
+            em.add_field(name = "__[{}]__\n".format(beatmap[i]['version']), value = beatmap_info, inline = False)
 
         page = urllib.request.urlopen(beatmap_url)
         soup = BeautifulSoup(page.read(), "html.parser")
