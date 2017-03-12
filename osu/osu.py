@@ -18,8 +18,8 @@ import logging
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
-            "**No linked account ({}osuset user [username]) or not using **`{}command [username] [gamemode]`".format(prefix, prefix),
-            "**No linked account ({}osuset user [username])**".format(prefix)
+            "**No linked account (`{}osuset user [username]`) or not using **`{}command [username] [gamemode]`".format(prefix, prefix),
+            "**No linked account (`{}osuset user [username]`)**".format(prefix)
             ]
 modes = ["osu", "taiko", "ctb", "mania"]
 
@@ -73,7 +73,7 @@ class Osu:
         await self.bot.say(msg)  
 
     @osuset.command(pass_context=True, no_pm=True)
-    @checks.mod_or_permissions(manage_messages=True)
+    @checks.serverowner_or_permissions(administrator=True)
     async def tracking(self, ctx, toggle=None):
         """ For disabling tracking on server (enable/disable) """
         server = ctx.message.server
@@ -150,7 +150,7 @@ class Osu:
         elif choice.lower() == "ripple":
             self.osu_settings[server.id]["api"] = self.osu_settings["type"]["ripple"]
         fileIO("data/osu/osu_settings.json", "save", self.osu_settings)
-        await self.bot.say("**Switched to `{}` server on `{}`.**".format(choice, server.name))
+        await self.bot.say("**Switched to `{}` server as default on `{}`.** :arrows_counterclockwise:".format(choice, server.name))
 
     @osuset.command(pass_context=True, no_pm=True)
     async def default(self, ctx, mode:str):
@@ -168,7 +168,7 @@ class Osu:
 
         if user.id in self.user_settings:
             self.user_settings[user.id]['default_gamemode'] = int(gamemode)
-            await self.bot.say("**`{}`'s default gamemode has been set to `{}`.**".format(user.name, modes[gamemode]))
+            await self.bot.say("**`{}`'s default gamemode has been set to `{}`.** :white_check_mark:".format(user.name, modes[gamemode]))
             fileIO('data/osu/user_settings.json', "save", self.user_settings)
         else:
             await self.bot.say(help_msg[1])
@@ -191,49 +191,58 @@ class Osu:
         else:
             self.osu_api_key["osu_api_key"] = key.content
             fileIO("data/osu/apikey.json", "save", self.osu_api_key)
-            await self.bot.whisper("API Key details added.")
+            await self.bot.whisper("API Key details added. :white_check_mark:")
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def osu(self, ctx, *username):
         """Gives osu user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def osutop(self, ctx, *username):
         """Gives top osu plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def taiko(self, ctx, *username):
         """Gives taiko user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def taikotop(self, ctx, *username):
         """Gives top taiko plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def ctb(self, ctx, *username):
         """Gives ctb user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def ctbtop(self, ctx, *username):
         """Gives ctb osu plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def mania(self, ctx, *username):
         """Gives mania user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def maniatop(self, ctx, *username):
         """Gives top mania plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 20, commands.BucketType.user)
     async def recent(self, ctx, *username):
         """Gives recent plays of player with respect to user's default gamemode. [p]recent [username] (gamemode:optional)"""
         await self._process_user_recent(ctx, username)
@@ -409,7 +418,6 @@ class Osu:
                 return user_id
         return -1
 
-
     # Gets information to proccess the top play version of the image
     async def _process_user_top(self, ctx, username, gamemode: int):
         key = self.osu_api_key["osu_api_key"]
@@ -462,18 +470,17 @@ class Osu:
                 if await get_user(key, self.osu_settings["type"]["default"], username, 0):
                     username = str(target)
                 else:
-                    await self.bot.say(help_msg[2])
+                    await self.bot.say(help_msg[1])
                     return
         # @ implies its a discord user (if not, it will just say user not found in the next section)
         # if not found, then oh well.
         elif "@" in username:
             user_id = re.findall("\d+", username)
             user_id = user_id[0]
-            try:
-                if self.user_settings[user_id]:
-                    username = self.user_settings[user_id]["osu_username"]
-            except:
-                await self.bot.say(help_msg[2])
+            if user_id in self.user_settings:
+                username = self.user_settings[user_id]["osu_username"]
+            else:
+                await self.bot.say(help_msg[1])
                 return
         else:
             username = str(username)
@@ -557,7 +564,7 @@ class Osu:
 
         # grab beatmap image
         page = urllib.request.urlopen(beatmap_url)
-        soup = BeautifulSoup(page.read())
+        soup = BeautifulSoup(page.read(), "html.parser")
         map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
         map_image_url = 'http:{}'.format(map_image[0]).replace(" ","%")
 
@@ -817,7 +824,7 @@ class Osu:
             em.add_field(name = "__[{}]__\n".format(beatmap[i]['version']), value = beatmap_info)
 
         page = urllib.request.urlopen(beatmap_url)
-        soup = BeautifulSoup(page.read())
+        soup = BeautifulSoup(page.read(), "html.parser")
         map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
         map_image_url = 'http:{}'.format(map_image[0]).replace(" ", "%")
         # await self.bot.send_message(message.channel, map_image_url)        
@@ -836,6 +843,7 @@ class Osu:
         em.set_author(name="Osu! Players Currently Tracked in {}".format(server.name), icon_url = server.icon_url)
         channel_users = {}
 
+        target_channel = None
         for username in self.track.keys():
             if server.id in self.track[username]["servers"]:
                 target_channel = find(lambda m: m.id == self.track[username]['servers'][server.id]["channel"], server.channels)
@@ -843,9 +851,13 @@ class Osu:
                     channel_users[target_channel.name] = []
                 channel_users[target_channel.name].append(username)
 
-        channel_users[target_channel.name] = sorted(channel_users[target_channel.name])
-        for channel_name in channel_users.keys():
-            em.add_field(name = "__#{}__".format(channel_name), value = ", ".join(channel_users[channel_name]))
+        if target_channel and channel_users[target_channel.name]:
+            channel_users[target_channel.name] = sorted(channel_users[target_channel.name])
+            for channel_name in channel_users.keys():
+                em.add_field(name = "__#{} ({})__".format(channel_name, len(channel_users[channel_name])), value = ", ".join(channel_users[channel_name]))
+        else:
+            em.description = "None."
+
         await self.bot.say(embed = em)
 
     @osutrack.command(pass_context=True, no_pm=True)
@@ -857,6 +869,7 @@ class Osu:
 
         key = self.osu_api_key["osu_api_key"]
         msg = ""
+        count_add = 0
 
         if usernames == (None):
             await self.bot.say("Please enter a user")
@@ -864,7 +877,7 @@ class Osu:
 
         for username in usernames:
             userinfo = list(await get_user(key, self.osu_settings["type"]["default"], username, 0))
-            if len(userinfo) == 0:
+            if not userinfo or len(userinfo) == 0:
                 msg+="`{}` does not exist in the osu! database.\n".format(username)
             else:
                 if username not in self.track:
@@ -887,7 +900,7 @@ class Osu:
                             # add last tracked time
                             current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                             self.track[username]["last_check"] = current_time
-
+                            count_add += 1
                             msg+="**`{}` added. Will now track on `#{}`**\n".format(username, channel.name)
                 else:
                     if server.id in self.track[username]["servers"]:
@@ -895,14 +908,20 @@ class Osu:
                             msg+="**Already tracking `{}` on `#{}.`**\n".format(username, channel.name)
                         else:
                             self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
+                            count_add += 1
                             msg+="**`{}` now tracking on `#{}`**\n".format(username, channel.name)
                     else:
                         if server.id not in self.track[username]["servers"]:
                             self.track[username]["servers"][server.id] = {}
                         self.track[username]["servers"][server.id]["channel"] = channel.id # add a channel to track
+                        count_add += 1
                         msg+="**`{}` added. Will now track on `#{}`**\n".format(username, channel.name)
+
         fileIO("data/osu/track.json", "save", self.track)
-        await self.bot.say(msg)
+        if len(msg) > 500:
+            await self.bot.say("**Added `{}` users to tracking on `#{}`.**".format(count_add, channel.name))
+        else:      
+            await self.bot.say(msg)
 
     @osutrack.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_messages=True)
@@ -911,6 +930,7 @@ class Osu:
         server = ctx.message.server
         channel = ctx.message.channel
         msg = ""
+        count_remove = 0
 
         if usernames == (None):
             await self.bot.say("Please enter a user")
@@ -923,12 +943,17 @@ class Osu:
                     if len(self.track[username]["servers"].keys()) == 0:
                         del self.track[username]                  
                     msg+="**No longer tracking `{}` in `#{}`.**\n".format(username, channel.name)
+                    count_remove += 1
                     fileIO("data/osu/track.json", "save", self.track)             
                 else:
                     msg+="**`{}` is not currently being tracked in `#{}`.**\n".format(username, channel.name)                
             else:
                 msg+="**`{}` is not currently being tracked.**\n".format(username)
-        await self.bot.say(msg)              
+
+        if len(msg) > 500:
+            await self.bot.say("**Removed `{}` users from tracking on `#{}`.**".format(count_remove, channel.name))
+        else:      
+            await self.bot.say(msg)            
 
     # used to track top plays of specified users
     async def play_tracker(self):
@@ -984,6 +1009,7 @@ class Osu:
                             self.track[username]["last_check"] = new_timestamps[i].strftime('%Y-%m-%d %H:%M:%S')
                             fileIO("data/osu/track.json", "save", self.track)
                             break
+
             try:
                 log.debug("sleep 60 seconds")
                 await asyncio.sleep(60)
@@ -1009,7 +1035,7 @@ class Osu:
         # grab beatmap image
         log.debug("getting map image")
         page = urllib.request.urlopen(beatmap_url)
-        soup = BeautifulSoup(page.read())
+        soup = BeautifulSoup(page.read(), "html.parser")
         map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
         map_image_url = 'http:{}'.format(map_image[0])
         em.set_thumbnail(url=map_image_url)
@@ -1017,7 +1043,7 @@ class Osu:
         em.set_author(name="New #{} for {} in {}".format(top_play_num, new_user_info['username'], self._get_gamemode(int(beatmap['mode']))), icon_url = profile_url, url = user_url)
 
         info = ""
-        info += "▸ [__{} [{}]__]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
+        info += "▸ [**__{} [{}]__**]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
         info += "▸ +{} ▸ **{:.2f}%** ▸ **{}** Rank\n".format(','.join(mods), float(acc), play['rank'])
         info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, str(s).zfill(2), beatmap['bpm'])
         if old_user_info != None:
@@ -1026,8 +1052,7 @@ class Osu:
             info += "▸ #{} → #{} ({}#{} → #{})".format(old_user_info['pp_rank'], new_user_info['pp_rank'], new_user_info['country'], old_user_info['pp_country_rank'], new_user_info['pp_country_rank'])
         else:
             info += "▸ {} ▸ x{} ▸ **{:.2f}pp**\n".format(play['score'], play['maxcombo'], float(play['pp']))
-            info += "▸ #{} ({}#{})".format(new_user_info['pp_rank'], new_user_info['country'], new_user_info['pp_country_rank'])
-                
+            info += "▸ #{} ({}#{})".format(new_user_info['pp_rank'], new_user_info['country'], new_user_info['pp_country_rank'])             
         em.description = info
         return em
 
