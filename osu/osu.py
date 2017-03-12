@@ -1010,11 +1010,8 @@ class Osu:
                             fileIO("data/osu/track.json", "save", self.track)
                             break
 
-            try:
-                log.debug("sleep 60 seconds")
-                await asyncio.sleep(60)
-            except:
-                pass
+            log.debug("sleep 60 seconds")
+            await asyncio.sleep(60)
 
     def _create_top_play(self, top_play_num, play, beatmap, old_user_info, new_user_info):
         beatmap_url = 'https://osu.ppy.sh/b/{}'.format(play['beatmap_id'])
@@ -1089,9 +1086,8 @@ async def get_scores(key, api:str, beatmap_id, user_id, mode):
     url_params.append(parameterize_id("u", user_id))
     url_params.append(parameterize_mode(mode))
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://{}/api/get_scores?".format(api))) as resp:
-            return await resp.json()
+    async with aiohttp.get(build_request(url_params, "https://{}/api/get_scores?".format(api))) as resp:
+        return await resp.json()
 
 async def get_user(key, api:str, user_id, mode): 
     url_params = []
@@ -1100,9 +1096,8 @@ async def get_user(key, api:str, user_id, mode):
     url_params.append(parameterize_id("u", user_id))
     url_params.append(parameterize_mode(mode))
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://{}/api/get_user?".format(api))) as resp:
-            return await resp.json()
+    async with aiohttp.get(build_request(url_params, "https://{}/api/get_user?".format(api))) as resp:
+        return await resp.json()
 
 async def get_user_best(key, api:str, user_id, mode, limit):
     url_params = []
@@ -1112,9 +1107,8 @@ async def get_user_best(key, api:str, user_id, mode, limit):
     url_params.append(parameterize_mode(mode))
     url_params.append(parameterize_limit(limit)) 
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://{}/api/get_user_best?".format(api))) as resp:
-            return await resp.json()
+    async with aiohttp.get(build_request(url_params, "https://{}/api/get_user_best?".format(api))) as resp:
+        return await resp.json()
 
 # Returns the user's ten most recent plays.
 async def get_user_recent(key, api:str, user_id, mode):
@@ -1124,9 +1118,8 @@ async def get_user_recent(key, api:str, user_id, mode):
     url_params.append(parameterize_id("u", user_id))
     url_params.append(parameterize_mode(mode)) 
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://{}/api/get_user_recent?".format(api))) as resp:
-            return await resp.json()
+    async with aiohttp.get(build_request(url_params, "https://{}/api/get_user_recent?".format(api))) as resp:
+        return await resp.json()
 
 # Returns the full API request URL using the provided base URL and parameters.
 def build_request(url_params, url):
