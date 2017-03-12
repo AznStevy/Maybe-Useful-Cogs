@@ -242,7 +242,6 @@ class Osu:
         await self._process_user_top(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
     async def recent(self, ctx, *username):
         """Gives recent plays of player with respect to user's default gamemode. [p]recent [username] (gamemode:optional)"""
         await self._process_user_recent(ctx, username)
@@ -366,11 +365,15 @@ class Osu:
 
         # forced handle gamemode
         gamemode = -1
+        inputs = list(inputs)
         for mode in modes:
             if len(inputs) >= 2 and mode in inputs:
                 gamemode = self._get_gamemode_number(mode)
+                inputs.remove(mode)
             elif len(inputs) == 1 and mode == inputs[0]:
-                gamemode = self._get_gamemode_number(mode)             
+                gamemode = self._get_gamemode_number(mode)
+                inputs.remove(mode)
+        inputs = tuple(inputs)         
 
         # handle api and username (1)
         username, api = self._determine_api(server, list(inputs))
