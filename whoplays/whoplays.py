@@ -20,17 +20,24 @@ class WhoPlays:
         members = server.members
 
         playing_game = ""
+        count_playing = 0
         for member in members:
             if member != None and member.game != None and member.game.name != None and not member.bot:
                 if game.lower() in member.game.name.lower():
-                    playing_game += "▸ {} ({})\n".format(member.name, member.game.name)            
+                    count_playing += 1
+                    if count_playing <= 15:
+                        playing_game += "▸ {} ({})\n".format(member.name, member.game.name)            
 
         if playing_game == "":
             await self.bot.say("No one is playing that game.")
         else:
             msg = playing_game
             em = discord.Embed(description=msg, colour=user.colour)
-            em.set_author(name="These are the people who are playing {}: \n".format(game))
+            if count_playing > 15:
+                showing = "(Showing 15/{})".format(count_playing)
+            else:
+                showing = "({})".format(count_playing)                
+            em.set_author(name="These are the people who are playing {} {}: \n".format(game, showing))
             await self.bot.say(embed = em)
 
     @commands.command(pass_context=True, no_pm=True)
