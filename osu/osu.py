@@ -194,54 +194,55 @@ class Osu:
             await self.bot.whisper("API Key details added. :white_check_mark:")
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def osu(self, ctx, *username):
         """Gives osu user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def osutop(self, ctx, *username):
         """Gives top osu plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def taiko(self, ctx, *username):
         """Gives taiko user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def taikotop(self, ctx, *username):
         """Gives top taiko plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def ctb(self, ctx, *username):
         """Gives ctb user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def ctbtop(self, ctx, *username):
         """Gives ctb osu plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def mania(self, ctx, *username):
         """Gives mania user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 20, commands.BucketType.user)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def maniatop(self, ctx, *username):
         """Gives top mania plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
+    @commands.cooldown(1, 10, commands.BucketType.user)
     async def recent(self, ctx, *username):
         """Gives recent plays of player with respect to user's default gamemode. [p]recent [username] (gamemode:optional)"""
         await self._process_user_recent(ctx, username)
@@ -809,7 +810,7 @@ class Osu:
         tags = beatmap[0]['tags']
         if tags == "":
             tags = "-"
-        desc = ' **Length:** {}:{}  **BPM:** {}\n **Tags:** {}\n_-----------------_'.format(m, str(s).zfill(2), beatmap[0]['bpm'], tags)
+        desc = ' **Length:** {}:{}  **BPM:** {}\n**Tags:** {}\n_-----------------_'.format(m, str(s).zfill(2), beatmap[0]['bpm'], tags)
         em = discord.Embed(description = desc, colour=0xeeeeee)
         em.set_author(name="{} - {} by {}".format(beatmap[0]['artist'], beatmap[0]['title'], beatmap[0]['creator']), url=beatmap_url)
 
@@ -962,7 +963,6 @@ class Osu:
     async def play_tracker(self):
         key = self.osu_api_key["osu_api_key"]
         while self == self.bot.get_cog('Osu'):
-
             # get all keys() to grab all current tracking users
             log.debug("looping through all users")
             for username in self.track.keys():
@@ -974,44 +974,47 @@ class Osu:
 
                 # gamemode = word
                 for gamemode in self.track[username]["userinfo"].keys():
-                    log.debug("examining gamemode {}".format(gamemode))
-                    last_check = datetime.datetime.strptime(self.track[username]["last_check"], '%Y-%m-%d %H:%M:%S')
-                    new_timestamps = []
-                    for new_play in new_plays[gamemode]:
-                        new_timestamps.append(datetime.datetime.strptime(new_play['date'], '%Y-%m-%d %H:%M:%S'))
-                    current_info = self.track[username]["userinfo"][gamemode] # user information
+                    try:
+                        log.debug("examining gamemode {}".format(gamemode))
+                        last_check = datetime.datetime.strptime(self.track[username]["last_check"], '%Y-%m-%d %H:%M:%S')
+                        new_timestamps = []
+                        for new_play in new_plays[gamemode]:
+                            new_timestamps.append(datetime.datetime.strptime(new_play['date'], '%Y-%m-%d %H:%M:%S'))
+                        current_info = self.track[username]["userinfo"][gamemode] # user information
 
-                    # loop to check what's different
-                    for i in range(len(new_timestamps)):
-                        if last_check != None and new_timestamps[i] != None and new_timestamps[i] > last_check:
-                            #print("Comparing new {} to old {}".format(new_timestamps[i], last_check))
-                            top_play_num = i+1
-                            play = new_plays[gamemode][i]
-                            play_map = await get_beatmap(key, self.osu_settings["type"]["default"], play['beatmap_id'])
-                            new_user_info = list(await get_user(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(gamemode)))
-                            new_user_info = new_user_info[0]
+                        # loop to check what's different
+                        for i in range(len(new_timestamps)):
+                            if last_check != None and new_timestamps[i] != None and new_timestamps[i] > last_check:
+                                #print("Comparing new {} to old {}".format(new_timestamps[i], last_check))
+                                top_play_num = i+1
+                                play = new_plays[gamemode][i]
+                                play_map = await get_beatmap(key, self.osu_settings["type"]["default"], play['beatmap_id'])
+                                new_user_info = list(await get_user(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(gamemode)))
+                                new_user_info = new_user_info[0]
 
-                            # send appropriate message to channel
-                            log.debug("creating top play")
-                            if gamemode in self.track[username]["userinfo"]:
-                                old_user_info = self.track[username]["userinfo"]
-                                em = self._create_top_play(top_play_num, play, play_map, old_user_info[gamemode], new_user_info)
-                            else:
-                                old_user_info = None
-                                em = self._create_top_play(top_play_num, play, play_map, old_user_info, new_user_info)
+                                # send appropriate message to channel
+                                log.debug("creating top play")
+                                if gamemode in self.track[username]["userinfo"]:
+                                    old_user_info = self.track[username]["userinfo"]
+                                    em = self._create_top_play(top_play_num, play, play_map, old_user_info[gamemode], new_user_info)
+                                else:
+                                    old_user_info = None
+                                    em = self._create_top_play(top_play_num, play, play_map, old_user_info, new_user_info)
 
-                            log.debug("sending embed")
-                            for server_id in self.track[username]['servers'].keys():
-                                server = find(lambda m: m.id == server_id, self.bot.servers)
-                                if server_id not in self.osu_settings or "tracking" not in self.osu_settings[server_id] or self.osu_settings[server_id]["tracking"] == True:
-                                    channel = find(lambda m: m.id == self.track[username]['servers'][server_id]["channel"], server.channels)
-                                    await self.bot.send_message(channel, embed = em)
+                                log.debug("sending embed")
+                                for server_id in self.track[username]['servers'].keys():
+                                    server = find(lambda m: m.id == server_id, self.bot.servers)
+                                    if server_id not in self.osu_settings or "tracking" not in self.osu_settings[server_id] or self.osu_settings[server_id]["tracking"] == True:
+                                        channel = find(lambda m: m.id == self.track[username]['servers'][server_id]["channel"], server.channels)
+                                        await self.bot.send_message(channel, embed = em)
 
-                            #print("Setting last changed time to {}".format(new_timestamps[i]))                          
-                            self.track[username]["userinfo"][gamemode] = new_user_info
-                            self.track[username]["last_check"] = new_timestamps[i].strftime('%Y-%m-%d %H:%M:%S')
-                            fileIO("data/osu/track.json", "save", self.track)
-                            break
+                                #print("Setting last changed time to {}".format(new_timestamps[i]))                          
+                                self.track[username]["userinfo"][gamemode] = new_user_info
+                                self.track[username]["last_check"] = new_timestamps[i].strftime('%Y-%m-%d %H:%M:%S')
+                                fileIO("data/osu/track.json", "save", self.track)
+                                break
+                    except:
+                        print("Failed to load top score for".format(username))
 
             log.debug("sleep 60 seconds")
             await asyncio.sleep(60)
