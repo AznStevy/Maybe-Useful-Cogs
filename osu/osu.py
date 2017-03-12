@@ -968,13 +968,13 @@ class Osu:
             for username in self.track.keys():
                 log.debug("checking {}".format(username))
                 # if the user's current top 10 scores are different from new top 10
-                new_plays = {}
-                for mode in modes:
-                    new_plays[mode] = await get_user_best(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(mode), self.osu_settings["num_track"])
+                try:
+                    new_plays = {}
+                    for mode in modes:
+                        new_plays[mode] = await get_user_best(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(mode), self.osu_settings["num_track"])
 
-                # gamemode = word
-                for gamemode in self.track[username]["userinfo"].keys():
-                    try:
+                    # gamemode = word
+                    for gamemode in self.track[username]["userinfo"].keys():
                         log.debug("examining gamemode {}".format(gamemode))
                         last_check = datetime.datetime.strptime(self.track[username]["last_check"], '%Y-%m-%d %H:%M:%S')
                         new_timestamps = []
@@ -1013,8 +1013,8 @@ class Osu:
                                 self.track[username]["last_check"] = new_timestamps[i].strftime('%Y-%m-%d %H:%M:%S')
                                 fileIO("data/osu/track.json", "save", self.track)
                                 break
-                    except:
-                        print("Failed to load top score for".format(username))
+                except:
+                    log.info("Failed to load top score for".format(username))
 
             log.debug("sleep 60 seconds")
             await asyncio.sleep(60)
