@@ -194,55 +194,46 @@ class Osu:
             await self.bot.whisper("API Key details added. :white_check_mark:")
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def osu(self, ctx, *username):
         """Gives osu user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def osutop(self, ctx, *username):
         """Gives top osu plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 0)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def taiko(self, ctx, *username):
         """Gives taiko user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def taikotop(self, ctx, *username):
         """Gives top taiko plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 1)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def ctb(self, ctx, *username):
         """Gives ctb user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def ctbtop(self, ctx, *username):
         """Gives ctb osu plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 2)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def mania(self, ctx, *username):
         """Gives mania user(s) stats. Use -ripple/-official to use specific api."""
         await self._process_user_info(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def maniatop(self, ctx, *username):
         """Gives top mania plays. Use -ripple/-official to use specific api."""
         await self._process_user_top(ctx, username, 3)
 
     @commands.command(pass_context=True, no_pm=True)
-    @commands.cooldown(1, 10, commands.BucketType.user)
     async def recent(self, ctx, *username):
         """Gives recent plays of player with respect to user's default gamemode. [p]recent [username] (gamemode:optional)"""
         await self._process_user_recent(ctx, username)
@@ -746,18 +737,18 @@ class Osu:
             # process the the idea from a url in msg
             all_urls = []
             original_message = message.content
-            while original_message.find('https://') != -1:
-                url = re.search("(?P<url>https?://[^\s]+)", original_message).group("url")
-                all_urls.append(url)
-                original_message = original_message.replace(url, '')
+            get_urls = re.findall("(https:\/\/[^\s]+)([ ]\+[A-Za-z][^\s]+)?", original_message)
+
+            for url in get_urls:
+                all_urls.append(url[0])
 
             # get rid of duplicates
             all_urls = list(set(all_urls))
             
-            if 'https://osu.ppy.sh/u/' in message.content:
+            if 'https://osu.ppy.sh/u/' in original_message:
                 await self.process_user_url(all_urls, message)
 
-            if 'https://osu.ppy.sh/s/' in message.content or 'https://osu.ppy.sh/b/' in message.content:
+            if 'https://osu.ppy.sh/s/' in original_message or 'https://osu.ppy.sh/b/' in original_message:
                 await self.process_beatmap(all_urls, message)
 
     # processes user input for user profile link
@@ -789,10 +780,11 @@ class Osu:
             if url.find('https://osu.ppy.sh/s/') != -1:
                 beatmap_id = url.replace('https://osu.ppy.sh/s/','')
                 beatmap_info = await get_beatmapset(key, self.osu_settings["type"]["default"], beatmap_id)
+                await self.disp_beatmap(message, beatmap_info, url)
             elif url.find('https://osu.ppy.sh/b/') != -1:
                 beatmap_id = url.replace('https://osu.ppy.sh/b/','')
                 beatmap_info = await get_beatmap(key, self.osu_settings["type"]["default"], beatmap_id)
-            await self.disp_beatmap(message, beatmap_info, url)
+                await self.disp_beatmap(message, beatmap_info, url)
             #except:
                 #await self.bot.send_message(message.channel, "That beatmap doesn't exist.")   
 
@@ -810,7 +802,7 @@ class Osu:
         tags = beatmap[0]['tags']
         if tags == "":
             tags = "-"
-        desc = ' **Length:** {}:{}  **BPM:** {}\n**Tags:** {}\n_-----------------_'.format(m, str(s).zfill(2), beatmap[0]['bpm'], tags)
+        desc = ' **Length:** {}:{}  **BPM:** {}\n**Tags:** {}\n------------------'.format(m, str(s).zfill(2), beatmap[0]['bpm'], tags)
         em = discord.Embed(description = desc, colour=0xeeeeee)
         em.set_author(name="{} - {} by {}".format(beatmap[0]['artist'], beatmap[0]['title'], beatmap[0]['creator']), url=beatmap_url)
 
@@ -825,7 +817,7 @@ class Osu:
             beatmap_info = ""    
             beatmap_info += "**▸Difficulty:** {:.2f}★  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['max_combo'])
             beatmap_info += "**▸AR:** {}  **▸OD:** {}  **▸HP:** {}  **▸CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
-            em.add_field(name = "__[{}]__\n".format(beatmap[i]['version']), value = beatmap_info, inline = False)
+            em.add_field(name = "__{}__\n".format(beatmap[i]['version']), value = beatmap_info, inline = False)
 
         page = urllib.request.urlopen(beatmap_url)
         soup = BeautifulSoup(page.read(), "html.parser")
@@ -1068,9 +1060,8 @@ async def get_beatmap(key, api:str, beatmap_id):
     url_params.append(parameterize_key(key))
     url_params.append(parameterize_id("b", beatmap_id)) 
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://{}/api/get_beatmaps?".format(api))) as resp:
-            return await resp.json()
+    async with aiohttp.get(build_request(url_params, "https://{}/api/get_beatmaps?".format(api))) as resp:
+        return await resp.json()
 
 # Gets the beatmap set
 async def get_beatmapset(key, api:str, set_id):
@@ -1079,9 +1070,8 @@ async def get_beatmapset(key, api:str, set_id):
     url_params.append(parameterize_key(key))
     url_params.append(parameterize_id("s", set_id)) 
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(build_request(url_params, "https://{}/api/get_beatmaps?".format(api))) as resp:
-            return await resp.json()
+    async with aiohttp.get(build_request(url_params, "https://{}/api/get_beatmaps?".format(api))) as resp:
+        return await resp.json()
 
 # Grabs the scores
 async def get_scores(key, api:str, beatmap_id, user_id, mode):
