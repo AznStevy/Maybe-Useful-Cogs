@@ -776,17 +776,17 @@ class Osu:
         key = self.osu_api_key["osu_api_key"]
 
         for url in all_urls:
-            #try:
-            if url.find('https://osu.ppy.sh/s/') != -1:
-                beatmap_id = url.replace('https://osu.ppy.sh/s/','')
-                beatmap_info = await get_beatmapset(key, self.osu_settings["type"]["default"], beatmap_id)
-                await self.disp_beatmap(message, beatmap_info, url)
-            elif url.find('https://osu.ppy.sh/b/') != -1:
-                beatmap_id = url.replace('https://osu.ppy.sh/b/','')
-                beatmap_info = await get_beatmap(key, self.osu_settings["type"]["default"], beatmap_id)
-                await self.disp_beatmap(message, beatmap_info, url)
-            #except:
-                #await self.bot.send_message(message.channel, "That beatmap doesn't exist.")   
+            try:
+                if url.find('https://osu.ppy.sh/s/') != -1:
+                    beatmap_id = url.replace('https://osu.ppy.sh/s/','')
+                    beatmap_info = await get_beatmapset(key, self.osu_settings["type"]["default"], beatmap_id)
+                    await self.disp_beatmap(message, beatmap_info, url)
+                elif url.find('https://osu.ppy.sh/b/') != -1:
+                    beatmap_id = url.replace('https://osu.ppy.sh/b/','')
+                    beatmap_info = await get_beatmap(key, self.osu_settings["type"]["default"], beatmap_id)
+                    await self.disp_beatmap(message, beatmap_info, url)
+            except:
+                await self.bot.send_message(message.channel, "That beatmap doesn't exist.")   
 
     # displays the beatmap properly
     async def disp_beatmap(self, message, beatmap, beatmap_url:str):
