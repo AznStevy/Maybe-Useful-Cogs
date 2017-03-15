@@ -83,7 +83,7 @@ class Discomegle:
             em = discord.Embed(description="**Your partner has disconnected.**", colour=self.colour)
             await self.bot.send_message(partner_channel, embed = em)
 
-            em = discord.Embed(description="**You are not in the pool or a conversation.**", colour=self.colour)
+            em = discord.Embed(description="**You have disconnected from the conversation.**", colour=self.colour)
             await self.bot.send_message(channel, embed = em)
         else:
             em = discord.Embed(description="**Leaving discomegle conversation and pool.**", colour=self.colour)
