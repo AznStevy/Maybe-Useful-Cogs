@@ -10,7 +10,7 @@ from cogs.utils import checks
 try:
     from pymongo import MongoClient
 except:
-    print("Can't load database.")
+    print("Can't load pymongo. Do 'pip3 install pymongo'.")
 try:
     import scipy
     import scipy.misc
@@ -36,8 +36,11 @@ user_directory = "data/leveler/users"
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES']
 default_avatar_url = "http://i.imgur.com/XPDO9VH.jpg"
 
-client = MongoClient()
-db = client['leveler']
+try:
+    client = MongoClient()
+    db = client['leveler']
+except:
+    print("Can't load database. Follow instructions on Git/online to install MongoDB.")    
 
 class Leveler:
     """A level up thing with image generation!"""
