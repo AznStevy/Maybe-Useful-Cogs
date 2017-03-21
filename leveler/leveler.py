@@ -38,7 +38,7 @@ default_avatar_url = "http://i.imgur.com/XPDO9VH.jpg"
 
 try:
     client = MongoClient()
-    db = client['leveler_db']
+    db = client['leveler']
 except:
     print("Can't load database. Follow instructions on Git/online to install MongoDB.")    
 
@@ -54,7 +54,7 @@ class Leveler:
         self.owner = bot_settings["OWNER"]
 
         dbs = client.database_names()
-        if 'leveler_db' not in dbs:
+        if 'leveler' not in dbs:
             self.pop_database()
 
     def pop_database(self):
@@ -951,6 +951,8 @@ class Leveler:
     async def lvlalert(self, ctx, all:str=None):
         """Toggle level-up messages on the server. Parameter: disableall/enableall"""
         server = ctx.message.server
+        user = ctx.message.author
+        
         # deals with enabled array
 
         # old version was boolean
