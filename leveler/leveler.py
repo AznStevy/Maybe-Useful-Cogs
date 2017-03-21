@@ -38,7 +38,7 @@ default_avatar_url = "http://i.imgur.com/XPDO9VH.jpg"
 
 try:
     client = MongoClient()
-    db = client['leveler']
+    db = client['leveler_db']
 except:
     print("Can't load database. Follow instructions on Git/online to install MongoDB.")    
 
@@ -54,11 +54,11 @@ class Leveler:
         self.owner = bot_settings["OWNER"]
 
         dbs = client.database_names()
-        if 'leveler' not in dbs:
+        if 'leveler_db' not in dbs:
             self.pop_database()
 
     def pop_database(self):
-        if not os.path.exists("data/leveler/users"):
+        if os.path.exists("data/leveler/users"):
             for userid in os.listdir(user_directory):
                 userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
                 userinfo['user_id'] = userid
