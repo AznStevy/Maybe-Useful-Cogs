@@ -37,7 +37,7 @@ prefix = fileIO("data/red/settings.json", "load")['PREFIXES']
 default_avatar_url = "http://i.imgur.com/XPDO9VH.jpg"
 
 client = MongoClient()
-db = client['leveler_test_2']
+db = client['leveler']
 
 class Leveler:
     """A level up thing with image generation!"""
