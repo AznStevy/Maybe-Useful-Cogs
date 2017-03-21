@@ -34,6 +34,6 @@ __Leveler Support__ - `pip3 install scipy` is known to not work on Windows (Linu
 
 3) Come to the [support server](https://discord.gg/T5HHf7k) to complain or just to hang out c:
 
-MongoDB - Leveler now requires the use of MongoDB. If you are on ubuntu, try [this](https://www.digitalocean.com/community/tutorials/how-to-install-mongodb-on-ubuntu-16-04). If you are on Windows, try [this](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-windows/). If you are on another Linux distro, try [this](https://docs.mongodb.com/v3.0/tutorial/install-mongodb-on-windows/). You will also need to install the python module by doing `pip3 install pymongo`.
+MongoDB - Leveler now requires the use of MongoDB. If you are on ubuntu, try [this](https://www.digitalocean.com/community/tutorials/how-to-install-mongodb-on-ubuntu-16-04). If you are on Windows, try [this](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-windows/#install-mongodb-community-edition) (Keep this console separate and open). If you are on another Linux distro, try [this](https://docs.mongodb.com/manual/administration/install-on-linux/). You will also need to install the python module by doing `pip3 install pymongo`.
 
 __Support Me__ - If you would like to give donations to a broke uni student, you can visit my [patreon page](https://www.patreon.com/stevy).
