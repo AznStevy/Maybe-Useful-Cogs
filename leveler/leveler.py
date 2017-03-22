@@ -10,14 +10,17 @@ from cogs.utils import checks
 try:
     from pymongo import MongoClient
 except:
-    print("Can't load pymongo. Do 'pip3 install pymongo'.")
+    raise RuntimeError("Can't load pymongo. Do 'pip3 install pymongo'.")
 try:
     import scipy
     import scipy.misc
     import scipy.cluster
 except:
     pass
-from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
+try:
+    from PIL import Image, ImageDraw, ImageFont, ImageColor, ImageOps
+except:
+    raise RuntimeError("Can't load pillow. Do 'pip3 install pillow'.")
 import time
 
 # fonts
@@ -2005,7 +2008,7 @@ class Leveler:
         required = self._required_exp(userinfo["servers"][server.id]["level"])
         db.users.update_one({'user_id':user.id}, {'$set':{
             "total_exp": userinfo["total_exp"] + exp,
-            }})
+            }}, upsert = True)
         if userinfo["servers"][server.id]["current_exp"] + exp >= required:
             db.users.update_one({'user_id':user.id}, {'$set':{
                 "servers.{}.level".format(server.id): userinfo["servers"][server.id]["level"] + 1,                
