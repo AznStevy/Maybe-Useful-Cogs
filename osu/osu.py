@@ -624,6 +624,17 @@ class Osu:
             gamemode_text = "Osu! Standard"
         return gamemode_text
 
+    def _track_gamemode(self, gamemode):
+        if gamemode == "osu":
+            gamemode_text = "Osu! Standard"
+        elif gamemode == "ctb":
+            gamemode_text = "Catch the Beat!"
+        elif gamemode == "mania":
+            gamemode_text = "Osu! Mania"
+        elif gamemode == "taiko":
+            gamemode_text = "Taiko"
+        return gamemode_text
+
     def _get_gamemode_number(self, gamemode:str):
         if gamemode == "taiko":
             gamemode_text = 1
@@ -973,6 +984,7 @@ class Osu:
                         for new_play in new_plays[gamemode]:
                             new_timestamps.append(datetime.datetime.strptime(new_play['date'], '%Y-%m-%d %H:%M:%S'))
                         current_info = self.track[username]["userinfo"][gamemode] # user information
+                        score_gamemode = self._track_gamemode(gamemode)
 
                         # loop to check what's different
                         for i in range(len(new_timestamps)):
@@ -988,10 +1000,10 @@ class Osu:
                                 log.debug("creating top play")
                                 if gamemode in self.track[username]["userinfo"]:
                                     old_user_info = self.track[username]["userinfo"]
-                                    em = self._create_top_play(top_play_num, play, play_map, old_user_info[gamemode], new_user_info)
+                                    em = self._create_top_play(top_play_num, play, play_map, old_user_info[gamemode], new_user_info, score_gamemode)
                                 else:
                                     old_user_info = None
-                                    em = self._create_top_play(top_play_num, play, play_map, old_user_info, new_user_info)
+                                    em = self._create_top_play(top_play_num, play, play_map, old_user_info, new_user_info, score_gamemode)
 
                                 log.debug("sending embed")
                                 for server_id in self.track[username]['servers'].keys():
@@ -1011,7 +1023,7 @@ class Osu:
             log.debug("sleep 60 seconds")
             await asyncio.sleep(60)
 
-    def _create_top_play(self, top_play_num, play, beatmap, old_user_info, new_user_info):
+    def _create_top_play(self, top_play_num, play, beatmap, old_user_info, new_user_info, gamemode):
         beatmap_url = 'https://osu.ppy.sh/b/{}'.format(play['beatmap_id'])
         user_url = 'https://{}/u/{}'.format(self.osu_settings["type"]["default"], new_user_info['user_id'])
         profile_url = 'http://s.ppy.sh/a/{}.png'.format(new_user_info['user_id'])
@@ -1035,7 +1047,7 @@ class Osu:
         map_image_url = 'http:{}'.format(map_image[0])
         em.set_thumbnail(url=map_image_url)
         log.debug("creating embed")
-        em.set_author(name="New #{} for {} in {}".format(top_play_num, new_user_info['username'], self._get_gamemode(int(beatmap['mode']))), icon_url = profile_url, url = user_url)
+        em.set_author(name="New #{} for {} in {}".format(top_play_num, new_user_info['username'], gamemode), icon_url = profile_url, url = user_url)
 
         info = ""
         info += "▸ [**__{} [{}]__**]({})\n".format(beatmap['title'], beatmap['version'], beatmap_url)
