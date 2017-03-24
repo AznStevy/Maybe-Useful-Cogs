@@ -357,10 +357,68 @@ class Leveler:
             await send_cmd_help(ctx)
             return
 
-    @commands.cooldown(rate = '1', per = '3')
+    @lvlset.command(pass_context=True, no_pm=True)
+    async def infocolor(self, ctx, img_type, info_color:str):
+        """Set info color. e.g [p]lvlset infocolor [profile|rank|levelup] [default|white|hex|auto]"""
+        user = ctx.message.author
+        server = ctx.message.server
+        userinfo = db.users.find_one({'user_id':user.id})
+        print(img_type)
+        print(info_color)
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("**Leveler commands for this server are disabled!**")
+            return
+
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say("**Text-only commands allowed.**")
+            return
+
+        if img_type.lower() in ["profile", "rank", "levelup"]:
+            img_type = img_type.lower()
+        else:
+            await self.bot.say("Invalid type. Use 'profile', 'rank', or 'levelup'")            
+
+        default_info_color = (30, 30 ,30, 200)
+        white_info_color = (150, 150, 150, 180)
+        default_a = 200
+        valid = True
+        hex_color = None
+        color_ranks = [int(random.randint(0,1))] # adds some randomness to color + most prominent color
+
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+
+        if info_color == "auto":
+            hex_color = await self._auto_color(userinfo["{}_background".format(img_type)], color_ranks)
+            color = self._hex_to_rgb(hex_color[0], default_a)
+            color = self._moderate_color(color, default_a, 5)
+            db.users.update_one({'user_id':user.id}, {'$set':{
+                    "{}_info_color".format(img_type): color
+                }})               
+        elif info_color == "default":
+            db.users.update_one({'user_id':user.id}, {'$set':{
+                    "{}_info_color".format(img_type): default_info_color
+                }})
+        elif info_color == "white":
+            db.users.update_one({'user_id':user.id}, {'$set':{
+                    "{}_info_color".format(img_type): white_info_color
+                }})
+        elif self._is_hex(info_color):
+            db.users.update_one({'user_id':user.id}, {'$set':{
+                    "{}_info_color".format(img_type): self._hex_to_rgb(info_color, default_a)
+                }})
+        else: 
+            await self.bot.say("**That's not a valid info color!**")
+            valid = False
+
+        if valid:
+            await self.bot.say("**{}, your {} info color has been set!**".format(self._is_mention(user), img_type.lower()))
+
+
     @lvlset.command(pass_context=True, no_pm=True)
     async def repcolor(self, ctx, rep_color:str):
-        """Set rep section color. 'auto': according to current bg."""
+        """Set rep section color. [p]lvlset repcolor [default|hex|auto]"""
         user = ctx.message.author
         server = ctx.message.server
         userinfo = db.users.find_one({'user_id':user.id})
@@ -405,10 +463,9 @@ class Leveler:
         if valid:
             await self.bot.say("**{}, your rep color has been set!**".format(self._is_mention(user)))
 
-    @commands.cooldown(rate = '1', per = '3')
     @lvlset.command(pass_context=True, no_pm=True)
     async def badgecolor(self, ctx, badge_col_color:str):
-        """Set badge section color. 'auto': according to current bg."""
+        """Set badge section color. [p]lvlset badgecolor [default|hex|auto]"""
         user = ctx.message.author
         server = ctx.message.server
         userinfo = db.users.find_one({'user_id':user.id})
@@ -454,7 +511,7 @@ class Leveler:
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def profileexp(self, ctx, exp_color:str):
-        """Set profile exp color. 'auto': according to current bg."""
+        """Set profile exp bar color. [p]lvlset profileexp [default|hex|auto]"""
         user = ctx.message.author
         server = ctx.message.server
         userinfo = db.users.find_one({'user_id':user.id})
@@ -498,7 +555,7 @@ class Leveler:
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def rankexp(self, ctx, exp_color:str):
-        """Set rank exp color. 'auto': according to current bg."""
+        """Set rank exp color. [p]lvlset rankexp [default|hex|auto]"""
         user = ctx.message.author
         server = ctx.message.server
         userinfo = db.users.find_one({'user_id':user.id})
@@ -778,6 +835,22 @@ class Leveler:
         em.set_author(name="Settings Overview for {}".format(self.bot.user.name))
         await self.bot.say(embed = em)
 
+    @lvladmin.command(pass_context=True, no_pm=True)
+    async def msgcredits(self, ctx, credits:int = 0):
+        '''Credits per message logged. Default = 0'''
+        channel = ctx.message.channel
+        server = ctx.message.server
+
+        if credits < 0 or credits > 1000:
+            await self.bot.say("**Please enter a valid number (0 - 1000)**".format(channel.name))            
+
+        if "msg_credits" not in self.settings.keys():
+            self.settings["msg_credits"] = {}
+
+        self.settings["msg_credits"][server.id] = credits
+        await self.bot.say("**Credits per message logged set to {}.**".format(str(credits)))
+
+        fileIO('data/leveler/settings.json', "save", self.settings)
 
     @lvladmin.command(name="lock", pass_context=True, no_pm=True)
     async def lvlmsglock(self, ctx):
@@ -826,7 +899,15 @@ class Leveler:
                 return True
             else:
                 await self.bot.say("**There was an error with economy cog. Fix to allow purchases or set price to $0. Currently ${}**".format(prefix, self.settings["bg_price"]))
-                return False           
+                return False
+
+    async def _give_chat_credit(self, user, server):
+        try:
+            bank = self.bot.get_cog('Economy').bank
+            if bank.account_exists(user) and "msg_credits" in self.settings:
+                bank.deposit_credits(user, self.settings["msg_credits"][server.id])
+        except:
+            pass      
 
     @checks.is_owner()
     @lvladmin.command(no_pm=True)
@@ -877,6 +958,7 @@ class Leveler:
             "total_exp": userinfo["total_exp"]
             }})
         await self.bot.say("**{}'s Level has been set to {}.**".format(self._is_mention(user), level))
+        await self._handle_levelup(user, userinfo, server)
 
     @checks.is_owner()
     @lvladmin.command(no_pm=True)
@@ -1025,11 +1107,13 @@ class Leveler:
     @lvlbadge.command(name="list", pass_context=True, no_pm=True)
     async def listbadges(self, ctx):
         '''Get a list of badges.'''
-        msg = "```xl\n"
-        for badge in self.badges.keys():
-            msg += "+ {}\n".format(badge)
-        msg += "```"
-        await self.bot.say(msg)  
+        user = ctx.message.author
+
+        msg = ", ".join(sorted(self.badges.keys()))
+        print(msg)
+        em = discord.Embed(description=msg, colour=user.colour)
+        em.set_author(name="Badges for {}".format(self.bot.user.name))
+        await self.bot.say(embed = em)  
 
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(name="add", no_pm=True)
@@ -1376,9 +1460,14 @@ class Leveler:
         else:
             badge_fill = tuple(userinfo["badge_col_color"])
 
-        draw.rectangle([(left_pos - 20, vert_pos + title_height), (right_pos, 156)], fill=(40,40,40,230)) # title box
-        draw.rectangle([(100,159), (285, 212)], fill=(30, 30 ,30, 220)) # general content
-        draw.rectangle([(100,215), (285, 285)], fill=(30, 30 ,30, 220)) # info content
+        if "profile_info_color" in userinfo.keys():
+            info_color = tuple(userinfo["profile_info_color"])
+        else:
+            info_color = (30, 30 ,30, 220)
+
+        draw.rectangle([(left_pos - 20, vert_pos + title_height), (right_pos, 156)], fill=info_color) # title box
+        draw.rectangle([(100,159), (285, 212)], fill=info_color) # general content
+        draw.rectangle([(100,215), (285, 285)], fill=info_color) # info content
 
         # stick in credits if needed
         if bg_url in bg_credits.keys():
@@ -1449,23 +1538,27 @@ class Leveler:
         if badge_fill == (128,151,165,230):
             lvl_color = white_color
         else:
-            lvl_color = self._contrast(badge_fill, exp_fill)
+            lvl_color = self._contrast(badge_fill, rep_fill, exp_fill)
         draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(lvl_color[0],lvl_color[1],lvl_color[2],255)) # Level #
 
         rep_text = "+{} rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 141), rep_text, font=rep_fnt, fill=white_color)
 
-        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=white_color) # Badges   
+        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=self._contrast(badge_fill, white_color, rep_fill)) # Badges   
 
         exp_text = "{}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"])) # Exp
-        exp_color = self._contrast(badge_fill, exp_fill)
+        exp_color = exp_fill
         draw.text((105, 99), exp_text,  font=exp_fnt, fill=(exp_color[0], exp_color[1], exp_color[2], 255)) # Exp Text
         
+        # determine info text color
+        dark_text = (35, 35, 35, 230)
+        info_text_color = self._contrast(info_color, light_color, dark_text)
+
         lvl_left = 100
         label_align = 105
-        _write_unicode(u"Rank:", label_align, 165, general_info_fnt, general_info_u_fnt, light_color)
-        draw.text((label_align, 180), "Exp:",  font=general_info_fnt, fill=light_color) # Exp
-        draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=light_color) # Credits
+        _write_unicode(u"Rank:", label_align, 165, general_info_fnt, general_info_u_fnt, info_text_color)
+        draw.text((label_align, 180), "Exp:",  font=general_info_fnt, fill=info_text_color) # Exp
+        draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=info_text_color) # Credits
 
         # local stats
         num_local_align = 180
@@ -1476,10 +1569,10 @@ class Leveler:
             local_symbol = "S "
 
         s_rank_txt = local_symbol + self._truncate_text("#{}".format(await self._find_server_rank(user, server)), 8)
-        _write_unicode(s_rank_txt, num_local_align - general_info_u_fnt.getsize(local_symbol)[0], 165, general_info_fnt, general_info_u_fnt, light_color) # Rank 
+        _write_unicode(s_rank_txt, num_local_align - general_info_u_fnt.getsize(local_symbol)[0], 165, general_info_fnt, general_info_u_fnt, info_text_color) # Rank 
 
         s_exp_txt = self._truncate_text("{}".format(await self._find_server_exp(user, server)), 8)
-        _write_unicode(s_exp_txt, num_local_align, 180, general_info_fnt, general_info_u_fnt, light_color)  # Exp
+        _write_unicode(s_exp_txt, num_local_align, 180, general_info_fnt, general_info_u_fnt, info_text_color)  # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -1489,7 +1582,7 @@ class Leveler:
         except:
             credits = 0
         credit_txt = "${}".format(credits)
-        draw.text((num_local_align, 195), self._truncate_text(credit_txt, 18),  font=general_info_fnt, fill=light_color) # Credits
+        draw.text((num_local_align, 195), self._truncate_text(credit_txt, 18),  font=general_info_fnt, fill=info_text_color) # Credits
 
         # global stats
         num_align = 230
@@ -1502,15 +1595,15 @@ class Leveler:
 
         rank_txt = global_symbol + self._truncate_text("#{}".format(await self._find_global_rank(user, server)), 8)
         exp_txt = self._truncate_text("{}".format(userinfo["total_exp"]), 8)
-        _write_unicode(rank_txt, num_align - general_info_u_fnt.getsize(global_symbol)[0] + fine_adjust, 165, general_info_fnt, general_info_u_fnt, light_color) # Rank 
-        _write_unicode(exp_txt, num_align, 180, general_info_fnt, general_info_u_fnt, light_color)  # Exp
+        _write_unicode(rank_txt, num_align - general_info_u_fnt.getsize(global_symbol)[0] + fine_adjust, 165, general_info_fnt, general_info_u_fnt, info_text_color) # Rank 
+        _write_unicode(exp_txt, num_align, 180, general_info_fnt, general_info_u_fnt, info_text_color)  # Exp
 
         draw.text((105, 220), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box 
         margin = 105
         offset = 238
         for line in textwrap.wrap(userinfo["info"], width=40):
             # draw.text((margin, offset), line, font=text_fnt, fill=(70,70,70,255))
-            _write_unicode(line, margin, offset, text_fnt, text_u_fnt, light_color)            
+            _write_unicode(line, margin, offset, text_fnt, text_u_fnt, info_text_color)            
             offset += text_fnt.getsize(line)[1] + 2
 
         # sort badges
@@ -1701,43 +1794,38 @@ class Leveler:
 
         # remove images
         try:
-            os.remove('data/leveler/temp/{}_temp_profile_bg.png'.format(user.id))
-            os.remove('data/leveler/temp/{}_temp_profile_profile.png'.format(user.id))    
+            os.remove('data/leveler/temp/{}_temp_profile_bg.png'.format(user.id))   
+        except:
+            pass
+        try:
+            os.remove('data/leveler/temp/{}_temp_profile_profile.png'.format(user.id))
         except:
             pass
 
-    # returns new text color based on the bg. doesn't work great.
-    def _contrast(self, bg_color, text_color):
-        min_diff = .50 # percent difference
-        dr = (bg_color[0] - text_color[0])
-        dg = (bg_color[1] - text_color[1])
-        db = (bg_color[2] - text_color[2])
-
-        if bg_color[0] != 0:
-            dr /= bg_color[0]
-        if bg_color[1] != 0:
-            dr /= bg_color[1]
-        if bg_color[2] != 0:
-            dr /= bg_color[2]
-
-        if abs(dr) > min_diff or abs(dg) > min_diff or abs(dg) > min_diff:
-            return text_color
+    # returns color that contrasts better in background
+    def _contrast(self, bg_color, color1, color2):
+        color1_ratio = self._contrast_ratio(bg_color, color1)
+        color2_ratio = self._contrast_ratio(bg_color, color2)
+        print("color 1: {}, color 2: {}".format(color1_ratio, color2_ratio))
+        if color1_ratio >= color2_ratio:
+            return color1
         else:
-            new_color = []
-            if dr > 0 or dg > 0 or db > 0:
-                for val in bg_color:
-                    new_color.append(int(val*min_diff))
-                return tuple(new_color)
-            else:
-                for val in bg_color:
-                    val = val*(1+min_diff)
-                    if val > 255:
-                        val = 255
-                    new_color.append(int(val))
-                return tuple(new_color)
+            return color2
 
     def _luminance(self, color):
-        return (0.2126*color[0]) + (0.7152*color[1]) + (0.0722*color[2])
+        # convert to greyscale
+        luminance = float((0.2126*color[0]) + (0.7152*color[1]) + (0.0722*color[2]))
+        print(luminance)
+        return luminance
+
+    def _contrast_ratio(self, bgcolor, foreground):
+        f_lum = float(self._luminance(foreground))
+        bg_lum = float(self._luminance(bgcolor))
+
+        if bg_lum > f_lum:
+            return bg_lum/f_lum
+        else:
+            return f_lum/bg_lum
 
     # returns a string with possibly a nickname
     def _name(self, user, max_length):
@@ -1818,7 +1906,12 @@ class Leveler:
         draw.rectangle([(left_pos - 20,vert_pos), (right_pos, vert_pos + title_height)], fill=(230,230,230,230)) # title box
         content_top = vert_pos + title_height + gap
         content_bottom = 100 - vert_pos
-        draw.rectangle([(left_pos - 20, content_top), (right_pos, content_bottom)], fill=(40, 40 ,40, 220), outline=(180, 180, 180, 180)) # content box
+
+        if "rank_info_color" in userinfo.keys():
+            info_color = tuple(userinfo["rank_info_color"])
+        else:
+            info_color = (30, 30 ,30, 220)
+        draw.rectangle([(left_pos - 20, content_top), (right_pos, content_bottom)], fill=info_color, outline=(180, 180, 180, 180)) # content box
 
         # stick in credits if needed
         if bg_url in bg_credits.keys():
@@ -1953,8 +2046,12 @@ class Leveler:
         bg_image = bg_image.crop((0,0, 85, 105))
         result.paste(bg_image, (0,0))
 
-        # draw transparent overlay   
-        draw.rectangle([(0, 40), (85, 105)], fill=(40, 40 ,40, 220)) # white portion
+        # draw transparent overlay
+        if "levelup_info_color" in userinfo.keys():
+            info_color = tuple(userinfo["levelup_info_color"])
+        else:
+            info_color = (30, 30 ,30, 220)
+        draw.rectangle([(0, 40), (85, 105)], fill=info_color) # info portion
         draw.rectangle([(15, 11), (68, 64)], fill=(255,255,255,160), outline=(100, 100, 100, 100)) # profile rectangle
 
         # put in profile picture
@@ -1975,29 +2072,30 @@ class Leveler:
         result.save('data/leveler/temp/{}_level.png'.format(user.id),'PNG', quality=100)
 
     async def _handle_on_message(self, message):
-        try:
-            text = message.content
-            channel = message.channel
-            server = message.server
-            user = message.author
-            # creates user if doesn't exist, bots are not logged.
-            await self._create_user(user, server)
-            curr_time = time.time()
-            userinfo = db.users.find_one({'user_id':user.id})
+        #try:
+        text = message.content
+        channel = message.channel
+        server = message.server
+        user = message.author
+        # creates user if doesn't exist, bots are not logged.
+        await self._create_user(user, server)
+        curr_time = time.time()
+        userinfo = db.users.find_one({'user_id':user.id})
 
-            if server.id in self.settings["disabled_servers"]:
-                return
-            if user.bot:
-                return
+        if server.id in self.settings["disabled_servers"]:
+            return
+        if user.bot:
+            return
 
-            # check if chat_block exists
-            if "chat_block" not in userinfo:
-                userinfo["chat_block"] = 0
+        # check if chat_block exists
+        if "chat_block" not in userinfo:
+            userinfo["chat_block"] = 0
 
-            if float(curr_time) - float(userinfo["chat_block"]) >= 120 and not any(text.startswith(x) for x in prefix):
-                await self._process_exp(message, userinfo, random.randint(15, 20))
-        except AttributeError as e:
-            pass
+        if float(curr_time) - float(userinfo["chat_block"]) >= 10 and not any(text.startswith(x) for x in prefix):
+            await self._process_exp(message, userinfo, random.randint(15, 20))
+            await self._give_chat_credit(user, server)
+        #except AttributeError as e:
+            #pass
 
     async def _process_exp(self, message, userinfo, exp:int):
         server = message.author.server
@@ -2005,47 +2103,55 @@ class Leveler:
         user = message.author
 
         # add to total exp
-        required = self._required_exp(userinfo["servers"][server.id]["level"])
-        db.users.update_one({'user_id':user.id}, {'$set':{
-            "total_exp": userinfo["total_exp"] + exp,
-            }}, upsert = True)
-        if userinfo["servers"][server.id]["current_exp"] + exp >= required:
+        try:
+            required = self._required_exp(userinfo["servers"][server.id]["level"])
             db.users.update_one({'user_id':user.id}, {'$set':{
-                "servers.{}.level".format(server.id): userinfo["servers"][server.id]["level"] + 1,                
+                "total_exp": userinfo["total_exp"] + exp,
+                }})
+        except:
+            pass
+        if userinfo["servers"][server.id]["current_exp"] + exp >= required:
+            userinfo["servers"][server.id]["level"] += 1
+            db.users.update_one({'user_id':user.id}, {'$set':{
+                "servers.{}.level".format(server.id): userinfo["servers"][server.id]["level"],                
                 "servers.{}.current_exp".format(server.id): userinfo["servers"][server.id]["current_exp"] + exp - required,
                 "chat_block": time.time()
                 }})
-     
-            if not isinstance(self.settings["lvl_msg"], list):
-                self.settings["lvl_msg"] = []
-
-            if server.id in self.settings["lvl_msg"]: # if lvl msg is enabled
-                # channel lock implementation
-                if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
-                    channel_id = self.settings["lvl_msg_lock"][server.id]
-                    channel = find(lambda m: m.id == channel_id, server.channels)
-
-                server_identifier = "" # super hacky
-                name = self._is_mention(user) # also super hacky
-                # private message takes precedent, of course
-                if "private_lvl_msg" in self.settings and server.id in self.settings["private_lvl_msg"]:
-                    server_identifier = " on {}".format(server.name)
-                    channel = user
-                    name = "You"
-
-                if "text_only" in self.settings and server.id in self.settings["text_only"]:
-                    await self.bot.send_typing(channel)
-                    em = discord.Embed(description='**{} just gained a level{}! (LEVEL {})**'.format(name, server_identifier, userinfo["servers"][server.id]["level"]), colour=user.colour)
-                    await self.bot.send_message(channel, '', embed = em)
-                else:
-                    await self.draw_levelup(user, server)
-                    await self.bot.send_typing(channel)   
-                    await self.bot.send_file(channel, 'data/leveler/temp/{}_level.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
+            await self._handle_levelup(user, userinfo, server)
         else:
             db.users.update_one({'user_id':user.id}, {'$set':{          
                 "servers.{}.current_exp".format(server.id): userinfo["servers"][server.id]["current_exp"] + exp,
                 "chat_block": time.time()
                 }})
+
+    async def _handle_levelup(self, user, userinfo, server):
+        if not isinstance(self.settings["lvl_msg"], list):
+            self.settings["lvl_msg"] = []
+            fileIO("data/leveler/settings.json", "save", self.settings)        
+
+        if server.id in self.settings["lvl_msg"]: # if lvl msg is enabled
+            # channel lock implementation
+            if "lvl_msg_lock" in self.settings.keys() and server.id in self.settings["lvl_msg_lock"].keys():
+                channel_id = self.settings["lvl_msg_lock"][server.id]
+                channel = find(lambda m: m.id == channel_id, server.channels)
+
+            server_identifier = "" # super hacky
+            name = self._is_mention(user) # also super hacky
+            # private message takes precedent, of course
+            if "private_lvl_msg" in self.settings and server.id in self.settings["private_lvl_msg"]:
+                server_identifier = " on {}".format(server.name)
+                channel = user
+                name = "You"
+
+            if "text_only" in self.settings and server.id in self.settings["text_only"]:
+                await self.bot.send_typing(channel)
+                em = discord.Embed(description='**{} just gained a level{}! (LEVEL {})**'.format(name, server_identifier, userinfo["servers"][server.id]["level"]), colour=user.colour)
+                await self.bot.send_message(channel, '', embed = em)
+            else:
+                await self.draw_levelup(user, server)
+                await self.bot.send_typing(channel)   
+                await self.bot.send_file(channel, 'data/leveler/temp/{}_level.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
+
 
     async def _find_server_rank(self, user, server):
         targetid = user.id
