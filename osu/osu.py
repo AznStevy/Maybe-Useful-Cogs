@@ -624,7 +624,7 @@ class Osu:
             gamemode_text = "Osu! Standard"
         return gamemode_text
 
-    def _track_gamemode(self, gamemode):
+    def _get_gamemode_display(self, gamemode):
         if gamemode == "osu":
             gamemode_text = "Osu! Standard"
         elif gamemode == "ctb":
@@ -984,7 +984,7 @@ class Osu:
                         for new_play in new_plays[gamemode]:
                             new_timestamps.append(datetime.datetime.strptime(new_play['date'], '%Y-%m-%d %H:%M:%S'))
                         current_info = self.track[username]["userinfo"][gamemode] # user information
-                        score_gamemode = self._track_gamemode(gamemode)
+                        score_gamemode = self._get_gamemode_display(gamemode)
 
                         # loop to check what's different
                         for i in range(len(new_timestamps)):
