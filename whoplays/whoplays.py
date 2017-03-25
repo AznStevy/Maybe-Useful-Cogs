@@ -13,7 +13,7 @@ class WhoPlays:
         """Shows a list of all the people playing a game."""
         if len(game) <= 2:
             await self.bot.say("You need at least 3 characters.")
-            return     
+            return
 
         user = ctx.message.author
         server = ctx.message.server
@@ -26,7 +26,7 @@ class WhoPlays:
                 if game.lower() in member.game.name.lower():
                     count_playing += 1
                     if count_playing <= 15:
-                        playing_game += "▸ {} ({})\n".format(member.name, member.game.name)            
+                        playing_game += "▸ {} ({})\n".format(member.name, member.game.name)
 
         if playing_game == "":
             await self.bot.say("No one is playing that game.")
@@ -36,7 +36,7 @@ class WhoPlays:
             if count_playing > 15:
                 showing = "(Showing 15/{})".format(count_playing)
             else:
-                showing = "({})".format(count_playing)                
+                showing = "({})".format(count_playing)
             em.set_author(name="These are the people who are playing {} {}: \n".format(game, showing))
             await self.bot.say(embed = em)
 
@@ -54,11 +54,11 @@ class WhoPlays:
                     freq_list[member.game.name] = 0
                 freq_list[member.game.name]+=1
 
-        sorted_list = sorted(freq_list.items(), key=operator.itemgetter(1), reverse = True)    
+        sorted_list = sorted(freq_list.items(), key=operator.itemgetter(1), reverse = True)
 
         if not freq_list:
             await self.bot.say("Surprisingly, no one is playing anything.")
-        else:            
+        else:
             # create display
             msg = ""
             max_games = min(len(sorted_list), 10)
@@ -69,7 +69,7 @@ class WhoPlays:
             em = discord.Embed(description=msg, colour=user.colour)
             em.set_author(name="These are the server's most played games at the moment:")
 
-            await self.bot.say(embed = em)         
+            await self.bot.say(embed = em)
 
 def setup(bot):
     n = WhoPlays(bot)

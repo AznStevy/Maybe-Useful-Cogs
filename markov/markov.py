@@ -53,7 +53,7 @@ class Markov:
                 em.description = markov_text
                 await self.bot.say(embed = em)
             except:
-                await self.bot.say("Something went wrong :C")                
+                await self.bot.say("Something went wrong :C")
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
@@ -69,14 +69,14 @@ class Markov:
             self.model[server.id][channel.id] = {}
 
         self.model[server.id][channel.id] = {}
-        fileIO('data/markov/model.json', "save", self.model)          
+        fileIO('data/markov/model.json', "save", self.model)
         await self.bot.say("Channel:`{}` data cleared.".format(channel.name))
 
     @commands.command(no_pm=True)
     async def size(self):
         """Shows the size of the file."""
         size = os.path.getsize('data/markov/model.json')
-        await self.bot.say("Current File Size: `{}` Bytes.".format(size))        
+        await self.bot.say("Current File Size: `{}` Bytes.".format(size))
 
     # loads the new text into the model
     async def track_message(self, message):
@@ -103,7 +103,7 @@ class Markov:
         except:
             pass
 
-# ------------------------------ setup ----------------------------------------    
+# ------------------------------ setup ----------------------------------------
 def check_folders():
     if not os.path.exists("data/markov"):
         print("Creating data/markov folder...")
