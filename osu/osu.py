@@ -618,12 +618,12 @@ class Osu:
         return gamemode_texts[gamemode]
 
     def _get_gamemode_display(self, gamemode):
-		gamemodes = ['osu', 'taiko', 'ctb', 'mania']
-		gamemode_texts = ['Osu! Standard', 'Catch the Beat!', 'Osu! Mania', 'Taiko']
+        gamemodes = ['osu', 'taiko', 'ctb', 'mania']
+        gamemode_texts = ['Osu! Standard', 'Catch the Beat!', 'Osu! Mania', 'Taiko']
         return gamemode_texts[gamemodes.index(gamemode)]
 
     def _get_gamemode_number(self, gamemode:str):
-		gamemodes = ['osu', 'taiko', 'ctb', 'mania']
+        gamemodes = ['osu', 'taiko', 'ctb', 'mania']
         return gamemodes.index(gamemode)
 
     def calculate_acc(self, beatmap, gamemode:int):
@@ -684,8 +684,8 @@ class Osu:
 
         for i in range(len(mods)):
             if number >= peppyNumbers[i]:
-				number -= peppyNumbers[i]
-				mod_list.append(mods[i])
+                number -= peppyNumbers[i]
+                mod_list.append(mods[i])
         return mod_list
 
     # ---------------------------- Detect Links ------------------------------
