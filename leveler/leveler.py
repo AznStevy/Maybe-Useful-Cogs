@@ -331,14 +331,20 @@ class Leveler:
         msg += "Profile background: {}\n".format(userinfo["profile_background"])
         msg += "Rank background: {}\n".format(userinfo["rank_background"])
         msg += "Levelup background: {}\n".format(userinfo["levelup_background"])
+        if "profile_info_color" in userinfo.keys() and userinfo["profile_info_color"]:
+            msg += "Profile info color: {}\n".format(self._rgb_to_hex(userinfo["profile_info_color"]))
+        if "profile_exp_color" in userinfo.keys() and userinfo["profile_exp_color"]:
+            msg += "Profile exp color: {}\n".format(self._rgb_to_hex(userinfo["profile_exp_color"]))
         if "rep_color" in userinfo.keys() and userinfo["rep_color"]:
             msg += "Rep section color: {}\n".format(self._rgb_to_hex(userinfo["rep_color"]))
         if "badge_col_color" in userinfo.keys() and userinfo["badge_col_color"]:
             msg += "Badge section color: {}\n".format(self._rgb_to_hex(userinfo["badge_col_color"]))
-        if "profile_exp_color" in userinfo.keys() and userinfo["profile_exp_color"]:
-            msg += "Profile exp color: {}\n".format(self._rgb_to_hex(userinfo["profile_exp_color"]))
+        if "rank_info_color" in userinfo.keys() and userinfo["rank_info_color"]:
+            msg += "Rank info color: {}\n".format(self._rgb_to_hex(userinfo["rank_info_color"]))
         if "rank_exp_color" in userinfo.keys() and userinfo["rank_exp_color"]:
             msg += "Rank exp color: {}\n".format(self._rgb_to_hex(userinfo["rank_exp_color"]))
+        if "levelup_info_color" in userinfo.keys() and userinfo["levelup_info_color"]:
+            msg += "Level info color: {}\n".format(self._rgb_to_hex(userinfo["levelup_info_color"]))
         msg += "Badges: "
         msg += ", ".join(userinfo["badges"])
 
@@ -363,8 +369,6 @@ class Leveler:
         user = ctx.message.author
         server = ctx.message.server
         userinfo = db.users.find_one({'user_id':user.id})
-        print(img_type)
-        print(info_color)
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
@@ -1541,7 +1545,7 @@ class Leveler:
             lvl_color = self._contrast(badge_fill, rep_fill, exp_fill)
         draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(lvl_color[0],lvl_color[1],lvl_color[2],255)) # Level #
 
-        rep_text = "+{} rep".format(userinfo["rep"])
+        rep_text = "{} rep".format(userinfo["rep"])
         draw.text((self._center(5, 100, rep_text, rep_fnt), 141), rep_text, font=rep_fnt, fill=white_color)
 
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=self._contrast(badge_fill, white_color, rep_fill)) # Badges   
@@ -1861,7 +1865,8 @@ class Leveler:
         userinfo = db.users.find_one({'user_id':user.id})
         # get urls
         bg_url = userinfo["rank_background"]
-        profile_url = user.avatar_url         
+        profile_url = user.avatar_url
+        server_icon_url = server.icon_url
 
         # create image objects
         bg_image = Image
@@ -1879,18 +1884,29 @@ class Leveler:
                 image = await r.content.read()
         with open('data/leveler/temp/{}_temp_rank_profile.png'.format(user.id),'wb') as f:
             f.write(image)
+        try:
+            async with aiohttp.get(server_icon_url) as r:
+                image = await r.content.read()
+        except:
+            async with aiohttp.get(default_avatar_url) as r:
+                image = await r.content.read()
+        with open('data/leveler/temp/{}_temp_server_icon.png'.format(user.id),'wb') as f:
+            f.write(image)
 
         bg_image = Image.open('data/leveler/temp/{}_temp_rank_bg.png'.format(user.id)).convert('RGBA')            
         profile_image = Image.open('data/leveler/temp/{}_temp_rank_profile.png'.format(user.id)).convert('RGBA')
+        server_image = Image.open('data/leveler/temp/{}_temp_server_icon.png'.format(user.id)).convert('RGBA')
 
         # set canvas
+        width = 360
+        height = 100
         bg_color = (255,255,255, 0)
-        result = Image.new('RGBA', (360, 100), bg_color)
-        process = Image.new('RGBA', (360, 100), bg_color)
+        result = Image.new('RGBA', (width, height), bg_color)
+        process = Image.new('RGBA', (width, height), bg_color)
         
         # puts in background
-        bg_image = bg_image.resize((360, 100), Image.ANTIALIAS)
-        bg_image = bg_image.crop((0,0, 360, 100))
+        bg_image = bg_image.resize((width, height), Image.ANTIALIAS)
+        bg_image = bg_image.crop((0,0, width, height))
         result.paste(bg_image, (0,0))
 
         # draw
@@ -1899,7 +1915,7 @@ class Leveler:
         # draw transparent overlay
         vert_pos = 5
         left_pos = 70
-        right_pos = 360 - vert_pos
+        right_pos = width - vert_pos
         title_height = 22
         gap = 3
 
@@ -1922,7 +1938,7 @@ class Leveler:
         multiplier = 6  
         lvl_circle_dia = 94
         circle_left = 15
-        circle_top = int((100 - lvl_circle_dia)/2)
+        circle_top = int((height- lvl_circle_dia)/2)
         raw_length = lvl_circle_dia * multiplier
 
         # create mask
@@ -1967,32 +1983,51 @@ class Leveler:
         lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])     
         draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), vert_pos + 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
 
+        # labels text colors
+        white_text = (240,240,240,255)
+        dark_text = (35, 35, 35, 230)
+        label_text_color = self._contrast(info_color, white_text, dark_text)
+
         # draw text
         grey_color = (110,110,110,255)
         white_color = (230,230,230,255)
+
+        # put in server picture
+        server_size = content_bottom - content_top - 10
+        server_border_size = server_size + 4
+        radius = 20
+        light_border = (150,150,150,180)
+        dark_border = (90,90,90,180)
+        border_color = self._contrast(info_color, light_border, dark_border)
+        draw_server_border = Image.new('RGBA', (2*server_border_size, 2*server_border_size),border_color)
+        draw_server_border = self._add_corners(draw_server_border, radius)
+        draw_server_border = ImageOps.fit(draw_server_border, (server_border_size, server_border_size))
+        draw_server_border = draw_server_border.resize((server_border_size, server_border_size), Image.ANTIALIAS)
+        output = ImageOps.fit(server_image, (server_size, server_size))
+        output = output.resize((server_size, server_size), Image.ANTIALIAS)
+        server_image = self._add_corners(server_image, radius)
+        server_image = server_image.resize((server_size, server_size), Image.ANTIALIAS)
+        process.paste(draw_server_border, (circle_left + profile_size + 2*border + 8, content_top + 3), draw_server_border)
+        process.paste(server_image, (circle_left + profile_size + 2*border + 10, content_top + 5), server_image)
+
         # reputation points
         left_text_align = 130
-        rep_align = self._center(110, 190, "R e p s", level_label_fnt)
         _write_unicode(self._truncate_text(self._name(user, 21), 21), left_text_align - 20, vert_pos + 2, name_fnt, header_u_fnt, grey_color) # Name 
-        draw.text((rep_align, 37), "R e p s".format(await self._find_server_rank(user, server)), font=level_label_fnt, fill=white_color) # Rep Label
-        rep_label_width = level_label_fnt.getsize("Reps")[0]
-        rep_text = "+{}".format(userinfo["rep"])
-        draw.text((self._center(rep_align, rep_align + rep_label_width, rep_text, large_fnt) , 63), rep_text, font=large_fnt, fill=white_color) # Rep
        
         # divider bar
-        draw.rectangle([(190, 45), (191, 85)], fill=(160,160,160,240))      
+        draw.rectangle([(192, 45), (193, 85)], fill=(160,160,160,240))      
 
         # labels
         label_align = 210
-        draw.text((label_align, 38), "Server Rank:", font=general_info_fnt, fill=white_color) # Server Rank
-        draw.text((label_align, 58), "Server Exp:", font=general_info_fnt, fill=white_color) # Server Exp
-        draw.text((label_align, 78), "Credits:", font=general_info_fnt, fill=white_color) # Credit
+        draw.text((label_align, 38), "Server Rank:", font=general_info_fnt, fill=label_text_color) # Server Rank
+        draw.text((label_align, 58), "Server Exp:", font=general_info_fnt, fill=label_text_color) # Server Exp
+        draw.text((label_align, 78), "Credits:", font=general_info_fnt, fill=label_text_color) # Credit
         # info
         right_text_align = 290
         rank_txt = "#{}".format(await self._find_server_rank(user, server))
-        draw.text((right_text_align, 38), self._truncate_text(rank_txt, 12) , font=general_info_fnt, fill=white_color) # Rank
+        draw.text((right_text_align, 38), self._truncate_text(rank_txt, 12) , font=general_info_fnt, fill=label_text_color) # Rank
         exp_txt = "{}".format(await self._find_server_exp(user, server))
-        draw.text((right_text_align, 58), self._truncate_text(exp_txt, 12), font=general_info_fnt, fill=white_color) # Exp
+        draw.text((right_text_align, 58), self._truncate_text(exp_txt, 12), font=general_info_fnt, fill=label_text_color) # Exp
         try:
             bank = self.bot.get_cog('Economy').bank
             if bank.account_exists(user):
@@ -2002,10 +2037,23 @@ class Leveler:
         except:
             credits = 0
         credit_txt = "${}".format(credits)
-        draw.text((right_text_align, 78), self._truncate_text(credit_txt, 12),  font=general_info_fnt, fill=white_color) # Credits
+        draw.text((right_text_align, 78), self._truncate_text(credit_txt, 12),  font=general_info_fnt, fill=label_text_color) # Credits
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/temp/{}_rank.png'.format(user.id),'PNG', quality=100)
+
+    def _add_corners(self, im, rad):
+        circle = Image.new('L', (rad * 2, rad * 2), 0)
+        draw = ImageDraw.Draw(circle)
+        draw.ellipse((0, 0, rad * 2, rad * 2), fill=255)
+        alpha = Image.new('L', im.size, 255)
+        w, h = im.size
+        alpha.paste(circle.crop((0, 0, rad, rad)), (0, 0))
+        alpha.paste(circle.crop((0, rad, rad, rad * 2)), (0, h - rad))
+        alpha.paste(circle.crop((rad, 0, rad * 2, rad)), (w - rad, 0))
+        alpha.paste(circle.crop((rad, rad, rad * 2, rad * 2)), (w - rad, h - rad))
+        im.putalpha(alpha)
+        return im
 
     async def draw_levelup(self, user, server):
         userinfo = db.users.find_one({'user_id':user.id})
@@ -2064,9 +2112,12 @@ class Leveler:
         level_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 32)
 
         # write label text
-        draw.text((self._center(0, 85, "Level Up!", level_fnt2), 65), "Level Up!", font=level_fnt2, fill=(240,240,240,255)) # Level
+        white_text = (240,240,240,255)
+        dark_text = (35, 35, 35, 230)
+        level_up_text = self._contrast(info_color, white_text, dark_text)
+        draw.text((self._center(0, 85, "Level Up!", level_fnt2), 65), "Level Up!", font=level_fnt2, fill=level_up_text) # Level
         lvl_text = "LVL {}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(0, 85, lvl_text, level_fnt), 80), lvl_text, font=level_fnt, fill=(240,240,240,255)) # Level Number
+        draw.text((self._center(0, 85, lvl_text, level_fnt), 80), lvl_text, font=level_fnt, fill=level_up_text) # Level Number
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/temp/{}_level.png'.format(user.id),'PNG', quality=100)
