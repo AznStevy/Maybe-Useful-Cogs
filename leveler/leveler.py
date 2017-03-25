@@ -1341,7 +1341,7 @@ class Leveler:
 
         em = discord.Embed(description='', colour=user.colour)
         if not type:
-            em.set_author(name="All Backgrounds for {}".format(self.bot.user.name), icon_url = server.icon_url)
+            em.set_author(name="All Backgrounds for {}".format(self.bot.user.name), icon_url = self.bot.user.avatar_url)
 
             for category in self.backgrounds.keys():
                 bg_url = []
