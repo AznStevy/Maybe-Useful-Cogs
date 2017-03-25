@@ -699,44 +699,14 @@ class Osu:
     def mod_calculation(self, number):
         number = int(number)
         mod_list = []
+        mods = ['PF', 'SO', 'FL', 'NC', 'HT', 'RX', 'DT', 'SD', 'HR', 'HD', 'EZ', 'NF']
+        peppyNumbers = [16384, 4096, 1024, 576, 256, 128, 64, 32, 16, 8, 2, 1]
 
-        if number >= 16384:
-            number -= 16384
-            mod_list.append('PF')
-        if number >= 4096:
-            number-= 4096
-            mod_list.append('SO')
-        if number >= 1024:
-            number-= 1024
-            mod_list.append('FL')
-        if number >= 576:
-            number-= 576
-            mod_list.append('NC')
-        if number >= 256:
-            number-= 256
-            mod_list.append('HT')
-        if number >= 128:
-            number-= 128
-            mod_list.append('RX')
-        if number >= 64:
-            number-= 64
-            mod_list.append('DT')
-        if number >= 32:
-            number-= 32
-            mod_list.append('SD')
-        if number >= 16:
-            number-= 16
-            mod_list.append('HR')
-        if number >= 8:
-            number-= 8
-            mod_list.append('HD')
-        if number >= 2:
-            number-= 2
-            mod_list.append('EZ')
-        if number >= 1:
-            number-= 1
-            mod_list.append('NF')
-        return mod_list
+        for i in range(len(mods)):
+            if number >= peppyNumbers[i]:
+		        number-= peppyNumbers[i]
+		        mod_list.append(mods[i])
+        return mod_list                
 
     # ---------------------------- Detect Links ------------------------------
     # called by listener
