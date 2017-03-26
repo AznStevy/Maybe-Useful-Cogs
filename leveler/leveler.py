@@ -1114,7 +1114,6 @@ class Leveler:
         user = ctx.message.author
 
         msg = ", ".join(sorted(self.badges.keys()))
-        print(msg)
         em = discord.Embed(description=msg, colour=user.colour)
         em.set_author(name="Badges for {}".format(self.bot.user.name))
         await self.bot.say(embed = em)
@@ -1810,7 +1809,6 @@ class Leveler:
     def _contrast(self, bg_color, color1, color2):
         color1_ratio = self._contrast_ratio(bg_color, color1)
         color2_ratio = self._contrast_ratio(bg_color, color2)
-        print("color 1: {}, color 2: {}".format(color1_ratio, color2_ratio))
         if color1_ratio >= color2_ratio:
             return color1
         else:
@@ -1819,7 +1817,6 @@ class Leveler:
     def _luminance(self, color):
         # convert to greyscale
         luminance = float((0.2126*color[0]) + (0.7152*color[1]) + (0.0722*color[2]))
-        print(luminance)
         return luminance
 
     def _contrast_ratio(self, bgcolor, foreground):
