@@ -713,7 +713,7 @@ class Leveler:
                 db.users.update_one({'user_id':user.id}, {'$set':{"levelup_background": self.backgrounds["levelup"][image_name]}})
                 await self.bot.say("**Your new level-up background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list levelup`".format(prefix))
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def profilebg(self, ctx, *, image_name:str):
@@ -738,7 +738,7 @@ class Leveler:
                 db.users.update_one({'user_id':user.id}, {'$set':{"profile_background": self.backgrounds["profile"][image_name]}})
                 await self.bot.say("**Your new profile background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list profile`".format(prefix))
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def rankbg(self, ctx, *, image_name:str):
@@ -763,7 +763,7 @@ class Leveler:
                 db.users.update_one({'user_id':user.id}, {'$set':{"rank_background": self.backgrounds["rank"][image_name]}})
                 await self.bot.say("**Your new rank background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at {}lvlset listbgs".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list rank`".format(prefix))
 
     @lvlset.command(pass_context=True, no_pm=True)
     async def title(self, ctx, *, title):
@@ -1922,8 +1922,9 @@ class Leveler:
 
         if "rank_info_color" in userinfo.keys():
             info_color = tuple(userinfo["rank_info_color"])
+            info_color = (info_color[0], info_color[1], info_color[2], 160) # increase transparency
         else:
-            info_color = (30, 30 ,30, 220)
+            info_color = (30, 30 ,30, 160)
         draw.rectangle([(left_pos - 20, content_top), (right_pos, content_bottom)], fill=info_color, outline=(180, 180, 180, 180)) # content box
 
         # stick in credits if needed
@@ -2011,7 +2012,7 @@ class Leveler:
         _write_unicode(self._truncate_text(self._name(user, 16), 16), left_text_align - 20, vert_pos + 2, name_fnt, header_u_fnt, grey_color) # Name
 
         # divider bar
-        draw.rectangle([(186, 45), (188, 85)], fill=(160,160,160,220))
+        draw.rectangle([(187, 45), (188, 85)], fill=(160,160,160,220))
 
         # labels
         label_align = 200
@@ -2368,7 +2369,8 @@ def check_files():
                 "default" : "http://i.imgur.com/SorwIrc.jpg",
                 "nebula": "http://i.imgur.com/V5zSCmO.jpg",
                 "mountain" : "http://i.imgur.com/qYqEUYp.jpg",
-                "abstract" : "http://i.imgur.com/70ZH6LX.png"
+                "abstract" : "http://i.imgur.com/70ZH6LX.png",
+                "city": "http://i.imgur.com/yr2cUM9.jpg",
             },
             "levelup": {
                 "default" : "http://i.imgur.com/eEFfKqa.jpg",
