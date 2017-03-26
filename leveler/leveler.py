@@ -771,7 +771,7 @@ class Leveler:
         user = ctx.message.author
         server = ctx.message.server
         userinfo = db.users.find_one({'user_id':user.id})
-        max_char = 18
+        max_char = 20
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
@@ -2104,16 +2104,16 @@ class Leveler:
         process.paste(profile_image, (17, 13))
 
         # fonts
-        level_fnt2 = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 20)
+        level_fnt2 = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 19)
         level_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 26)
 
         # write label text
         white_text = (240,240,240,255)
         dark_text = (35, 35, 35, 230)
         level_up_text = self._contrast(info_color, white_text, dark_text)
-        draw.text((self._center(0, 85, "Level Up!", level_fnt2), 65), "Level Up!", font=level_fnt2, fill=level_up_text) # Level
+        draw.text((self._center(0, 85, "LEVEL UP!", level_fnt2), 67), "LEVEL UP!", font=level_fnt2, fill=level_up_text) # Level
         lvl_text = "LVL {}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(0, 85, lvl_text, level_fnt), 83), lvl_text, font=level_fnt, fill=level_up_text) # Level Number
+        draw.text((self._center(2, 85, lvl_text, level_fnt), 83), lvl_text, font=level_fnt, fill=level_up_text) # Level Number
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/temp/{}_level.png'.format(user.id),'PNG', quality=100)
