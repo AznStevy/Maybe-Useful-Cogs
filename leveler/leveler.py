@@ -771,7 +771,7 @@ class Leveler:
         user = ctx.message.author
         server = ctx.message.server
         userinfo = db.users.find_one({'user_id':user.id})
-        max_char = 20
+        max_char = 18
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
@@ -1387,8 +1387,8 @@ class Leveler:
         large_fnt = ImageFont.truetype(font_bold_file, 33)
         level_label_fnt = ImageFont.truetype(font_bold_file, 22)
         general_info_fnt = ImageFont.truetype(font_bold_file, 15)
-        general_info_u_fnt = ImageFont.truetype(font_unicode_file, 11)
-        rep_fnt = ImageFont.truetype(font_bold_file, 30)
+        general_info_u_fnt = ImageFont.truetype(font_unicode_file, 12)
+        rep_fnt = ImageFont.truetype(font_bold_file, 26)
         text_fnt = ImageFont.truetype(font_bold_file, 12)
         text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
         credit_fnt = ImageFont.truetype(font_bold_file, 10)
@@ -1530,22 +1530,22 @@ class Leveler:
         light_color = (160,160,160,255)
 
         head_align = 105
-        _write_unicode(self._truncate_text(self._name(user, 24), 24), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255)) # NAME
+        _write_unicode(self._truncate_text(self._name(user, 18), 18), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255)) # NAME
         _write_unicode(userinfo["title"], head_align, 136, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
         level_right = 290
-        level_left = level_right - 72
+        level_left = level_right - 82
         draw.rectangle([(level_left, 0), (level_right, 21)], fill=(badge_fill[0],badge_fill[1],badge_fill[2],160)) # box
         lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])
         if badge_fill == (128,151,165,230):
             lvl_color = white_color
         else:
             lvl_color = self._contrast(badge_fill, rep_fill, exp_fill)
-        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(lvl_color[0],lvl_color[1],lvl_color[2],255)) # Level #
+        draw.text((self._center(level_left+2, level_right, lvl_text, level_label_fnt), 2), lvl_text,  font=level_label_fnt, fill=(lvl_color[0],lvl_color[1],lvl_color[2],255)) # Level #
 
-        rep_text = "{} rep".format(userinfo["rep"])
-        draw.text((self._center(5, 100, rep_text, rep_fnt), 141), rep_text, font=rep_fnt, fill=white_color)
+        rep_text = "{} REP".format(userinfo["rep"])
+        draw.text((self._center(7, 100, rep_text, rep_fnt), 144), rep_text, font=rep_fnt, fill=white_color)
 
         draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=self._contrast(badge_fill, white_color, rep_fill)) # Badges
 
@@ -1564,7 +1564,7 @@ class Leveler:
         draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=info_text_color) # Credits
 
         # local stats
-        num_local_align = 180
+        num_local_align = 168
         local_symbol = u"\U0001F3E0 "
         if "linux" in platform.system().lower():
             local_symbol = u"\U0001F3E0 "
@@ -1604,7 +1604,7 @@ class Leveler:
         draw.text((105, 220), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box
         margin = 105
         offset = 238
-        for line in textwrap.wrap(userinfo["info"], width=40):
+        for line in textwrap.wrap(userinfo["info"], width=32):
             # draw.text((margin, offset), line, font=text_fnt, fill=(70,70,70,255))
             _write_unicode(line, margin, offset, text_fnt, text_u_fnt, info_text_color)
             offset += text_fnt.getsize(line)[1] + 2
@@ -1820,8 +1820,8 @@ class Leveler:
         return luminance
 
     def _contrast_ratio(self, bgcolor, foreground):
-        f_lum = float(self._luminance(foreground))
-        bg_lum = float(self._luminance(bgcolor))
+        f_lum = float(self._luminance(foreground)+0.05)
+        bg_lum = float(self._luminance(bgcolor)+0.05)
 
         if bg_lum > f_lum:
             return bg_lum/f_lum
@@ -1974,7 +1974,7 @@ class Leveler:
         process.paste(profile_image, (circle_left + border, circle_top + border), mask)
 
         # draw level box
-        level_left = 277
+        level_left = 270
         level_right = right_pos
         draw.rectangle([(level_left, vert_pos), (level_right, vert_pos + title_height)], fill="#AAA") # box
         lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])
@@ -2006,15 +2006,15 @@ class Leveler:
         process.paste(draw_server_border, (circle_left + profile_size + 2*border + 8, content_top + 3), draw_server_border)
         process.paste(server_image, (circle_left + profile_size + 2*border + 10, content_top + 5), server_image)
 
-        # reputation points
+        # name
         left_text_align = 130
-        _write_unicode(self._truncate_text(self._name(user, 21), 21), left_text_align - 20, vert_pos + 2, name_fnt, header_u_fnt, grey_color) # Name
+        _write_unicode(self._truncate_text(self._name(user, 16), 16), left_text_align - 20, vert_pos + 2, name_fnt, header_u_fnt, grey_color) # Name
 
         # divider bar
-        draw.rectangle([(192, 45), (193, 85)], fill=(160,160,160,240))
+        draw.rectangle([(186, 45), (188, 85)], fill=(160,160,160,220))
 
         # labels
-        label_align = 210
+        label_align = 200
         draw.text((label_align, 38), "Server Rank:", font=general_info_fnt, fill=label_text_color) # Server Rank
         draw.text((label_align, 58), "Server Exp:", font=general_info_fnt, fill=label_text_color) # Server Exp
         draw.text((label_align, 78), "Credits:", font=general_info_fnt, fill=label_text_color) # Credit
@@ -2105,7 +2105,7 @@ class Leveler:
 
         # fonts
         level_fnt2 = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 20)
-        level_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 32)
+        level_fnt = ImageFont.truetype('data/leveler/fonts/font_bold.ttf', 26)
 
         # write label text
         white_text = (240,240,240,255)
@@ -2113,7 +2113,7 @@ class Leveler:
         level_up_text = self._contrast(info_color, white_text, dark_text)
         draw.text((self._center(0, 85, "Level Up!", level_fnt2), 65), "Level Up!", font=level_fnt2, fill=level_up_text) # Level
         lvl_text = "LVL {}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(0, 85, lvl_text, level_fnt), 80), lvl_text, font=level_fnt, fill=level_up_text) # Level Number
+        draw.text((self._center(0, 85, lvl_text, level_fnt), 83), lvl_text, font=level_fnt, fill=level_up_text) # Level Number
 
         result = Image.alpha_composite(result, process)
         result.save('data/leveler/temp/{}_level.png'.format(user.id),'PNG', quality=100)
