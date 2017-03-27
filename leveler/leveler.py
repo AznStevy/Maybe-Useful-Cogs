@@ -881,6 +881,7 @@ class Leveler:
 
         if credits < 0 or credits > 1000:
             await self.bot.say("**Please enter a valid number (0 - 1000)**".format(channel.name))
+            return
 
         if "msg_credits" not in self.settings.keys():
             self.settings["msg_credits"] = {}
@@ -1285,7 +1286,8 @@ class Leveler:
     @lvladmin.group(name = "bg", pass_context=True)
     async def lvladminbg(self, ctx):
         """Admin Background Configuration"""
-        if ctx.invoked_subcommand is None:
+        if ctx.invoked_subcommand is None or \
+                isinstance(ctx.invoked_subcommand, commands.Group):
             await send_cmd_help(ctx)
             return
 
@@ -1564,12 +1566,12 @@ class Leveler:
         light_color = (160,160,160,255)
 
         head_align = 105
-        _write_unicode(self._truncate_text(self._name(user, 18), 18), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255)) # NAME
+        _write_unicode(self._truncate_text(self._name(user, 22), 22), head_align, vert_pos + 3, level_label_fnt, header_u_fnt, (110,110,110,255)) # NAME
         _write_unicode(userinfo["title"], head_align, 136, level_label_fnt, header_u_fnt, white_color)
 
         # draw level box
         level_right = 290
-        level_left = level_right - 82
+        level_left = level_right - 78
         draw.rectangle([(level_left, 0), (level_right, 21)], fill=(badge_fill[0],badge_fill[1],badge_fill[2],160)) # box
         lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])
         if badge_fill == (128,151,165,230):
@@ -1598,7 +1600,7 @@ class Leveler:
         draw.text((label_align, 195), "Credits:",  font=general_info_fnt, fill=info_text_color) # Credits
 
         # local stats
-        num_local_align = 168
+        num_local_align = 172
         local_symbol = u"\U0001F3E0 "
         if "linux" in platform.system().lower():
             local_symbol = u"\U0001F3E0 "
@@ -1638,7 +1640,7 @@ class Leveler:
         draw.text((105, 220), "Info Box",  font=sub_header_fnt, fill=white_color) # Info Box
         margin = 105
         offset = 238
-        for line in textwrap.wrap(userinfo["info"], width=32):
+        for line in textwrap.wrap(userinfo["info"], width=42):
             # draw.text((margin, offset), line, font=text_fnt, fill=(70,70,70,255))
             _write_unicode(line, margin, offset, text_fnt, text_u_fnt, info_text_color)
             offset += text_fnt.getsize(line)[1] + 2
@@ -2009,11 +2011,11 @@ class Leveler:
         process.paste(profile_image, (circle_left + border, circle_top + border), mask)
 
         # draw level box
-        level_left = 270
+        level_left = 274
         level_right = right_pos
         draw.rectangle([(level_left, vert_pos), (level_right, vert_pos + title_height)], fill="#AAA") # box
         lvl_text = "LEVEL {}".format(userinfo["servers"][server.id]["level"])
-        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), vert_pos + 2), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
+        draw.text((self._center(level_left, level_right, lvl_text, level_label_fnt), vert_pos + 3), lvl_text,  font=level_label_fnt, fill=(110,110,110,255)) # Level #
 
         # labels text colors
         white_text = (240,240,240,255)
@@ -2043,7 +2045,7 @@ class Leveler:
 
         # name
         left_text_align = 130
-        _write_unicode(self._truncate_text(self._name(user, 16), 16), left_text_align - 20, vert_pos + 2, name_fnt, header_u_fnt, grey_color) # Name
+        _write_unicode(self._truncate_text(self._name(user, 20), 20), left_text_align - 12, vert_pos + 3, name_fnt, header_u_fnt, grey_color) # Name
 
         # divider bar
         draw.rectangle([(187, 45), (188, 85)], fill=(160,160,160,220))
