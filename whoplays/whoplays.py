@@ -1,8 +1,7 @@
-import os
 import discord
 from discord.ext import commands
-from .utils.dataIO import fileIO
 import operator
+
 
 class WhoPlays:
     def __init__(self, bot):
@@ -13,7 +12,7 @@ class WhoPlays:
         """Shows a list of all the people playing a game."""
         if len(game) <= 2:
             await self.bot.say("You need at least 3 characters.")
-            return     
+            return
 
         user = ctx.message.author
         server = ctx.message.server
@@ -22,11 +21,17 @@ class WhoPlays:
         playing_game = ""
         count_playing = 0
         for member in members:
-            if member != None and member.game != None and member.game.name != None and not member.bot:
-                if game.lower() in member.game.name.lower():
-                    count_playing += 1
-                    if count_playing <= 15:
-                        playing_game += "▸ {} ({})\n".format(member.name, member.game.name)            
+            if not member:
+                continue
+            if not member.game or not member.game.name:
+                continue
+            if member.bot:
+                continue
+            if game.lower() in member.game.name.lower():
+                count_playing += 1
+                if count_playing <= 15:
+                    playing_game += "▸ {} ({})\n".format(member.name,
+                                                         member.game.name)
 
         if playing_game == "":
             await self.bot.say("No one is playing that game.")
@@ -36,9 +41,11 @@ class WhoPlays:
             if count_playing > 15:
                 showing = "(Showing 15/{})".format(count_playing)
             else:
-                showing = "({})".format(count_playing)                
-            em.set_author(name="These are the people who are playing {} {}: \n".format(game, showing))
-            await self.bot.say(embed = em)
+                showing = "({})".format(count_playing)
+            text = "These are the people who are playing"
+            text += "{}:\n{}".format(game, showing)
+            em.set_author(name=text)
+            await self.bot.say(embed=em)
 
     @commands.command(pass_context=True, no_pm=True)
     async def cgames(self, ctx):
@@ -49,27 +56,34 @@ class WhoPlays:
 
         freq_list = {}
         for member in members:
-            if member != None and member.game != None and member.game.name != None and not member.bot:
-                if member.game.name not in freq_list:
-                    freq_list[member.game.name] = 0
-                freq_list[member.game.name]+=1
+            if not member:
+                continue
+            if not member.game or not member.game.name:
+                continue
+            if member.bot:
+                continue
+            if member.game.name not in freq_list:
+                freq_list[member.game.name] = 0
+            freq_list[member.game.name] += 1
 
-        sorted_list = sorted(freq_list.items(), key=operator.itemgetter(1), reverse = True)    
+        sorted_list = sorted(freq_list.items(),
+                             key=operator.itemgetter(1),
+                             reverse=True)
 
         if not freq_list:
             await self.bot.say("Surprisingly, no one is playing anything.")
-        else:            
+        else:
             # create display
             msg = ""
             max_games = min(len(sorted_list), 10)
             for i in range(max_games):
                 game, freq = sorted_list[i]
-                msg+= "▸ {}: __{}__\n".format(game, freq_list[game])
+                msg += "▸ {}: __{}__\n".format(game, freq_list[game])
 
             em = discord.Embed(description=msg, colour=user.colour)
             em.set_author(name="These are the server's most played games at the moment:")
+            await self.bot.say(embed=em)
 
-            await self.bot.say(embed = em)         
 
 def setup(bot):
     n = WhoPlays(bot)
