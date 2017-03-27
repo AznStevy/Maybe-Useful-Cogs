@@ -3,10 +3,11 @@ import discord
 from discord.ext import commands
 from discord.utils import find
 from __main__ import send_cmd_help
-import random, time, datetime
+import datetime
 import aiohttp
 import asyncio
-import re, operator
+import re
+import operator
 import urllib.request
 try:
     from bs4 import BeautifulSoup
@@ -18,13 +19,15 @@ import logging
 
 prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
 help_msg = [
-            "**No linked account (`{}osuset user [username]`) or not using **`{}command [username] [gamemode]`".format(prefix, prefix),
-            "**No linked account (`{}osuset user [username]`)**".format(prefix)
-            ]
+    ("**No linked account (`{}osuset user [username]`) or no"
+     "t using **`{}command [username] [gamemode]`").format(prefix, prefix),
+    "**No linked account (`{}osuset user [username]`)**".format(prefix)
+]
 modes = ["osu", "taiko", "ctb", "mania"]
 
 log = logging.getLogger("red.osu")
 log.setLevel(logging.INFO)
+
 
 class Osu:
     """Cog to give osu! stats for all gamemodes."""
@@ -38,7 +41,7 @@ class Osu:
         self.num_max_prof = 8
         self.max_map_disp = 3
 
-    # ---------------------------- Settings ------------------------------------
+    # ---------------------------- Settings -----------------------------------
     @commands.group(pass_context=True)
     async def osuset(self, ctx):
         """Where you can define some settings"""
@@ -48,7 +51,7 @@ class Osu:
 
     @osuset.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def tracktop(self, ctx, top_num:int):
+    async def tracktop(self, ctx, top_num: int):
         """ Set # of top plays being tracked """
         msg = ""
         if top_num < 1 or top_num > 100:
@@ -61,7 +64,7 @@ class Osu:
 
     @osuset.command(pass_context=True, no_pm=True)
     @checks.is_owner()
-    async def displaytop(self, ctx, top_num:int):
+    async def displaytop(self, ctx, top_num: int):
         """ Set # of best plays being displayed in top command """
         msg = ""
         if top_num < 1 or top_num > 10:
@@ -84,7 +87,8 @@ class Osu:
 
         status = ""
         if not toggle:
-            self.osu_settings[server.id]["tracking"] = not self.osu_settings[server.id]["tracking"]
+            _state = self.osu_settings[server.id]["tracking"]
+            self.osu_settings[server.id]["tracking"] = not _state
             if self.osu_settings[server.id]["tracking"]:
                 status = "Enabled"
             else:
@@ -96,7 +100,8 @@ class Osu:
             self.osu_settings[server.id]["tracking"] = False
             status = "Disabled"
         fileIO("data/osu/osu_settings.json", "save", self.osu_settings)
-        await self.bot.say("**Player Tracking {} on {}.**".format(server.name, status))
+        await self.bot.say("**Player Tracking {} on {}.**".format(server.name,
+                                                                  status))
 
     @osuset.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_messages=True)
@@ -106,19 +111,27 @@ class Osu:
         user = ctx.message.author
 
         em = discord.Embed(description='', colour=user.colour)
-        em.set_author(name="Current Settings for {}".format(server.name), icon_url = server.icon_url)
+        em.set_author(name="Current Settings for {}".format(server.name),
+                      icon_url=server.icon_url)
 
         # determine api to use
-        if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
-            if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
+        _server_sets = self.osu_settings[server.id]
+        _types = self.osu_settings["type"]
+
+        if server.id in self.osu_settings and "api" in _server_sets:
+            if _server_sets["api"] == _types["default"]:
                 api = "Official Osu! API"
-            elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
+            elif _server_sets["api"] == _types["ripple"]:
                 api = "Ripple API"
         else:
             api = "Official Osu! API"
 
         # determine
-        if server.id not in self.osu_settings or "tracking" not in self.osu_settings[server.id] or self.osu_settings[server.id]["tracking"] == True:
+        if server.id not in self.osu_settings:
+            tracking = "Enabled"
+        elif "tracking" not in _server_sets:
+            tracking = "Enabled"
+        elif _server_sets["tracking"] is True:
             tracking = "Enabled"
         else:
             tracking = "Disabled"
@@ -128,11 +141,13 @@ class Osu:
         info += "**▸ Tracking:** {}\n".format(tracking)
 
         if tracking == "Enabled":
-            info += "**▸ Tracking Number:** {}\n".format(self.osu_settings['num_track'])
-        info += "**▸ Top Plays:** {}".format(self.osu_settings['num_best_plays'])
+            _num_track = self.osu_settings['num_track']
+            info += "**▸ Tracking Number:** {}\n".format(_num_track)
+        _num_best = self.osu_settings['num_best_plays']
+        info += "**▸ Top Plays:** {}".format(_num_best)
 
         em.description = info
-        await self.bot.say(embed = em)
+        await self.bot.say(embed=em)
 
     @osuset.command(pass_context=True, no_pm=True)
     @checks.is_owner()
@@ -142,21 +157,25 @@ class Osu:
         if server.id not in self.osu_settings:
             self.osu_settings[server.id] = {}
 
+        _types = self.osu_settings["type"]
         if not choice.lower() == "official" and not choice.lower() == "ripple":
             await self.bot.say("The two choices are `official` and `ripple`")
             return
         elif choice.lower() == "official":
-            self.osu_settings[server.id]["api"] = self.osu_settings["type"]["default"]
+            self.osu_settings[server.id]["api"] = _types["default"]
         elif choice.lower() == "ripple":
-            self.osu_settings[server.id]["api"] = self.osu_settings["type"]["ripple"]
+            self.osu_settings[server.id]["api"] = _types["ripple"]
         fileIO("data/osu/osu_settings.json", "save", self.osu_settings)
-        await self.bot.say("**Switched to `{}` server as default on `{}`.** :arrows_counterclockwise:".format(choice, server.name))
+
+        msg = ("**Switched to `{}` server as defa"
+               "ult on `{}`.** :arrows_counterclockwise:").format(choice,
+                                                                  server.name)
+        await self.bot.say(msg)
 
     @osuset.command(pass_context=True, no_pm=True)
-    async def default(self, ctx, mode:str):
+    async def default(self, ctx, mode: str):
         """ Set your default gamemode """
         user = ctx.message.author
-        server = ctx.message.server
 
         if mode.lower() in modes:
             gamemode = modes.index(mode.lower())
@@ -168,7 +187,11 @@ class Osu:
 
         if user.id in self.user_settings:
             self.user_settings[user.id]['default_gamemode'] = int(gamemode)
-            await self.bot.say("**`{}`'s default gamemode has been set to `{}`.** :white_check_mark:".format(user.name, modes[gamemode]))
+
+            msg = ("**`{}`'s default gamemode has been"
+                   "set to `{}`.** :white_check_mark:").format(user.name,
+                                                               modes[gamemode])
+            await self.bot.say(msg)
             fileIO('data/osu/user_settings.json', "save", self.user_settings)
         else:
             await self.bot.say(help_msg[1])
@@ -185,7 +208,8 @@ class Osu:
     async def key(self, ctx):
         """Sets your osu api key"""
         await self.bot.whisper("Type your osu! api key. You can reply here.")
-        key = await self.bot.wait_for_message(timeout=30, author=ctx.message.author)
+        key = await self.bot.wait_for_message(timeout=30,
+                                              author=ctx.message.author)
         if key is None:
             return
         else:
@@ -246,12 +270,22 @@ class Osu:
         server = user.server
         key = self.osu_api_key["osu_api_key"]
 
+        msgs = {
+            "no_user": "{} doesn't exist in the osu! database.",
+            "linked": "{}, your account has been linked to osu! username `{}`",
+            "edited": "{}, your osu! username has been edited to `{}`"
+        }
+
         if user.server.id not in self.user_settings:
             self.user_settings[user.server.id] = {}
 
+        _default = self.osu_settings["type"]["default"]
         if not self._check_user_exists(user):
             try:
-                osu_user = list(await get_user(key, self.osu_settings["type"]["default"], username, 1))
+                osu_user = list(await get_user(key,
+                                               _default,
+                                               username,
+                                               1))
                 newuser = {
                     "discord_username": user.name,
                     "osu_username": username,
@@ -261,22 +295,32 @@ class Osu:
                 }
 
                 self.user_settings[user.id] = newuser
-                fileIO('data/osu/user_settings.json', "save", self.user_settings)
-                await self.bot.say("{}, your account has been linked to osu! username `{}`".format(user.mention, osu_user[0]["username"]))
+                fileIO('data/osu/user_settings.json',
+                       "save", self.user_settings)
+                msg = msgs["linked"].format(user.mention,
+                                            osu_user[0]["username"])
+                await self.bot.say(msg)
             except:
-                await self.bot.say("{} doesn't exist in the osu! database.".format(username))
+                await self.bot.say(msgs["no_user"].format(username))
         else:
             try:
-                osu_user = list(await get_user(key, self.osu_settings["type"]["default"], username, 1))
+                osu_user = list(await get_user(key,
+                                               _default,
+                                               username,
+                                               1))
                 self.user_settings[user.id]["osu_username"] = username
                 self.user_settings[user.id]["osu_user_id"] = osu_user[0]["user_id"]
-                fileIO('data/osu/user_settings.json', "save", self.user_settings)
-                await self.bot.say("{}, your osu! username has been edited to `{}`".format(user.mention, osu_user[0]["username"]))
+                fileIO('data/osu/user_settings.json',
+                       "save",
+                       self.user_settings)
+                msg = msgs["edited"].format(user.mention,
+                                            osu_user[0]["username"])
+                await self.bot.say(msg)
             except:
-                await self.bot.say("{} doesn't exist in the osu! database.".format(username))
+                await self.bot.say(msgs["no_user"].format(username))
 
     # Gets json information to proccess the small version of the image
-    async def _process_user_info(self, ctx, usernames, gamemode:int):
+    async def _process_user_info(self, ctx, usernames, gamemode: int):
         key = self.osu_api_key["osu_api_key"]
         channel = ctx.message.channel
         user = ctx.message.author
@@ -294,7 +338,7 @@ class Osu:
         final_usernames = []
         for username in usernames:
             test_username = await self._process_username(ctx, username)
-            if test_username != None:
+            if test_username is not None:
                 final_usernames.append(test_username)
 
         # testing if username is osu username
@@ -303,34 +347,49 @@ class Osu:
 
         count_valid = 0
         for i in range(len(final_usernames)):
-            userinfo = list(await get_user(key, api, final_usernames[i], gamemode)) # get user info from osu api
-            if userinfo != None and len(userinfo) > 0 and userinfo[0]['pp_raw'] != None:
+            # get user info from osu api
+            userinfo = list(await get_user(key,
+                                           api,
+                                           final_usernames[i],
+                                           gamemode))
+            if userinfo and len(userinfo) > 0 and userinfo[0]['pp_raw']:
                 all_user_info.append(userinfo[0])
                 sequence.append((count_valid, int(userinfo[0]["pp_rank"])))
                 count_valid = count_valid + 1
             else:
-                await self.bot.say("**`{}` has not played enough.**".format(final_usernames[i]))
+                await self.bot.say(("**`{}` has not played"
+                                    " enough.**").format(final_usernames[i]))
 
         sequence = sorted(sequence, key=operator.itemgetter(1))
 
         all_players = []
         for i, pp in sequence:
-            all_players.append(await self._get_user_info(api, server, user, all_user_info[i], gamemode))
+            all_players.append(await self._get_user_info(api,
+                                                         server,
+                                                         user,
+                                                         all_user_info[i],
+                                                         gamemode))
 
         disp_num = min(self.num_max_prof, len(all_players))
         if disp_num < len(all_players):
-            await self.bot.say("Found {} users, but displaying top {}.".format(len(all_players), disp_num))
+            await self.bot.say(("Found {} users, but"
+                                "displaying top {}.").format(len(all_players),
+                                                             disp_num))
 
         for player in all_players[0:disp_num]:
             await self.bot.say(embed=player)
 
     # takes iterable of inputs and determines api, also based on defaults
     def _determine_api(self, server, inputs):
-        if not inputs or ('-ripple' not in inputs and '-official' not in inputs): # in case not specified
-            if server.id in self.osu_settings and "api" in self.osu_settings[server.id]:
-                if self.osu_settings[server.id]["api"] == self.osu_settings["type"]["default"]:
+        _server_sets = self.osu_settings[server.id]
+        _types = self.osu_settings["type"]
+
+        # in case not specified
+        if not inputs or ('-ripple' not in inputs and '-official' not in inputs):
+            if server.id in self.osu_settings and "api" in _server_sets:
+                if _server_sets["api"] == _types["default"]:
                     api = self.osu_settings["type"]["default"]
-                elif self.osu_settings[server.id]["api"] == self.osu_settings["type"]["ripple"]:
+                elif _server_sets["api"] == _types["ripple"]:
                     api = self.osu_settings["type"]["ripple"]
             else:
                 api = self.osu_settings["type"]["default"]
@@ -392,24 +451,31 @@ class Osu:
         userinfo = list(await get_user(key, api, username, gamemode))
         userrecent = list(await get_user_recent(key, api, username, gamemode))
         if not userinfo or not userrecent:
-            await self.bot.say("**`{}` was not found or no recent plays in `{}`.**".format(username, self._get_gamemode(gamemode)))
+            await self.bot.say(("**`{}` was not found or no recent plays in `"
+                                "{}`.**").format(username,
+                                                 self._get_gamemode(gamemode)))
             return
         else:
             userinfo = userinfo[0]
             userrecent = userrecent[0]
-            msg, recent_play = await self._get_recent(ctx, api, userinfo, userrecent, gamemode)
+            msg, recent_play = await self._get_recent(ctx,
+                                                      api,
+                                                      userinfo,
+                                                      userrecent,
+                                                      gamemode)
             await self.bot.say(msg, embed=recent_play)
 
-    def _get_discord_id(self, username:str, api:str):
-        #if api == self.osu_settings["type"]["ripple"]:
-            #name_type = "ripple_username"
-        #else:
-            #name_type = "osu_username"
+    def _get_discord_id(self, username: str, api: str):
+        # if api == self.osu_settings["type"]["ripple"]:
+            # name_type = "ripple_username"
+        # else:
+            # name_type = "osu_username"
         # currently assumes same name
         name_type = "osu_username"
 
         for user_id in self.user_settings.keys():
-            if self.user_settings[user_id] and username in self.user_settings[user_id][name_type]:
+            _user_sets = self.user_settings[user_id]
+            if _user_sets and username in _user_sets[name_type]:
                 return user_id
         return -1
 
@@ -433,14 +499,23 @@ class Osu:
 
         # get userinfo
         userinfo = list(await get_user(key, api, username, gamemode))
-        userbest = list(await get_user_best(key, api, username, gamemode, self.osu_settings['num_best_plays']))
+        userbest = list(await get_user_best(key,
+                                            api,
+                                            username,
+                                            gamemode,
+                                            self.osu_settings['num_best_plays']))
         if userinfo and userbest:
-            msg, top_plays = await self._get_user_top(ctx, api, userinfo[0], userbest, gamemode)
+            msg, top_plays = await self._get_user_top(ctx,
+                                                      api,
+                                                      userinfo[0],
+                                                      userbest,
+                                                      gamemode)
             await self.bot.say(msg, embed=top_plays)
         else:
-            await self.bot.say("**`{}` was not found or not enough plays.**".format(username))
+            await self.bot.say(("**`{}` was not found or not"
+                                " enough plays.**").format(username))
 
-    ## processes username. probably the worst chunck of code in this project so far. will fix/clean later
+    # processes username. probably the worst chunck of code in this project so far. will fix/clean later
     async def _process_username(self, ctx, username):
         channel = ctx.message.channel
         user = ctx.message.author
@@ -452,17 +527,23 @@ class Osu:
             if self._check_user_exists(user):
                 username = self.user_settings[user.id]["osu_username"]
             else:
-                await self.bot.say("It doesn't seem that you have an account linked. Do **{}osuset user [username]**.".format(prefix))
+                await self.bot.say(("It doesn't seem that you have an account"
+                                    "linked. Do **{}osuset user"
+                                    "[username]**.").format(prefix))
                 return None # bad practice, but too lazy to make it nice
         # if it's a discord user, first check to see if they are in database and choose that username
         # then see if the discord username is a osu username, then try the string itself
-        elif find(lambda m: m.name == username, channel.server.members) is not None:
+        elif find(lambda m: m.name == username,
+                  channel.server.members):
             target = find(lambda m: m.name == username, channel.server.members)
             try:
                 self._check_user_exists(target)
                 username = self.user_settings[target.id]["osu_username"]
             except:
-                if await get_user(key, self.osu_settings["type"]["default"], username, 0):
+                if await get_user(key,
+                                  self.osu_settings["type"]["default"],
+                                  username,
+                                  0):
                     username = str(target)
                 else:
                     await self.bot.say(help_msg[1])
@@ -488,14 +569,19 @@ class Osu:
             return False
         return True
 
-    def _get_api_name(self, url:str):
+    def _get_api_name(self, url: str):
         if url == self.osu_settings["type"]["ripple"]:
             return "Ripple"
         else:
             return "Official"
 
     # Gives a small user profile
-    async def _get_user_info(self, api:str, server, server_user, user, gamemode: int):
+    async def _get_user_info(self,
+                             api: str,
+                             server,
+                             server_user,
+                             user,
+                             gamemode: int):
         if api == self.osu_settings["type"]["default"]:
             profile_url ='http://s.ppy.sh/a/{}.png'.format(user['user_id'])
             pp_country_rank = " ({}#{})".format(user['country'], user['pp_country_rank'])
@@ -510,14 +596,19 @@ class Osu:
         try:
             user_url = 'https://{}/u/{}'.format(api, user['user_id'])
             em = discord.Embed(description='', colour=server_user.colour)
-            em.set_author(name="{} Profile for {}".format(gamemode_text, user['username']), icon_url = flag_url, url = user_url)
+            em.set_author(name="{} Profile for {}".format(gamemode_text,
+                                                          user['username']),
+                          icon_url=flag_url,
+                          url=user_url)
             em.set_thumbnail(url=profile_url)
             level_int = int(float(user['level']))
             level_percent = float(user['level']) - level_int
 
             info = ""
-            info += "**▸ Global Rank:** #{} {}\n".format(user['pp_rank'], pp_country_rank)
-            info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent*100)
+            info += "**▸ Global Rank:** #{} {}\n".format(user['pp_rank'],
+                                                         pp_country_rank)
+            info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int,
+                                                         level_percent * 100)
             info += "**▸ Total PP:** {}\n".format(user['pp_raw'])
             info += "**▸ Playcount:** {}\n".format(user['playcount'])
             info += "**▸ Hit Accuracy:** {}%".format(user['accuracy'][0:5])
@@ -527,7 +618,7 @@ class Osu:
         except:
             return None
 
-    async def _get_recent(self, ctx, api, user, userrecent, gamemode:int):
+    async def _get_recent(self, ctx, api, user, userrecent, gamemode: int):
         server_user = ctx.message.author
         server = ctx.message.server
         key = self.osu_api_key["osu_api_key"]
@@ -550,27 +641,40 @@ class Osu:
             mods.append('No Mod')
         beatmap_url = 'https://osu.ppy.sh/b/{}'.format(beatmap['beatmap_id'])
 
-        msg = "**Most Recent {} Play for {}:**".format(self._get_gamemode(gamemode), user['username'])
+        msg = ("**Most Recent {} Play for"
+               "{}:**").format(self._get_gamemode(gamemode),
+                               user['username'])
 
         info = ""
-        info += "▸ **Rank:** {} ▸ **Combo:** x{}\n".format(userrecent['rank'], userrecent['maxcombo'])
-        info += "▸ **Score:** {} ▸ **Misses:** {}\n".format(userrecent['score'], userrecent['countmiss'])
-        info += "▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n".format(float(acc), float(beatmap['difficultyrating']))
+        info += ("▸ **Rank:** {} ▸ **Combo:"
+                 "** x{}\n").format(userrecent['rank'],
+                                    userrecent['maxcombo'])
+        info += ("▸ **Score:** {} ▸ **Misses:"
+                 "** {}\n").format(userrecent['score'],
+                                   userrecent['countmiss'])
+        info += ("▸ **Acc:** {:.2f}% ▸ **Stars:"
+                 "** {:.2f}★\n").format(float(acc),
+                                        float(beatmap['difficultyrating']))
 
         # grab beatmap image
         page = urllib.request.urlopen(beatmap_url)
         soup = BeautifulSoup(page.read(), "html.parser")
         map_image = [x['src'] for x in soup.findAll('img', {'class': 'bmt'})]
-        map_image_url = 'http:{}'.format(map_image[0]).replace(" ","%")
+        map_image_url = 'http:{}'.format(map_image[0]).replace(" ", "%")
 
         em = discord.Embed(description=info, colour=server_user.colour)
-        em.set_author(name="{} [{}] +{}".format(beatmap['title'], beatmap['version'], ",".join(mods)), url = beatmap_url, icon_url = profile_url)
+        em.set_author(name="{} [{}] +{}".format(beatmap['title'],
+                                                beatmap['version'],
+                                                ",".join(mods)),
+                      url=beatmap_url,
+                      icon_url=profile_url)
         em.set_thumbnail(url=map_image_url)
-        em.set_footer(text = "{} On Osu! {} Server".format(userrecent['date'], self._get_api_name(api)))
+        em.set_footer(text="{} On Osu! {} Server".format(userrecent['date'],
+                                                         self._get_api_name(api)))
         return (msg, em)
 
     # Gives a user profile image with some information
-    async def _get_user_top(self, ctx, api, user, userbest, gamemode:int):
+    async def _get_user_top(self, ctx, api, user, userbest, gamemode: int):
         server_user = ctx.message.author
         server = ctx.message.server
         key = self.osu_api_key["osu_api_key"]
@@ -586,34 +690,56 @@ class Osu:
         best_beatmaps = []
         best_acc = []
         for i in range(self.osu_settings['num_best_plays']):
-            beatmap = list(await get_beatmap(key, api, beatmap_id=userbest[i]['beatmap_id']))[0]
-            score = list(await get_scores(key, api, userbest[i]['beatmap_id'], user['user_id'], gamemode))[0]
+            id = userbest[i]['beatmap_id']
+            beatmap = list(await get_beatmap(key,
+                                             api,
+                                             beatmap_id=id))[0]
+            score = list(await get_scores(key,
+                                          api,
+                                          id,
+                                          user['user_id'],
+                                          gamemode))[0]
             best_beatmaps.append(beatmap)
-            best_acc.append(self.calculate_acc(score,gamemode))
+            best_acc.append(self.calculate_acc(score, gamemode))
 
         all_plays = []
-        msg = "**Top {} {} Plays for {}:**".format(self.osu_settings['num_best_plays'], gamemode_text, user['username'])
+        msg = ("**Top {} {} Plays for"
+               " {}:**").format(self.osu_settings['num_best_plays'],
+                                gamemode_text,
+                                user['username'])
         desc = ''
         for i in range(self.osu_settings['num_best_plays']):
             mods = self.mod_calculation(userbest[i]['enabled_mods'])
             if not mods:
                 mods = []
                 mods.append('No Mod')
-            beatmap_url = 'https://osu.ppy.sh/b/{}'.format(best_beatmaps[i]['beatmap_id'])
+            beatmap_url = ('https://osu.ppy.sh/b/'
+                           '{}').format(best_beatmaps[i]['beatmap_id'])
 
             info = ''
-            info += '***{}. [__{} [{}]__]({}) +{}\n***'.format(i+1, best_beatmaps[i]['title'], best_beatmaps[i]['version'], beatmap_url, ','.join(mods))
-            info += '▸ **Rank:** {} ▸ **PP:** {:.2f}\n'.format(userbest[i]['rank'], float(userbest[i]['pp']))
-            info += '▸ **Score:** {} ▸ **Combo:** x{}\n'.format(userbest[i]['score'], userbest[i]['maxcombo'])
-            info += '▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n\n'.format(float(best_acc[i]), float(best_beatmaps[i]['difficultyrating']))
+            info += ('***{}. [__{} [{}]'
+                     '__]({}) +{}\n***').format(i + 1,
+                                                best_beatmaps[i]['title'],
+                                                best_beatmaps[i]['version'],
+                                                beatmap_url,
+                                                ','.join(mods))
+            info += ('▸ **Rank:** {} ▸ '
+                     '**PP:** {:.2f}\n').format(userbest[i]['rank'],
+                                                float(userbest[i]['pp']))
+            info += ('▸ **Score:** {} ▸ '
+                     '**Combo:** x{}\n').format(userbest[i]['score'],
+                                                userbest[i]['maxcombo'])
+            info += ('▸ **Acc:** {:.2f}% ▸**Stars:** {:.2f}★\n'
+                     '\n').format(float(best_acc[i]),
+                                  float(best_beatmaps[i]['difficultyrating']))
             desc += info
         em = discord.Embed(description=desc, colour=server_user.colour)
-        em.set_footer(text = "On Osu! {} Server".format(self._get_api_name(api)))
+        em.set_footer(text="On Osu! {} Server".format(self._get_api_name(api)))
         em.set_thumbnail(url=profile_url)
 
         return (msg, em)
 
-    def _get_gamemode(self, gamemode:int):
+    def _get_gamemode(self, gamemode: int):
         if gamemode == 1:
             gamemode_text = "Taiko"
         elif gamemode == 2:
@@ -635,7 +761,7 @@ class Osu:
             gamemode_text = "Taiko"
         return gamemode_text
 
-    def _get_gamemode_number(self, gamemode:str):
+    def _get_gamemode_number(self, gamemode: str):
         if gamemode == "taiko":
             gamemode_text = 1
         elif gamemode == "ctb":
@@ -646,13 +772,13 @@ class Osu:
             gamemode_text = 0
         return int(gamemode_text)
 
-    def calculate_acc(self, beatmap, gamemode:int):
+    def calculate_acc(self, beatmap, gamemode: int):
         if gamemode == 0:
             total_unscale_score = float(beatmap['count300'])
             total_unscale_score += float(beatmap['count100'])
             total_unscale_score += float(beatmap['count50'])
             total_unscale_score += float(beatmap['countmiss'])
-            total_unscale_score *=300
+            total_unscale_score *= 300
             user_score = float(beatmap['count300']) * 300.0
             user_score += float(beatmap['count100']) * 100.0
             user_score += float(beatmap['count50']) * 50.0
@@ -672,7 +798,7 @@ class Osu:
             total_unscale_score += float(beatmap['countkatu'])
             user_score = float(beatmap['count300'])
             user_score += float(beatmap['count100'])
-            user_score  += float(beatmap['count50'])
+            user_score += float(beatmap['count50'])
         elif gamemode == 3:
             total_unscale_score = float(beatmap['count300'])
             total_unscale_score += float(beatmap['countgeki'])
@@ -680,14 +806,14 @@ class Osu:
             total_unscale_score += float(beatmap['count100'])
             total_unscale_score += float(beatmap['count50'])
             total_unscale_score += float(beatmap['countmiss'])
-            total_unscale_score *=300
+            total_unscale_score *= 300
             user_score = float(beatmap['count300']) * 300.0
             user_score += float(beatmap['countgeki']) * 300.0
             user_score += float(beatmap['countkatu']) * 200.0
             user_score += float(beatmap['count100']) * 100.0
             user_score += float(beatmap['count50']) * 50.0
 
-        return (float(user_score)/float(total_unscale_score)) * 100.0
+        return (float(user_score) / float(total_unscale_score)) * 100.0
 
     # Truncates the text because some titles/versions are too long
     def truncate_text(self, text):
@@ -699,12 +825,14 @@ class Osu:
     def mod_calculation(self, number):
         number = int(number)
         mod_list = []
-        mods = ['PF', 'SO', 'FL', 'NC', 'HT', 'RX', 'DT', 'SD', 'HR', 'HD', 'EZ', 'NF']
-        peppyNumbers = [16384, 4096, 1024, 576, 256, 128, 64, 32, 16, 8, 2, 1]
+        mods = ['PF', 'SO', 'FL', 'NC', 'HT', 'RX',
+                'DT', 'SD', 'HR', 'HD', 'EZ', 'NF']
+        peppyNumbers = [16384, 4096, 1024, 576, 256,
+                        128, 64, 32, 16, 8, 2, 1]
 
         for i in range(len(mods)):
             if number >= peppyNumbers[i]:
-                number-= peppyNumbers[i]
+                number -= peppyNumbers[i]
                 mod_list.append(mods[i])
         return mod_list
 
@@ -718,7 +846,8 @@ class Osu:
             # process the the idea from a url in msg
             all_urls = []
             original_message = message.content
-            get_urls = re.findall("(https:\/\/[^\s]+)([ ]\+[A-Za-z][^\s]+)?", original_message)
+            get_urls = re.findall(r"(https:\/\/[^\s]+)([ ]\+[A-Za-z][^\s]+)?",
+                                  original_message)
 
             for url in get_urls:
                 all_urls.append(url[0])
@@ -737,44 +866,65 @@ class Osu:
         key = self.osu_api_key["osu_api_key"]
         server_user = message.author
         server = message.author.server
+        _types = self.osu_settings["type"]
 
         for url in all_urls:
             try:
                 if url.find('https://osu.ppy.sh/u/') != -1:
-                    user_id = url.replace('https://osu.ppy.sh/u/','')
-                    user_info = await get_user(key, self.osu_settings["type"]["default"], user_id, 0)
+                    user_id = url.replace('https://osu.ppy.sh/u/', '')
+                    user_info = await get_user(key,
+                                               _types["default"],
+                                               user_id, 0)
                     if user_id in self.user_settings:
                         gamemode = self.user_settings[user_id]["default_gamemode"]
                     else:
                         gamemode = 0
-                    em = await self._get_user_info(self.osu_settings["type"]["default"], server, server_user, user_info[0], gamemode)
-                    await self.bot.send_message(message.channel, embed = em)
+                    em = await self._get_user_info(_types["default"],
+                                                   server,
+                                                   server_user,
+                                                   user_info[0],
+                                                   gamemode)
+                    await self.bot.send_message(message.channel,
+                                                embed=em)
             except:
-                await self.bot.send_message(message.channel, "That user doesn't exist.")
+                await self.bot.send_message(message.channel,
+                                            "That user doesn't exist.")
 
     # processes user input for the beatmap
     async def process_beatmap(self, all_urls, message):
         key = self.osu_api_key["osu_api_key"]
+        _types = self.osu_settings["type"]
 
         for url in all_urls:
             try:
                 if url.find('https://osu.ppy.sh/s/') != -1:
-                    beatmap_id = url.replace('https://osu.ppy.sh/s/','')
-                    beatmap_info = await get_beatmapset(key, self.osu_settings["type"]["default"], beatmap_id)
-                    await self.disp_beatmap(message, beatmap_info, url)
+                    beatmap_id = url.replace('https://osu.ppy.sh/s/', '')
+                    beatmap_info = await get_beatmapset(key,
+                                                        _types["default"],
+                                                        beatmap_id)
+                    await self.disp_beatmap(message,
+                                            beatmap_info,
+                                            url)
                 elif url.find('https://osu.ppy.sh/b/') != -1:
-                    beatmap_id = url.replace('https://osu.ppy.sh/b/','')
-                    beatmap_info = await get_beatmap(key, self.osu_settings["type"]["default"], beatmap_id)
-                    await self.disp_beatmap(message, beatmap_info, url)
+                    beatmap_id = url.replace('https://osu.ppy.sh/b/', '')
+                    beatmap_info = await get_beatmap(key,
+                                                     _types["default"],
+                                                     beatmap_id)
+                    await self.disp_beatmap(message,
+                                            beatmap_info,
+                                            url)
             except:
-                await self.bot.send_message(message.channel, "That beatmap doesn't exist.")
+                await self.bot.send_message(message.channel,
+                                            "That beatmap doesn't exist.")
 
     # displays the beatmap properly
-    async def disp_beatmap(self, message, beatmap, beatmap_url:str):
+    async def disp_beatmap(self, message, beatmap, beatmap_url: str):
         # process time
         num_disp = min(len(beatmap), self.max_map_disp)
-        if (len(beatmap)>self.max_map_disp):
-            msg = "Found {} maps, but only displaying {}.\n".format(len(beatmap), self.max_map_disp)
+        if (len(beatmap) > self.max_map_disp):
+            msg = ("Found {} maps, but only"
+                   "displaying {}.\n").format(len(beatmap),
+                                              self.max_map_disp)
         else:
             msg = "Found {} map(s).\n".format(len(beatmap))
 
@@ -783,22 +933,37 @@ class Osu:
         tags = beatmap[0]['tags']
         if tags == "":
             tags = "-"
-        desc = ' **Length:** {}:{}  **BPM:** {}\n**Tags:** {}\n------------------'.format(m, str(s).zfill(2), beatmap[0]['bpm'], tags)
-        em = discord.Embed(description = desc, colour=0xeeeeee)
-        em.set_author(name="{} - {} by {}".format(beatmap[0]['artist'], beatmap[0]['title'], beatmap[0]['creator']), url=beatmap_url)
+        desc = (' **Length:** {}:{}  **BPM:** {}\n**Tags:'
+                '** {}\n------------------').format(m,
+                                                    str(s).zfill(2),
+                                                    beatmap[0]['bpm'],
+                                                    tags)
+        em = discord.Embed(description=desc, colour=0xeeeeee)
+        em.set_author(name="{} - {} by {}".format(beatmap[0]['artist'],
+                                                  beatmap[0]['title'],
+                                                  beatmap[0]['creator']),
+                      url=beatmap_url)
 
         # sort maps
         map_order = []
         for i in range(num_disp):
-            map_order.append((i,float(beatmap[i]['difficultyrating'])))
+            map_order.append((i, float(beatmap[i]['difficultyrating'])))
 
         map_order = sorted(map_order, key=operator.itemgetter(1), reverse=True)
 
         for i, diff in map_order:
+            _map = beatmap[i]
             beatmap_info = ""
-            beatmap_info += "**▸Difficulty:** {:.2f}★  **Max Combo:** {}\n".format(float(beatmap[i]['difficultyrating']), beatmap[i]['max_combo'])
-            beatmap_info += "**▸AR:** {}  **▸OD:** {}  **▸HP:** {}  **▸CS:** {}\n".format(beatmap[i]['diff_approach'], beatmap[i]['diff_overall'], beatmap[i]['diff_drain'], beatmap[i]['diff_size'])
-            em.add_field(name = "__{}__\n".format(beatmap[i]['version']), value = beatmap_info, inline = False)
+            beatmap_info += ("**▸Difficulty:** {:.2f}★  **Max Combo:** "
+                             "{}\n").format(float(_map['difficultyrating']),
+                                            _map['max_combo'])
+            beatmap_info += ("**▸AR:** {}  **▸OD:** {}  **▸HP:** {} "
+                             " **▸CS:** {}\n").format(_map['diff_approach'],
+                                                      _map['diff_overall'],
+                                                      _map['diff_drain'],
+                                                      _map['diff_size'])
+            em.add_field(name="__{}__\n".format(_map['version']),
+                         value=beatmap_info, inline=False)
 
         page = urllib.request.urlopen(beatmap_url)
         soup = BeautifulSoup(page.read(), "html.parser")
@@ -806,7 +971,8 @@ class Osu:
         map_image_url = 'http:{}'.format(map_image[0]).replace(" ", "%")
         # await self.bot.send_message(message.channel, map_image_url)
         em.set_thumbnail(url=map_image_url)
-        await self.bot.send_message(message.channel, msg, embed = em)
+        await self.bot.send_message(message.channel,
+                                    msg, embed=em)
 
     # --------------------- Tracking Section -------------------------------
     @osutrack.command(pass_context=True, no_pm=True)
@@ -817,13 +983,16 @@ class Osu:
         user = ctx.message.author
 
         em = discord.Embed(colour=user.colour)
-        em.set_author(name="Osu! Players Currently Tracked in {}".format(server.name), icon_url = server.icon_url)
+        em.set_author(name=("Osu! Players Currently "
+                            "Tracked in {}").format(server.name),
+                      icon_url=server.icon_url)
         channel_users = {}
 
         target_channel = None
         for username in self.track.keys():
             if server.id in self.track[username]["servers"]:
-                target_channel = find(lambda m: m.id == self.track[username]['servers'][server.id]["channel"], server.channels)
+                _ = self.track[username]['servers'][server.id]["channel"]
+                target_channel = find(lambda m: m.id == _, server.channels)
                 if target_channel.name not in channel_users:
                     channel_users[target_channel.name] = []
                 channel_users[target_channel.name].append(username)
@@ -831,11 +1000,13 @@ class Osu:
         if target_channel and channel_users[target_channel.name]:
             channel_users[target_channel.name] = sorted(channel_users[target_channel.name])
             for channel_name in channel_users.keys():
-                em.add_field(name = "__#{} ({})__".format(channel_name, len(channel_users[channel_name])), value = ", ".join(channel_users[channel_name]))
+                em.add_field(name="__#{} ({})__".format(channel_name,
+                                                        len(channel_users[channel_name])),
+                             value=", ".join(channel_users[channel_name]))
         else:
             em.description = "None."
 
-        await self.bot.say(embed = em)
+        await self.bot.say(embed=em)
 
     @osutrack.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_messages=True)
@@ -847,13 +1018,15 @@ class Osu:
         key = self.osu_api_key["osu_api_key"]
         msg = ""
         count_add = 0
+        _types = self.osu_settings["type"]
 
         if usernames == (None):
             await self.bot.say("Please enter a user")
             return
 
         for username in usernames:
-            userinfo = list(await get_user(key, self.osu_settings["type"]["default"], username, 0))
+            userinfo = list(await get_user(key,
+                                           _types["default"], username, 0))
             if not userinfo or len(userinfo) == 0:
                 msg+="`{}` does not exist in the osu! database.\n".format(username)
             else:
@@ -872,7 +1045,11 @@ class Osu:
                             if "userinfo" not in self.track[username]:
                                 self.track[username]["userinfo"] = {}
                             for mode in modes:
-                                self.track[username]["userinfo"][mode] = list(await get_user(key, self.osu_settings["type"]["default"], username, self._get_gamemode_number(mode)))[0]
+                                _list = list(await get_user(key,
+                                                            _types["default"],
+                                                            username,
+                                                            self._get_gamemode_number(mode)))[0]
+                                self.track[username]["userinfo"][mode] = _list
 
                             # add last tracked time
                             current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -902,7 +1079,7 @@ class Osu:
 
     @osutrack.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_messages=True)
-    async def remove(self, ctx, *usernames:str):
+    async def remove(self, ctx, *usernames: str):
         """Removes a player to track for top scores."""
         server = ctx.message.server
         channel = ctx.message.channel
@@ -914,18 +1091,19 @@ class Osu:
             return
 
         for username in usernames:
-            if username in self.track and "servers" in self.track[username] and server.id in self.track[username]["servers"]:
-                if channel.id == self.track[username]["servers"][server.id]["channel"]:
+            _track = self.track[username]
+            if username in self.track and "servers" in _track and server.id in _track["servers"]:
+                if channel.id == _track["servers"][server.id]["channel"]:
                     del self.track[username]["servers"][server.id]
                     if len(self.track[username]["servers"].keys()) == 0:
                         del self.track[username]
-                    msg+="**No longer tracking `{}` in `#{}`.**\n".format(username, channel.name)
+                    msg += "**No longer tracking `{}` in `#{}`.**\n".format(username, channel.name)
                     count_remove += 1
                     fileIO("data/osu/track.json", "save", self.track)
                 else:
-                    msg+="**`{}` is not currently being tracked in `#{}`.**\n".format(username, channel.name)
+                    msg += "**`{}` is not currently being tracked in `#{}`.**\n".format(username, channel.name)
             else:
-                msg+="**`{}` is not currently being tracked.**\n".format(username)
+                msg += "**`{}` is not currently being tracked.**\n".format(username)
 
         if len(msg) > 500:
             await self.bot.say("**Removed `{}` users from tracking on `#{}`.**".format(count_remove, channel.name))
@@ -1033,20 +1211,23 @@ class Osu:
         em.description = info
         return em
 
-###-------------------------Python wrapper for osu! api-------------------------
+# -----------------------Python wrapper for osu! api-------------------------
+
 
 # Gets the beatmap
-async def get_beatmap(key, api:str, beatmap_id):
+async def get_beatmap(key, api: str, beatmap_id):
     url_params = []
 
     url_params.append(parameterize_key(key))
     url_params.append(parameterize_id("b", beatmap_id))
 
+
     async with aiohttp.get(build_request(url_params, "https://{}/api/get_beatmaps?".format(api))) as resp:
         return await resp.json()
 
+
 # Gets the beatmap set
-async def get_beatmapset(key, api:str, set_id):
+async def get_beatmapset(key, api: str, set_id):
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -1055,8 +1236,9 @@ async def get_beatmapset(key, api:str, set_id):
     async with aiohttp.get(build_request(url_params, "https://{}/api/get_beatmaps?".format(api))) as resp:
         return await resp.json()
 
+
 # Grabs the scores
-async def get_scores(key, api:str, beatmap_id, user_id, mode):
+async def get_scores(key, api: str, beatmap_id, user_id, mode):
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -1067,7 +1249,8 @@ async def get_scores(key, api:str, beatmap_id, user_id, mode):
     async with aiohttp.get(build_request(url_params, "https://{}/api/get_scores?".format(api))) as resp:
         return await resp.json()
 
-async def get_user(key, api:str, user_id, mode):
+
+async def get_user(key, api: str, user_id, mode):
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -1077,7 +1260,8 @@ async def get_user(key, api:str, user_id, mode):
     async with aiohttp.get(build_request(url_params, "https://{}/api/get_user?".format(api))) as resp:
         return await resp.json()
 
-async def get_user_best(key, api:str, user_id, mode, limit):
+
+async def get_user_best(key, api: str, user_id, mode, limit):
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -1088,8 +1272,9 @@ async def get_user_best(key, api:str, user_id, mode, limit):
     async with aiohttp.get(build_request(url_params, "https://{}/api/get_user_best?".format(api))) as resp:
         return await resp.json()
 
+
 # Returns the user's ten most recent plays.
-async def get_user_recent(key, api:str, user_id, mode):
+async def get_user_recent(key, api: str, user_id, mode):
     url_params = []
 
     url_params.append(parameterize_key(key))
@@ -1099,6 +1284,7 @@ async def get_user_recent(key, api:str, user_id, mode):
     async with aiohttp.get(build_request(url_params, "https://{}/api/get_user_recent?".format(api))) as resp:
         return await resp.json()
 
+
 # Returns the full API request URL using the provided base URL and parameters.
 def build_request(url_params, url):
     for param in url_params:
@@ -1106,6 +1292,7 @@ def build_request(url_params, url):
         if (param != ""):
             url += "&"
     return url[:-1]
+
 
 def parameterize_event_days(event_days):
     if (event_days == ""):
@@ -1116,6 +1303,7 @@ def parameterize_event_days(event_days):
         print("Invalid Event Days")
     return event_days
 
+
 def parameterize_id(t, id):
     if (t != "b" and t != "s" and t != "u" and t != "mp"):
         print("Invalid Type")
@@ -1124,14 +1312,16 @@ def parameterize_id(t, id):
     else:
         return ""
 
+
 def parameterize_key(key):
     if (len(key) == 40):
         return "k=" + key
     else:
         print("Invalid Key")
 
+
 def parameterize_limit(limit):
-    ## Default case: 10 scores
+    # Default case: 10 scores
     if (limit == ""):
         limit = "limit=10"
     elif (int(limit) >= 1 and int(limit) <= 100):
@@ -1140,8 +1330,9 @@ def parameterize_limit(limit):
         print("Invalid Limit")
     return limit
 
+
 def parameterize_mode(mode):
-    ## Default case: 0 (osu!)
+    # Default case: 0 (osu!)
     if (mode == ""):
         mode = "m=0"
     elif (int(mode) >= 0 and int(mode) <= 3):
@@ -1150,14 +1341,16 @@ def parameterize_mode(mode):
         print("Invalid Mode")
     return mode
 
-###-------------------------Setup-------------------------
+
+# -------------------------Setup-------------------------
 def check_folders():
     if not os.path.exists("data/osu"):
         print("Creating data/osu folder...")
         os.makedirs("data/osu")
 
+
 def check_files():
-    osu_api_key = {"osu_api_key" : ""}
+    osu_api_key = {"osu_api_key": ""}
     api_file = "data/osu/apikey.json"
 
     if not fileIO(api_file, "check"):
@@ -1192,11 +1385,12 @@ def check_files():
         fileIO(settings_file, "save", {
             "type": {
                 "default": "osu.ppy.sh",
-                "ripple":"ripple.moe"
-                },
-            "num_track" : 50,
+                "ripple": "ripple.moe"
+            },
+            "num_track": 50,
             "num_best_plays": 5,
-            })
+        })
+
 
 def setup(bot):
     check_folders()
