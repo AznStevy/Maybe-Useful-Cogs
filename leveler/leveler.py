@@ -67,7 +67,7 @@ class Leveler:
                 userinfo['user_id'] = userid
                 db.users.insert_one(userinfo)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(name = "profile", pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
         """Displays a user profile."""
         if user == None:
@@ -356,19 +356,50 @@ class Leveler:
         rgb = tuple(rgb[:3])
         return '#%02x%02x%02x' % rgb
 
-    @commands.group(pass_context=True)
+    @commands.group(name = "lvlset", pass_context=True)
     async def lvlset(self, ctx):
         """Profile Configuration Options"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
 
-    @lvlset.command(pass_context=True, no_pm=True)
-    async def infocolor(self, ctx, img_type, info_color:str):
-        """Set info color. e.g [p]lvlset infocolor [profile|rank|levelup] [default|white|hex|auto]"""
+    @lvlset.group(name = "profile", pass_context=True)
+    async def profileset(self, ctx):
+        """Profile options"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+            return
+
+    @lvlset.group(name = "rank", pass_context=True)
+    async def rankset(self, ctx):
+        """Rank options"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+            return
+
+    @lvlset.group(name = "levelup", pass_context=True)
+    async def levelupset(self, ctx):
+        """Level-Up options"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+            return
+
+    @profileset.command(name = "color", pass_context=True, no_pm=True)
+    async def profilecolors(self, ctx, section:str, color:str):
+        """Set info color. e.g [p]lvlset profile color [exp|rep|badge|info|all] [default|white|hex|auto]"""
         user = ctx.message.author
         server = ctx.message.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
+
+        section = section.lower()
+        default_info_color = (30, 30 ,30, 200)
+        white_info_color = (150, 150, 150, 180)
+        default_rep = (92,130,203,230)
+        default_badge = (128,151,165,230)
+        default_exp = (255, 255, 255, 230)
+        default_a = 200
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
@@ -378,54 +409,188 @@ class Leveler:
             await self.bot.say("**Text-only commands allowed.**")
             return
 
-        if img_type.lower() in ["profile", "rank", "levelup"]:
-            img_type = img_type.lower()
+        # get correct section for db query
+        if section == "rep":
+            section_name = "rep_color"
+        elif section == "exp":
+            section_name = "profile_exp_color"
+        elif section == "badge":
+            section_name = "badge_col_color"
+        elif section == "info":
+            section_name = "profile_info_color"
+        elif section == "all":
+            section_name = "all"
         else:
-            await self.bot.say("Invalid type. Use 'profile', 'rank', or 'levelup'")
+            await self.bot.say("**Not a valid section. (rep, exp, badge, info, all)**")
+            return
 
+        # get correct color choice
+        if color == "auto":
+            if section == "exp":
+                color_ranks = [random.randint(2,3)]
+            elif section == "rep":
+                color_ranks = [random.randint(2,3)]
+            elif section == "badge":
+                color_ranks = [0] # most prominent color
+            elif section == "info":
+                color_ranks = [random.randint(0,1)]
+            elif section == "all":
+                color_ranks = [random.randint(2,3), random.randint(2,3), 0, random.randint(0,1)]
+
+            hex_colors = await self._auto_color(userinfo["profile_background"], color_ranks)
+            set_color = []
+            for hex_color in hex_colors:
+                color_temp = self._hex_to_rgb(hex_color, default_a)
+                set_color.append(color_temp)
+
+        elif color == "white":
+            set_color = [white_info_color]
+        elif color == "default":
+            if section == "exp":
+                set_color = [default_exp]
+            elif section == "rep":
+                set_color = [default_rep]
+            elif section == "badge":
+                set_color = [default_badge]
+            elif section == "info":
+                set_color = [default_info_color]
+            elif section == "all":
+                set_color = [default_exp, default_rep, default_badge, default_info_color]
+        elif self._is_hex(color):
+            set_color = [self._hex_to_rgb(color, default_a)]
+        else:
+            await self.bot.say("**Not a valid color. (default, hex, white, auto)**")
+            return
+
+        if section == "all":
+            if len(set_color) == 1:
+                db.users.update_one({'user_id':user.id}, {'$set':{
+                        "profile_exp_color": set_color[0],
+                        "rep_color": set_color[0],
+                        "badge_col_color": set_color[0],
+                        "profile_info_color": set_color[0]
+                    }})
+            elif color == "default":
+                db.users.update_one({'user_id':user.id}, {'$set':{
+                        "profile_exp_color": default_exp,
+                        "rep_color": default_rep,
+                        "badge_col_color": default_badge,
+                        "profile_info_color": default_info_color
+                    }})
+            elif color == "auto":
+                db.users.update_one({'user_id':user.id}, {'$set':{
+                        "profile_exp_color": set_color[0],
+                        "rep_color": set_color[1],
+                        "badge_col_color": set_color[2],
+                        "profile_info_color": set_color[3]
+                    }})
+            await self.bot.say("**Colors for profile set.**")
+        else:
+            print("update one")
+            db.users.update_one({'user_id':user.id}, {'$set':{
+                    section_name: set_color[0]
+                }})
+            await self.bot.say("**Color for profile {} set.**".format(section))
+
+    @rankset.command(name = "color", pass_context=True, no_pm=True)
+    async def rankcolors(self, ctx, section:str, color:str = None):
+        """Set info color. e.g [p]lvlset rank color [exp|info] [default|white|hex|auto]"""
+        user = ctx.message.author
+        server = ctx.message.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+        userinfo = db.users.find_one({'user_id':user.id})
+
+        section = section.lower()
+        default_info_color = (30, 30 ,30, 200)
+        white_info_color = (150, 150, 150, 180)
+        default_exp = (255, 255, 255, 230)
+        default_a = 200
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("**Leveler commands for this server are disabled!**")
+            return
+
+        if "text_only" in self.settings and server.id in self.settings["text_only"]:
+            await self.bot.say("**Text-only commands allowed.**")
+            return
+
+        # get correct section for db query
+        if section == "exp":
+            section_name = "rank_exp_color"
+        elif section == "info":
+            section_name = "rank_info_color"
+        elif section == "all":
+            section_name = "all"
+        else:
+            await self.bot.say("**Not a valid section. (exp, info, all)**")
+            return
+
+        # get correct color choice
+        if color == "auto":
+            if section == "exp":
+                color_ranks = [random.randint(2,3)]
+            elif section == "info":
+                color_ranks = [random.randint(0,1)]
+            elif section == "all":
+                color_ranks = [random.randint(2,3), random.randint(0,1)]
+
+            hex_colors = await self._auto_color(userinfo["rank_background"], color_ranks)
+            set_color = []
+            for hex_color in hex_colors:
+                color_temp = self._hex_to_rgb(hex_color, default_a)
+                set_color.append(color_temp)
+        elif color == "white":
+            set_color = [white_info_color]
+        elif color == "default":
+            if section == "exp":
+                set_color = [default_exp]
+            elif section == "info":
+                set_color = [default_info_color]
+            elif section == "all":
+                set_color = [default_exp, default_rep, default_badge, default_info_color]
+        elif self._is_hex(color):
+            set_color = [self._hex_to_rgb(color, default_a)]
+        else:
+            await self.bot.say("**Not a valid color. (default, hex, white, auto)**")
+            return
+
+        if section == "all":
+            if len(set_color) == 1:
+                db.users.update_one({'user_id':user.id}, {'$set':{
+                        "rank_exp_color": set_color[0],
+                        "rank_info_color": set_color[0]
+                    }})
+            elif color == "default":
+                db.users.update_one({'user_id':user.id}, {'$set':{
+                        "rank_exp_color": default_exp,
+                        "rank_info_color": default_info_color
+                    }})
+            elif color == "auto":
+                db.users.update_one({'user_id':user.id}, {'$set':{
+                        "rank_exp_color": set_color[0],
+                        "rank_info_color": set_color[1]
+                    }})
+            await self.bot.say("**Colors for rank set.**")
+        else:
+            db.users.update_one({'user_id':user.id}, {'$set':{
+                    section_name: set_color[0]
+                }})
+            await self.bot.say("**Color for rank {} set.**".format(section))
+
+    @levelupset.command(name = "color", pass_context=True, no_pm=True)
+    async def levelupcolors(self, ctx, section:str, color:str = None):
+        """Set info color. e.g [p]lvlset color [info] [default|white|hex|auto]"""
+        user = ctx.message.author
+        server = ctx.message.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+        userinfo = db.users.find_one({'user_id':user.id})
+
+        section = section.lower()
         default_info_color = (30, 30 ,30, 200)
         white_info_color = (150, 150, 150, 180)
         default_a = 200
-        valid = True
-        hex_color = None
-        color_ranks = [int(random.randint(0,1))] # adds some randomness to color + most prominent color
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        if info_color == "auto":
-            hex_color = await self._auto_color(userinfo["{}_background".format(img_type)], color_ranks)
-            color = self._hex_to_rgb(hex_color[0], default_a)
-            color = self._moderate_color(color, default_a, 5)
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "{}_info_color".format(img_type): color
-                }})
-        elif info_color == "default":
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "{}_info_color".format(img_type): default_info_color
-                }})
-        elif info_color == "white":
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "{}_info_color".format(img_type): white_info_color
-                }})
-        elif self._is_hex(info_color):
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "{}_info_color".format(img_type): self._hex_to_rgb(info_color, default_a)
-                }})
-        else:
-            await self.bot.say("**That's not a valid info color!**")
-            valid = False
-
-        if valid:
-            await self.bot.say("**{}, your {} info color has been set!**".format(self._is_mention(user), img_type.lower()))
-
-
-    @lvlset.command(pass_context=True, no_pm=True)
-    async def repcolor(self, ctx, rep_color:str):
-        """Set rep section color. [p]lvlset repcolor [default|hex|auto]"""
-        user = ctx.message.author
-        server = ctx.message.server
-        userinfo = db.users.find_one({'user_id':user.id})
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
@@ -435,171 +600,37 @@ class Leveler:
             await self.bot.say("**Text-only commands allowed.**")
             return
 
-        default_rep = (92,130,203,230)
-        default_a = 230
-        valid = True
-        hex_color = None
-        color_ranks = [int(random.randint(2,3))] # adds some randomness to color + most prominent color
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        # still ugly, might fix later
-        if rep_color == "auto":
-            hex_color = await self._auto_color(userinfo["profile_background"], color_ranks)
-            color = self._hex_to_rgb(hex_color[0], default_a)
-            color = self._moderate_color(color, default_a, 5)
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "rep_color": color
-                }})
-        elif rep_color == "default":
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "rep_color": default_rep
-                }})
-        elif self._is_hex(rep_color):
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "rep_color": self._hex_to_rgb(rep_color, default_a)
-                }})
+        # get correct section for db query
+        if section == "info":
+            section_name = "levelup_info_color"
         else:
-            await self.bot.say("**That's not a valid rep color!**")
-            valid = False
-
-        if valid:
-            await self.bot.say("**{}, your rep color has been set!**".format(self._is_mention(user)))
-
-    @lvlset.command(pass_context=True, no_pm=True)
-    async def badgecolor(self, ctx, badge_col_color:str):
-        """Set badge section color. [p]lvlset badgecolor [default|hex|auto]"""
-        user = ctx.message.author
-        server = ctx.message.server
-        userinfo = db.users.find_one({'user_id':user.id})
-
-        if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("**Leveler commands for this server are disabled!**")
+            await self.bot.say("**Not a valid section. (info)**")
             return
 
-        if "text_only" in self.settings and server.id in self.settings["text_only"]:
-            await self.bot.say("**Text-only commands allowed.**")
-            return
-
-        default_badge_col = (128,151,165,230)
-        default_a = 230
-        valid = True
-        hex_color = None
-        color_ranks = [0] # most prominent color
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        if badge_col_color == "auto":
-            hex_color = await self._auto_color(userinfo["profile_background"], color_ranks)
-            color = self._hex_to_rgb(hex_color[0], default_a)
-            color = self._moderate_color(color, default_a, 15)
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "badge_col_color": color
-                }})
-        elif badge_col_color == "default":
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "badge_col_color": default_badge_col
-                }})
-        elif self._is_hex(badge_col_color):
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "badge_col_color": self._hex_to_rgb(badge_col_color, default_a)
-                }})
+        # get correct color choice
+        if color == "auto":
+            if section == "info":
+                color_ranks = [random.randint(0,1)]
+            hex_colors = await self._auto_color(userinfo["levelup_background"], color_ranks)
+            set_color = []
+            for hex_color in hex_colors:
+                color_temp = self._hex_to_rgb(hex_color, default_a)
+                set_color.append(color_temp)
+        elif color == "white":
+            set_color = [white_info_color]
+        elif color == "default":
+            if section == "info":
+                set_color = [default_info_color]
+        elif self._is_hex(color):
+            set_color = [self._hex_to_rgb(color, default_a)]
         else:
-            await self.bot.say("**That's not a valid badge column color!**")
-            valid = False
-
-        if valid:
-            await self.bot.say("**{}, your badge color has been set!**".format(self._is_mention(user)))
-
-    @lvlset.command(pass_context=True, no_pm=True)
-    async def profileexp(self, ctx, exp_color:str):
-        """Set profile exp bar color. [p]lvlset profileexp [default|hex|auto]"""
-        user = ctx.message.author
-        server = ctx.message.server
-        userinfo = db.users.find_one({'user_id':user.id})
-        default_exp = (255, 255, 255, 230)
-        default_a = 230
-        valid = True
-        color_rank = int(random.randint(2,3))
-
-        if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
+            await self.bot.say("**Not a valid color. (default, hex, white, auto)**")
             return
 
-        if "text_only" in self.settings and server.id in self.settings["text_only"]:
-            await self.bot.say("**Text-only commands allowed.**")
-            return
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        if exp_color == "auto":
-            hex_color = await self._auto_color(userinfo["profile_background"], [color_rank])
-            color = self._hex_to_rgb(hex_color[0], default_a)
-            color = self._moderate_color(color, default_a, 0)
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "profile_exp_color": color
-                }})
-        elif exp_color == "default":
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "profile_exp_color": default_exp
-                }})
-        elif self._is_hex(exp_color):
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "profile_exp_color": self._hex_to_rgb(exp_color, default_a)
-                }})
-        else:
-            await self.bot.say("**That's not a valid exp color!**")
-            valid = False
-
-        if valid:
-            await self.bot.say("**{}, your profile exp colors have been set!**".format(self._is_mention(user)))
-
-    @lvlset.command(pass_context=True, no_pm=True)
-    async def rankexp(self, ctx, exp_color:str):
-        """Set rank exp color. [p]lvlset rankexp [default|hex|auto]"""
-        user = ctx.message.author
-        server = ctx.message.server
-        userinfo = db.users.find_one({'user_id':user.id})
-        default_exp = (255, 255, 255, 230)
-        default_a = 230
-        valid = True
-        color_rank = int(random.randint(2,3))
-
-        if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
-            return
-
-        if "text_only" in self.settings and server.id in self.settings["text_only"]:
-            await self.bot.say("**Text-only commands allowed.**")
-            return
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        if exp_color == "auto":
-            hex_color = await self._auto_color(userinfo["rank_background"], [color_rank])
-            color = self._hex_to_rgb(hex_color[0], default_a)
-            color = self._moderate_color(color, default_a, 0)
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "rank_exp_color": color
-                }})
-        elif exp_color == "default":
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "rank_exp_color": default_exp
-                }})
-        elif self._is_hex(exp_color):
-            db.users.update_one({'user_id':user.id}, {'$set':{
-                    "rank_exp_color": self._hex_to_rgb(exp_color, default_a)
-                }})
-        else:
-            await self.bot.say("**That's not a valid exp color!**")
-            valid = False
-
-        if valid:
-            await self.bot.say("**{}, your rank exp colors have been set!**".format(self._is_mention(user)))
+        db.users.update_one({'user_id':user.id}, {'$set':{
+                section_name: set_color[0]
+            }})
+        await self.bot.say("**Color for level-up {} set.**".format(section))
 
     # uses k-means algorithm to find color from bg, rank is abundance of color, descending
     async def _auto_color(self, url:str, ranks):
@@ -669,7 +700,7 @@ class Leveler:
         return tuple(new_colors)
 
 
-    @lvlset.command(pass_context=True, no_pm=True)
+    @profileset.command(pass_context=True, no_pm=True)
     async def info(self, ctx, *, info):
         """Set your user info."""
         user = ctx.message.author
@@ -690,7 +721,7 @@ class Leveler:
         else:
             await self.bot.say("**Your description has too many characters! Must be <{}**".format(max_char))
 
-    @lvlset.command(pass_context=True, no_pm=True)
+    @levelupset.command(name = "bg", pass_context=True, no_pm=True)
     async def levelbg(self, ctx, *, image_name:str):
         """Set your level background"""
         user = ctx.message.author
@@ -715,7 +746,7 @@ class Leveler:
         else:
             await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list levelup`".format(prefix))
 
-    @lvlset.command(pass_context=True, no_pm=True)
+    @profileset.command(name = "bg", pass_context=True, no_pm=True)
     async def profilebg(self, ctx, *, image_name:str):
         """Set your profile background"""
         user = ctx.message.author
@@ -740,7 +771,7 @@ class Leveler:
         else:
             await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list profile`".format(prefix))
 
-    @lvlset.command(pass_context=True, no_pm=True)
+    @rankset.command(name = "bg", pass_context=True, no_pm=True)
     async def rankbg(self, ctx, *, image_name:str):
         """Set your rank background"""
         user = ctx.message.author
@@ -765,7 +796,7 @@ class Leveler:
         else:
             await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list rank`".format(prefix))
 
-    @lvlset.command(pass_context=True, no_pm=True)
+    @profileset.command(pass_context=True, no_pm=True)
     async def title(self, ctx, *, title):
         """Set your title."""
         user = ctx.message.author
@@ -1004,7 +1035,7 @@ class Leveler:
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
-    @lvladmin.command(name="text", pass_context=True, no_pm=True)
+    @lvladmin.command(pass_context=True, no_pm=True)
     async def textonly(self, ctx, all:str=None):
         """Toggle text-based messages on the server. Parameter: disableall/enableall"""
         server = ctx.message.server
@@ -1248,7 +1279,7 @@ class Leveler:
             db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
             await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), badge_name, self._is_mention(user)))
 
-    @commands.group(name = "lvlbg", pass_context=True)
+    @lvladmin.group(name = "bg", pass_context=True)
     async def lvladminbg(self, ctx):
         """Admin Background Configuration"""
         if ctx.invoked_subcommand is None:
@@ -1327,9 +1358,9 @@ class Leveler:
         else:
             await self.bot.say("**That level-up background name doesn't exist.**")
 
-    @lvladminbg.command(name = "list", pass_context=True, no_pm=True)
+    @lvlset.command(name="listbgs", pass_context=True, no_pm=True)
     async def listbgs(self, ctx, type:str = None):
-        '''Gives a list of backgrounds. types = profile, rank, levelup'''
+        '''Gives a list of backgrounds. [p]lvlset listbgs [profile|rank|levelup]'''
         server = ctx.message.server
         user = ctx.message.author
         max_all = 15
@@ -2094,8 +2125,9 @@ class Leveler:
         # draw transparent overlay
         if "levelup_info_color" in userinfo.keys():
             info_color = tuple(userinfo["levelup_info_color"])
+            info_color = (info_color[0], info_color[1], info_color[2], 160) # increase transparency
         else:
-            info_color = (30, 30 ,30, 220)
+            info_color = (30, 30 ,30, 160)
         draw.rectangle([(0, 40), (85, 105)], fill=info_color) # info portion
         draw.rectangle([(15, 11), (68, 64)], fill=(255,255,255,160), outline=(100, 100, 100, 100)) # profile rectangle
 
