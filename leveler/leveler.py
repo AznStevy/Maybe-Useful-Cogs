@@ -366,21 +366,24 @@ class Leveler:
     @lvlset.group(name = "profile", pass_context=True)
     async def profileset(self, ctx):
         """Profile options"""
-        if ctx.invoked_subcommand is None:
+        if ctx.invoked_subcommand is None or \
+                isinstance(ctx.invoked_subcommand, commands.Group):
             await send_cmd_help(ctx)
             return
 
     @lvlset.group(name = "rank", pass_context=True)
     async def rankset(self, ctx):
         """Rank options"""
-        if ctx.invoked_subcommand is None:
+        if ctx.invoked_subcommand is None or \
+                isinstance(ctx.invoked_subcommand, commands.Group):
             await send_cmd_help(ctx)
             return
 
     @lvlset.group(name = "levelup", pass_context=True)
     async def levelupset(self, ctx):
         """Level-Up options"""
-        if ctx.invoked_subcommand is None:
+        if ctx.invoked_subcommand is None or \
+                isinstance(ctx.invoked_subcommand, commands.Group):
             await send_cmd_help(ctx)
             return
 
