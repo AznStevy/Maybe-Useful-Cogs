@@ -2174,7 +2174,7 @@ class Leveler:
         if "chat_block" not in userinfo:
             userinfo["chat_block"] = 0
 
-        if float(curr_time) - float(userinfo["chat_block"]) >= 10 and not any(text.startswith(x) for x in prefix):
+        if float(curr_time) - float(userinfo["chat_block"]) >= 120 and not any(text.startswith(x) for x in prefix):
             await self._process_exp(message, userinfo, random.randint(15, 20))
             await self._give_chat_credit(user, server)
         #except AttributeError as e:
