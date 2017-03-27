@@ -830,7 +830,6 @@ class Leveler:
             return
 
     @checks.admin_or_permissions(manage_server=True)
-    @checks.is_owner()
     @lvladmin.group(pass_context=True)
     async def overview(self, ctx):
         """A list of settings"""
@@ -1291,7 +1290,7 @@ class Leveler:
             await send_cmd_help(ctx)
             return
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.is_owner()
     @lvladminbg.command(no_pm=True)
     async def addprofilebg(self, name:str, url:str):
         """Add a profile background. Proportions: (290px x 290px)"""
@@ -1304,7 +1303,7 @@ class Leveler:
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
             await self.bot.say("**New profile background(`{}`) added.**".format(name))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.is_owner()
     @lvladminbg.command(no_pm=True)
     async def addrankbg(self, name:str, url:str):
         """Add a rank background. Proportions: (360px x 100px)"""
@@ -1317,7 +1316,7 @@ class Leveler:
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
             await self.bot.say("**New rank background(`{}`) added.**".format(name))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.is_owner()
     @lvladminbg.command(no_pm=True)
     async def addlevelbg(self, name:str, url:str):
         '''Add a level-up background. Proportions: (85px x 105px)'''
@@ -1330,7 +1329,7 @@ class Leveler:
             fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
             await self.bot.say("**New level-up background(`{}`) added.**".format(name))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.is_owner()
     @lvladminbg.command(no_pm=True)
     async def delprofilebg(self, name:str):
         '''Delete a profile background.'''
@@ -1341,7 +1340,7 @@ class Leveler:
         else:
             await self.bot.say("**That profile background name doesn't exist.**")
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.is_owner()
     @lvladminbg.command(no_pm=True)
     async def delrankbg(self, name:str):
         '''Delete a rank background.'''
@@ -1352,7 +1351,7 @@ class Leveler:
         else:
             await self.bot.say("**That rank background name doesn't exist.**")
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.is_owner()
     @lvladminbg.command(no_pm=True)
     async def dellevelbg(self, name:str):
         '''Delete a level background.'''
@@ -2167,7 +2166,7 @@ class Leveler:
         curr_time = time.time()
         userinfo = db.users.find_one({'user_id':user.id})
 
-        if server.id in self.settings["disabled_servers"]:
+        if not server or server.id in self.settings["disabled_servers"]:
             return
         if user.bot:
             return
