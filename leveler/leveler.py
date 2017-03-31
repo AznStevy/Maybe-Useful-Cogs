@@ -1926,7 +1926,7 @@ class Leveler:
                 ]
             i = 0
             for pair in sorted_badges[:12]:
-                coord = [left + int(mult[i][0])*int(hor_gap+size), vert_pos + int(mult[i][1])*int(vert_gap + size)]
+                coord = (left + int(mult[i][0])*int(hor_gap+size), vert_pos + int(mult[i][1])*int(vert_gap + size))
                 badge = pair[0]
                 bg_color = badge["bg_img"]
                 border_color = badge["border_color"]
