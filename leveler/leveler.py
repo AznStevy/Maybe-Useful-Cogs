@@ -923,9 +923,18 @@ class Leveler:
                     await self.bot.say("**Insufficient funds. Backgrounds changes cost: ${}**".format(self.settings["bg_price"]))
                     return False
                 else:
-                    new_balance = bank.get_balance(user) - self.settings["bg_price"]
-                    bank.set_credits(user, new_balance)
-                    return True
+                    await self.bot.say('**{}, you are about to buy a background for `{}`. Confirm by typing "yes".**'.format(self._is_mention(user), self.settings["bg_price"]))
+                    answer = await self.bot.wait_for_message(timeout=15, author=user)
+                    if answer is None:
+                        await self.bot.say('**Purchase canceled.**')
+                        return False
+                    elif "yes" not in answer.content.lower():
+                        await self.bot.say('**Background not purchased.**')
+                        return False
+                    else:
+                        new_balance = bank.get_balance(user) - self.settings["bg_price"]
+                        bank.set_credits(user, new_balance)
+                        return True
             else:
                 if self.settings["bg_price"] == 0:
                     return True
@@ -1261,8 +1270,8 @@ class Leveler:
                                     "badges":userinfo['badges'],
                                     }})
                                 await self.bot.say('**You have bought the `{}` badge for `{}`.**'.format(name, badge_info['price']))
-                            elif bank.account_exists(user) and bank.get_balance(user) < badge_info[price]:
-                                await self.bot.say('**Not enough money! Need {} more.**'.format(badge_info[price] - bank.get_balance(user)))
+                            elif bank.account_exists(user) and bank.get_balance(user) < badge_info['price']:
+                                await self.bot.say('**Not enough money! Need {} more.**'.format(badge_info['price'] - bank.get_balance(user)))
                             else:
                                 await self.bot.say('**User does not exist in bank. Do {}bank register**'.format(prefix))
                 else:
