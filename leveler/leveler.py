@@ -1318,7 +1318,10 @@ class Leveler:
         for member in server.members:
             if not member.bot:
                 members += 1
-        if members < required_members:
+
+        if user.id == self.owner:
+            pass
+        elif members < required_members:
             await self.bot.say("**You may only add badges in servers with {}+ non-bot members**".format(required_members))
             return
 
