@@ -438,7 +438,7 @@ class Leveler:
             elif section == "info":
                 color_ranks = [random.randint(0,1)]
             elif section == "all":
-                color_ranks = [random.randint(2,3), random.randint(2,3), 0, random.randint(0,1)]
+                color_ranks = [random.randint(2,3), random.randint(2,3), 0, random.randint(0,2)]
 
             hex_colors = await self._auto_color(userinfo["profile_background"], color_ranks)
             set_color = []
@@ -892,7 +892,7 @@ class Leveler:
 
     @lvladmin.command(name="lock", pass_context=True, no_pm=True)
     async def lvlmsglock(self, ctx):
-        '''Locks levelup messages to one channel. Disable command on locked channel.'''
+        '''Locks levelup messages to one channel. Disable command via locked channel.'''
         channel = ctx.message.channel
         server = ctx.message.server
 
@@ -961,7 +961,7 @@ class Leveler:
     @checks.is_owner()
     @lvladmin.command(pass_context=True, no_pm=True)
     async def setlevel(self, ctx, user : discord.Member, level:int):
-        '''Set a user's level. (What a cheater c:).'''
+        '''Set a user's level. (What a cheater C:).'''
         org_user = ctx.message.author
         server = user.server
         userinfo = db.users.find_one({'user_id':user.id})
@@ -1040,7 +1040,7 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(pass_context=True, no_pm=True)
     async def textonly(self, ctx, all:str=None):
-        """Toggle text-based messages on the server. Parameter: disableall/enableall"""
+        """Toggle text-based messages on the server."""
         server = ctx.message.server
         user = ctx.message.author
         # deals with enabled array
@@ -1072,11 +1072,9 @@ class Leveler:
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(name="alerts", pass_context=True, no_pm=True)
     async def lvlalert(self, ctx, all:str=None):
-        """Toggle level-up messages on the server. Parameter: disableall/enableall"""
+        """Toggle level-up messages on the server."""
         server = ctx.message.server
         user = ctx.message.author
-
-        # deals with enabled array
 
         # old version was boolean
         if not isinstance(self.settings["lvl_msg"], list):
@@ -1142,52 +1140,241 @@ class Leveler:
             await send_cmd_help(ctx)
             return
 
-    @lvlbadge.command(name="list", pass_context=True, no_pm=True)
-    async def listbadges(self, ctx):
-        '''Get a list of badges.'''
+    @lvlbadge.command(name="available", pass_context=True, no_pm=True)
+    async def available(self, ctx, global_badge:str = None):
+        '''Get a list of available badges for server or 'global'.'''
         user = ctx.message.author
+        server = ctx.message.server
+        icon = server.icon_url
 
-        msg = ", ".join(sorted(self.badges.keys()))
-        em = discord.Embed(description=msg, colour=user.colour)
-        em.set_author(name="Badges for {}".format(self.bot.user.name))
+        # get server stuff
+        ids = [('global','Global'), (server.id, server.name)]
+
+        em = discord.Embed(description='', colour=user.colour)
+        for serverid, servername in ids:
+            msg = ""
+            server_badge_info = db.badges.find_one({'server_id':serverid})
+            if server_badge_info:
+                server_badges = server_badge_info['badges']
+                for badgename in server_badges:
+                    badgeinfo = server_badges[badgename]
+                    if badgeinfo['price'] == -1:
+                        price = 'Non-purchasable'
+                    elif badgeinfo['price'] == 0:
+                        price = 'Free'
+                    else:
+                        price = badgeinfo['price']
+
+                    msg += "**• {}** ({}) - {}\n".format(badgename, price, badgeinfo['description'])
+            else:
+                msg = "None"
+            em.add_field(name = "__{}__".format(servername), value = msg, inline = False)
+
+        em.set_author(name="Available Badges", icon_url = icon)
         await self.bot.say(embed = em)
 
-    @checks.admin_or_permissions(manage_server=True)
-    @lvlbadge.command(name="add", no_pm=True)
-    async def addbadge(self, name:str, priority_num: int, text_color:str, bg_color:str, border_color:str = None):
-        """Add a badge. Colors in hex, border color optional."""
+    @lvlbadge.command(name="list", pass_context=True, no_pm=True)
+    async def listuserbadges(self, ctx, user:discord.Member = None):
+        '''Get the badges of a user.'''
+        if user == None:
+            user = ctx.message.author
+        server = ctx.message.server
+        await self._create_user(user, server)
+        userinfo = db.users.find_one({'user_id':user.id})
+        self._badge_convert_dict(userinfo)
 
-        if not self._is_hex(text_color):
-            await self.bot.say("**Text color hex is not valid!**")
+        # sort
+        priority_badges = []
+        for badgename in userinfo['badges'].keys():
+            badge = userinfo['badges'][badgename]
+            priority_num = badge["priority_num"]
+            if priority_num != -1:
+                priority_badges.append((badge, priority_num))
+        sorted_badges = sorted(priority_badges, key=operator.itemgetter(1), reverse=True)
+
+        badge_ranks = ""
+        counter = 1
+        for badge, priority_num in sorted_badges[:12]:
+            badge_ranks += "**{}. {}** ({}) [{}] **—** {}\n".format(counter, badge['badge_name'], badge['server_name'], priority_num, badge['description'])
+            counter += 1
+        if not badge_ranks:
+            badge_ranks = "None"
+
+        em = discord.Embed(description='', colour=user.colour)
+
+        total_pages = 0
+        for page in pagify(badge_ranks, [" "]):
+            total_pages +=1
+
+        counter = 1
+        for page in pagify(badge_ranks, [" "]):
+            em.description = page
+            em.set_author(name="Badges for {}".format(user.name), icon_url = user.avatar_url)
+            em.set_footer(text = "Page {} of {}".format(counter, total_pages))
+            await self.bot.say(embed = em)
+            counter += 1
+
+    @lvlbadge.command(name="get", pass_context=True, no_pm=True)
+    async def get(self, ctx, name:str, global_badge:str = None):
+        '''Get a badge from repository. optional = "-global"'''
+        user = ctx.message.author
+        server = ctx.message.server
+        if global_badge == '-global':
+            serverid = 'global'
+        else:
+            serverid = server.id
+        await self._create_user(user, server)
+        userinfo = db.users.find_one({'user_id':user.id})
+        print(serverid)
+        server_badge_info = db.badges.find_one({'server_id':serverid})
+
+        print(server_badge_info)
+        if server_badge_info:
+            server_badges = server_badge_info['badges']
+            if name in server_badges:
+
+                if "{}_{}".format(name,str(serverid)) not in userinfo['badges'].keys():
+                    badge_info = server_badges[name]
+                    if badge_info['price'] == -1:
+                        await self.bot.say('**That badge is not purchasable.**'.format(name))
+                    elif badge_info['price'] == 0:
+                        userinfo['badges']["{}_{}".format(name,str(serverid))] = server_badges[name]
+                        db.users.update_one({'user_id':userinfo['user_id']}, {'$set':{
+                            "badges":userinfo['badges'],
+                            }})
+                        await self.bot.say('**`{}` has been obtained.**'.format(name))
+                    else:
+                        # use the economy cog
+                        bank = self.bot.get_cog('Economy').bank
+                        await self.bot.say('**{}, you are about to buy the `{}` badge for `{}`. Confirm by typing "yes"**'.format(self._is_mention(user), name, badge_info['price']))
+                        answer = await self.bot.wait_for_message(timeout=15, author=user)
+                        if answer is None:
+                            await self.bot.say('**Purchase canceled.**')
+                            return
+                        elif "yes" not in answer.content.lower():
+                            await self.bot.say('**Badge not purchased.**')
+                            return
+                        else:
+                            if bank.account_exists(user) and badge_info['price'] <= bank.get_balance(user):
+                                bank.withdraw_credits(user, badge_info['price'])
+                                userinfo['badges']["{}_{}".format(name,str(serverid))] = server_badges[name]
+                                db.users.update_one({'user_id':userinfo['user_id']}, {'$set':{
+                                    "badges":userinfo['badges'],
+                                    }})
+                                await self.bot.say('**You have bought the `{}` badge for `{}`.**'.format(name, badge_info['price']))
+                            elif bank.account_exists(user) and bank.get_balance(user) < badge_info[price]:
+                                await self.bot.say('**Not enough money! Need {} more.**'.format(badge_info[price] - bank.get_balance(user)))
+                            else:
+                                await self.bot.say('**User does not exist in bank. Do {}bank register**'.format(prefix))
+                else:
+                    await self.bot.say('**{}, you already have this badge!**'.format(user.name))
+            else:
+                await self.bot.say('**The badge `{}` does not exist. (try `{}lvlbadge available`)**'.format(name, prefix[0]))
+        else:
+            await self.bot.say('**There are no badges to get! (try `{}lvlbadge get [name] -global`).**'.format(prefix[0]))
+
+    @lvlbadge.command(name="set", pass_context=True, no_pm=True)
+    async def set(self, ctx, name:str, priority_num:int):
+        '''Set a badge to profile. -1(invis), 0(not on profile), max: 5000.'''
+        user = ctx.message.author
+        server = ctx.message.author
+        await self._create_user(user, server)
+
+        userinfo = db.users.find_one({'user_id':user.id})
+        self._badge_convert_dict(userinfo)
+
+        if priority_num < -1 or priority_num > 5000:
+            await self.bot.say("**Invalid priority number! -1-5000**")
             return
 
-        if not self._is_hex(bg_color) and not await self._valid_image_url(bg_color):
+        for badge in userinfo['badges']:
+            if userinfo['badges'][badge]['badge_name'] == name:
+                userinfo['badges'][badge]['priority_num'] = priority_num
+                db.users.update_one({'user_id':userinfo['user_id']}, {'$set':{
+                    "badges":userinfo['badges'],
+                    }})
+                await self.bot.say("**The {} badge priority has been set to {}!**".format(userinfo['badges'][badge]['badge_name'], priority_num))
+                break
+        else:
+            await self.bot.say("**You don't have that badge!**")
+
+    def _badge_convert_dict(self, userinfo):
+        if 'badges' not in userinfo or not isinstance(userinfo['badges'], dict):
+            db.users.update_one({'user_id':userinfo['user_id']}, {'$set':{
+                "badges":{},
+                }})
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvlbadge.command(name="add", pass_context = True, no_pm=True)
+    async def addbadge(self, ctx, name:str, bg_img:str, border_color:str, price:int, *, description:str):
+        """Add a badge. name = "Use Quotes", Colors = #hex. bg_img = url, price = -1(non-purchasable), 0,..."""
+
+        user = ctx.message.author
+        server = ctx.message.server
+
+        print('"{}"'.format(border_color))
+
+        # check members
+        required_members = 35
+        members = 0
+        for member in server.members:
+            if not member.bot:
+                members += 1
+        if members < required_members:
+            await self.bot.say("**You may only add badges in servers with {}+ non-bot members**".format(required_members))
+            return
+
+        if '-global' in description and user.id == self.owner:
+            description = description.replace('-global', '')
+            serverid = 'global'
+            servername = 'global'
+        else:
+            serverid = server.id
+            servername = server.name
+
+        if not await self._valid_image_url(bg_img):
             await self.bot.say("**Backround is not valid. Enter hex or image url!**")
             return
 
-        if not border_color and self._is_hex(border_color):
+        if not self._is_hex(border_color):
             await self.bot.say("**Border color is not valid!**")
             return
 
-        if name in self.badges:
-            await self.bot.say("**{} badge updated.**".format(name))
+        if price < -1:
+            await self.bot.say("**Price is not valid!**")
+            return
+
+        badges = db.badges.find_one({'server_id':serverid})
+        if not badges:
+            db.badges.insert_one({'server_id':serverid,
+                'badges': {}})
+            badges = db.badges.find_one({'server_id':serverid})
+
+        if name not in badges.keys():
+            badges['badges'][name] = {
+                "badge_name": name,
+                "bg_img": bg_img,
+                "price": price,
+                "description": description,
+                "border_color": border_color,
+                "server_id": serverid,
+                "server_name": servername,
+                "priority_num": 0
+            }
+
+            db.badges.update_one({'server_id':serverid}, {'$set': {
+                'badges': badges['badges']
+                }})
+
+            await self.bot.say("**`{}` Badge added in `{}` server.**".format(name.replace('_', ' '), servername))
         else:
-            await self.bot.say("**{} badge added.**".format(name))
+            await self.bot.say("The `{}` badge already exists".format(name))
 
-        self.badges[name] = {
-            "priority_num": priority_num,
-            "text_color" : text_color,
-            "bg_color": bg_color,
-            "border_color": border_color
-        }
-
-        fileIO('data/leveler/badges.json', "save", self.badges)
-
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.is_owner()
     @lvlbadge.command(no_pm=True)
     async def type(self, name:str):
-        """circles, bars, or squares. All lowercase."""
-        valid_types = ["circles", "bars", "squares"]
+        """circles, bars, or squares."""
+        valid_types = ["circles", "bars"]
         if name.lower() not in valid_types:
             await self.bot.say("**That is not a valid badge type!**")
             return
@@ -1205,82 +1392,114 @@ class Leveler:
 
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(name="delete", pass_context=True, no_pm=True)
-    async def delbadge(self, ctx, name:str):
+    async def delbadge(self, ctx, *, name:str):
         """Delete a badge and remove from all users."""
         user = ctx.message.author
         channel = ctx.message.channel
         server = user.server
 
-        # creates user if doesn't exist
-        await self._create_user(user, server)
-
-        if server.id in self.settings["disabled_servers"]:
-            await self.bot.say("Leveler commands for this server are disabled.")
-            return
-
-        if name in self.badges:
-            del self.badges[name]
-
-            # remove the badge if there
-            for userinfo in db.users.find({}):
-                try:
-                    if name in userinfo["badges"]:
-                        userinfo["badges"].remove(name)
-                        db.users.update_one({'user_id':userinfo['user_id']}, {'$set':{
-                            "badges":userinfo["badges"]
-                            }})
-                except:
-                    pass
-
-            await self.bot.say("**The {} badge has been removed.**".format(name))
-            fileIO('data/leveler/badges.json', "save", self.badges)
+        if '-global' in name and user.id == self.owner:
+            description = description.replace('-global', '')
+            serverid = 'global'
         else:
-            await self.bot.say("**That badges does not exist.**")
+            serverid = server.id
 
-    @checks.admin_or_permissions(manage_server=True)
-    @lvlbadge.command(pass_context = True, no_pm=True)
-    async def give(self, ctx, user : discord.Member, badge_name: str):
-        """Give a user a badge."""
-        org_user = ctx.message.author
-        server = org_user.server
         # creates user if doesn't exist
         await self._create_user(user, server)
+        userinfo = db.users.find_one({'user_id':user.id})
+        self._badge_convert_dict(userinfo)
         userinfo = db.users.find_one({'user_id':user.id})
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
             return
 
-        if badge_name not in self.badges:
-            await self.bot.say("**That badge doesn't exist!**")
-        elif badge_name in userinfo["badges"]:
-            await self.bot.say("**{} already has that badge!**".format(self._is_mention(user)))
+        serverbadges = db.badges.find_one({'server_id':serverid})
+        if name in serverbadges['badges'].keys():
+            del serverbadges['badges'][name]
+            db.badges.update_one({'server_id':serverbadges['server_id']}, {'$set':{
+                "badges":serverbadges["badges"],
+                }})
+            # remove the badge if there
+            for user_info_temp in db.users.find({}):
+                try:
+                    self._badge_convert_dict(user_info_temp)
+                    user_info_temp = db.users.find_one({'user_id':user_info_temp['user_id']})
+
+                    badge_name = "{}_{}".format(name, server.id)
+                    if badge_name in user_info_temp["badges"].keys():
+                        del user_info_temp["badges"][badge_name]
+                        db.users.update_one({'user_id':user_info_temp['user_id']}, {'$set':{
+                            "badges":user_info_temp["badges"],
+                            }})
+                except:
+                    pass
+
+            await self.bot.say("**The {} badge has been removed.**".format(name))
         else:
-            userinfo["badges"].append(badge_name)
-            db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
-            await self.bot.say("**{} has just given {} the {} badge!**".format(self._is_mention(org_user), self._is_mention(user), badge_name))
+            await self.bot.say("**That badge does not exist.**")
 
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(pass_context = True, no_pm=True)
-    async def take(self, ctx, user : discord.Member, badge_name: str):
+    async def give(self, ctx, user : discord.Member, name: str):
+        """Give a user a badge with a certain name"""
+        org_user = ctx.message.author
+        server = org_user.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
+        userinfo = db.users.find_one({'user_id':user.id})
+        self._badge_convert_dict(userinfo)
+        userinfo = db.users.find_one({'user_id':user.id})
+
+        if server.id in self.settings["disabled_servers"]:
+            await self.bot.say("Leveler commands for this server are disabled.")
+            return
+
+        serverbadges = db.badges.find_one({'server_id':server.id})
+        badges = serverbadges['badges']
+        badge_name = "{}_{}".format(name, server.id)
+
+        if name not in badges:
+            await self.bot.say("**That badge doesn't exist in this server!**")
+            return
+        elif badge_name in badges.keys():
+            await self.bot.say("**{} already has that badge!**".format(self._is_mention(user)))
+            return
+        else:
+            userinfo["badges"][badge_name] = badges[name]
+            db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
+            await self.bot.say("**{} has just given {} the {} badge!**".format(self._is_mention(org_user), self._is_mention(user), name))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @lvlbadge.command(pass_context = True, no_pm=True)
+    async def take(self, ctx, user : discord.Member, name: str):
         """Take a user's badge."""
         org_user = ctx.message.author
         server = org_user.server
         # creates user if doesn't exist
         await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
+        self._badge_convert_dict(userinfo)
+        userinfo = db.users.find_one({'user_id':user.id})
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
             return
 
-        if badge_name not in self.badges:
-            await self.bot.say("**That badge doesn't exist!**")
+        serverbadges = db.badges.find_one({'server_id':server.id})
+        badges = serverbadges['badges']
+        badge_name = "{}_{}".format(name, server.id)
+
+        if name not in badges:
+            await self.bot.say("**That badge doesn't exist in this server!**")
         elif badge_name not in userinfo["badges"]:
             await self.bot.say("**{} does not have that badge!**".format(self._is_mention(user)))
         else:
-            userinfo["badges"].remove(badge_name)
-            db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
-            await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), badge_name, self._is_mention(user)))
+            if userinfo['badges'][badge_name]['price'] == -1:
+                del userinfo["badges"][badge_name]
+                db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
+                await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), name, self._is_mention(user)))
+            else:
+                await self.bot.say("**You can't take away purchasable badges!**")
 
     @lvladmin.group(name = "bg", pass_context=True)
     async def lvladminbg(self, ctx):
@@ -1367,7 +1586,7 @@ class Leveler:
         '''Gives a list of backgrounds. [p]lvlset listbgs [profile|rank|levelup]'''
         server = ctx.message.server
         user = ctx.message.author
-        max_all = 15
+        max_all = 18
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
@@ -1383,7 +1602,7 @@ class Leveler:
                     bg_url.append("[{}]({})".format(background_name, self.backgrounds[category][background_name]))
                 max_bg = min(max_all, len(bg_url))
                 bgs = ", ".join(bg_url[0:max_bg])
-                if max_bg <= max_all:
+                if len(bg_url) >= max_all:
                     bgs += "..."
                 em.add_field(name = category.upper(), value = bgs)
             await self.bot.say(embed = em)
@@ -1405,10 +1624,17 @@ class Leveler:
                 for background_name in sorted(self.backgrounds[bg_key].keys()):
                     bg_url.append("[{}]({})".format(background_name, self.backgrounds[bg_key][background_name]))
                 bgs = ", ".join(bg_url)
-                bgs = pagify(bgs, [" "])
-                for page in bgs:
+
+                total_pages = 0
+                for page in pagify(bgs, [" "]):
+                    total_pages +=1
+
+                counter = 1
+                for page in pagify(bgs, [" "]):
                     em.description = page
+                    em.set_footer(text = "Page {} of {}".format(counter, total_pages))
                     await self.bot.say(embed = em)
+                    counter += 1
             else:
                 await self.bot.say("**Invalid Background Type. (profile, rank, levelup)**")
 
@@ -1417,7 +1643,7 @@ class Leveler:
         header_u_fnt = ImageFont.truetype(font_unicode_file, 18)
         title_fnt = ImageFont.truetype(font_file, 18)
         sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
-        badge_fnt = ImageFont.truetype(font_bold_file, 12)
+        badge_fnt = ImageFont.truetype(font_bold_file, 10)
         exp_fnt = ImageFont.truetype(font_bold_file, 13)
         large_fnt = ImageFont.truetype(font_bold_file, 33)
         level_label_fnt = ImageFont.truetype(font_bold_file, 22)
@@ -1441,6 +1667,8 @@ class Leveler:
 
         # get urls
         userinfo = db.users.find_one({'user_id':user.id})
+        self._badge_convert_dict(userinfo)
+        userinfo = db.users.find_one({'user_id':user.id}) ##############################################
         bg_url = userinfo["profile_background"]
         profile_url = user.avatar_url
 
@@ -1582,7 +1810,7 @@ class Leveler:
         rep_text = "{} REP".format(userinfo["rep"])
         draw.text((self._center(7, 100, rep_text, rep_fnt), 144), rep_text, font=rep_fnt, fill=white_color)
 
-        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 173), "Badges", font=sub_header_fnt, fill=self._contrast(badge_fill, white_color, rep_fill)) # Badges
+        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 172), "Badges", font=sub_header_fnt, fill=self._contrast(badge_fill, white_color, rep_fill)) # Badges
 
         exp_text = "{}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"])) # Exp
         exp_color = exp_fill
@@ -1646,30 +1874,39 @@ class Leveler:
 
         # sort badges
         priority_badges = []
-        for badge in userinfo["badges"]:
-            priority_num = self.badges[badge]["priority_num"]
-            priority_badges.append((badge, priority_num))
+
+        for badgename in userinfo['badges'].keys():
+            badge = userinfo['badges'][badgename]
+            priority_num = badge["priority_num"]
+            if priority_num != 0 and priority_num != -1:
+                priority_badges.append((badge, priority_num))
         sorted_badges = sorted(priority_badges, key=operator.itemgetter(1), reverse=True)
 
         # TODO: simplify this. it shouldn't be this complicated... sacrifices conciseness for customizability
         if "badge_type" not in self.settings.keys() or self.settings["badge_type"] == "circles":
             # circles require antialiasing
-            vert_pos = 187
-            right_shift = 6
-            left = 10 + right_shift
+            vert_pos = 186
+            right_shift = 2
+            left = 9 + right_shift
             right = 52 + right_shift
-            coord = [(left, vert_pos), (right, vert_pos), (left, vert_pos + 33), (right, vert_pos + 33), (left, vert_pos + 66), (right, vert_pos + 66)]
-            i = 0
-            total_gap = 2 # /2
+            size = 28
+            total_gap = 4 # /2
+            hor_gap = 6
+            vert_gap = 1
             border_width = int(total_gap/2)
-
-            for pair in sorted_badges[:6]:
+            mult = [
+                (0,0), (1,0), (2,0),
+                (0,1), (1,1), (2,1),
+                (0,2), (1,2), (2,2),
+                (0,3), (1,3), (2,3),
+                ]
+            i = 0
+            for pair in sorted_badges[:12]:
+                coord = [left + int(mult[i][0])*int(hor_gap+size), vert_pos + int(mult[i][1])*int(vert_gap + size)]
                 badge = pair[0]
-                bg_color = self.badges[badge]["bg_color"]
-                text_color = self.badges[badge]["text_color"]
-                border_color = self.badges[badge]["border_color"]
-                text = badge.replace("_", " ")
-                size = 32
+                bg_color = badge["bg_img"]
+                border_color = badge["border_color"]
+                size = 24
                 multiplier = 6 # for antialiasing
                 raw_length = size * multiplier
 
@@ -1695,19 +1932,20 @@ class Leveler:
                         output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
                         output = output.resize((size, size), Image.ANTIALIAS)
                         outer_mask = mask.resize((size, size), Image.ANTIALIAS)
-                        process.paste(output, coord[i], outer_mask)
+                        process.paste(output, coord, outer_mask)
 
                         # put on ellipse/circle
                         output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
                         output = output.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
                         inner_mask = mask.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
-                        process.paste(output, (coord[i][0] + border_width, coord[i][1] + border_width), inner_mask)
+                        process.paste(output, (coord[0] + border_width, coord[1] + border_width), inner_mask)
                     else:
                         # put on ellipse/circle
                         output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
                         output = output.resize((size, size), Image.ANTIALIAS)
                         outer_mask = mask.resize((size, size), Image.ANTIALIAS)
-                        process.paste(output, coord[i], outer_mask)
+                        process.paste(output, coord, outer_mask)
+
                     try:
                         os.remove('data/leveler/temp/{}_temp_badge.png'.format(user.id))
                     except:
@@ -1719,69 +1957,23 @@ class Leveler:
                         output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
                         output = output.resize((size, size), Image.ANTIALIAS)
                         outer_mask = mask.resize((size, size), Image.ANTIALIAS)
-                        process.paste(output, coord[i], outer_mask)
+                        process.paste(output, coord, outer_mask)
 
                         # put on ellipse/circle
                         square = Image.new('RGBA', (raw_length, raw_length), bg_color)
                         output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
                         output = output.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
                         inner_mask = mask.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
-                        process.paste(output, (coord[i][0] + border_width, coord[i][1] + border_width), inner_mask)
-                        draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text
+                        process.paste(output, (coord[0] + border_width, coord[1] + border_width), inner_mask)
+                        draw.text((self._center(coord[0], coord[0] + size, badge[:6], badge_fnt), coord[1]+8), badge[:6],  font=badge_fnt, fill=text_color) # Text
                     else:
                         square = Image.new('RGBA', (raw_length, raw_length), bg_color)
                         output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
                         output = output.resize((size, size), Image.ANTIALIAS)
                         outer_mask = mask.resize((size, size), Image.ANTIALIAS)
-                        process.paste(output, coord[i], outer_mask)
-                        draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text
+                        process.paste(output, coord, outer_mask)
+                        draw.text((self._center(coord[0], coord[0] + size, badge[:6], badge_fnt), coord[1]+8), badge[:6],  font=badge_fnt, fill=text_color) # Text
                 i += 1
-        elif self.settings["badge_type"] == "squares":
-            # squares, cause eslyium.
-            vert_pos = 188
-            right_shift = 6
-            left = 10 + right_shift
-            right = 52 + right_shift
-            coord = [(left, vert_pos), (right, vert_pos), (left, vert_pos + 33), (right, vert_pos + 33), (left, vert_pos + 66), (right, vert_pos + 66)]
-            total_gap = 4
-            border_width = int(total_gap/2)
-            i = 0
-            for pair in sorted_badges[:6]:
-                badge = pair[0]
-                bg_color = self.badges[badge]["bg_color"]
-                text_color = self.badges[badge]["text_color"]
-                border_color = self.badges[badge]["border_color"]
-                text = badge.replace("_", " ")
-                size = 32
-
-                # determine image or color for badge bg, this is also pretty terrible tbh...
-                if await self._valid_image_url(bg_color):
-                    # get image
-                    async with aiohttp.get(bg_color) as r:
-                        image = await r.content.read()
-                    with open('data/leveler/temp/{}_temp_badge.png'.format(user.id),'wb') as f:
-                        f.write(image)
-
-                    badge_image = Image.open('data/leveler/temp/{}_temp_badge.png'.format(user.id)).convert('RGBA')
-                    if border_color != None:
-                        draw.rectangle([coord[i], (coord[i][0] + size, coord[i][1] + size)], fill=border_color) # border
-                        badge_image = badge_image.resize((size - total_gap + 1, size - total_gap + 1), Image.ANTIALIAS)
-                        process.paste(badge_image, (coord[i][0] + border_width, coord[i][1] + border_width))
-                    else:
-                        badge_image = badge_image.resize((size, size), Image.ANTIALIAS)
-                        process.paste(badge_image, coord[i])
-                    try:
-                        os.remove('data/leveler/temp/{}_temp_badge.png'.format(user.id))
-                    except:
-                        pass
-                else:
-                    if border_color != None:
-                        draw.rectangle([coord[i], (coord[i][0] + size, coord[i][1] + size)], fill=border_color) # border
-                        draw.rectangle([(coord[i][0] + border_width, coord[i][1] + border_width), (coord[i][0] + size - border_width, coord[i][1] + size - border_width)], fill=bg_color) # bg
-                    else:
-                        draw.rectangle([coord[i], (coord[i][0] + size, coord[i][1] + size)], fill = bg_color)
-                    draw.text((self._center(coord[i][0], coord[i][0] + size, badge[:6], badge_fnt), coord[i][1] + 12), badge[:6],  font=badge_fnt, fill=text_color) # Text
-                i+=1
         elif self.settings["badge_type"] == "tags" or self.settings["badge_type"] == "bars":
             vert_pos = 190
             i = 0
@@ -2304,7 +2496,8 @@ class Leveler:
                     "title": "",
                     "info": "I am a mysterious person.",
                     "rep": 0,
-                    "badges":[],
+                    "badges":{},
+                    "active_badges":{},
                     "rep_color": [],
                     "badge_col_color": [],
                     "rep_block": 0,
