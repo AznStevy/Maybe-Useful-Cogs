@@ -1181,7 +1181,7 @@ class Leveler:
         server = ctx.message.server
         await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
-        self._badge_convert_dict(userinfo)
+        userinfo = self._badge_convert_dict(userinfo)
 
         # sort
         priority_badges = []
@@ -1225,10 +1225,9 @@ class Leveler:
             serverid = server.id
         await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
-        print(serverid)
+        userinfo = self._badge_convert_dict(userinfo)
         server_badge_info = db.badges.find_one({'server_id':serverid})
 
-        print(server_badge_info)
         if server_badge_info:
             server_badges = server_badge_info['badges']
             if name in server_badges:
@@ -1281,7 +1280,7 @@ class Leveler:
         await self._create_user(user, server)
 
         userinfo = db.users.find_one({'user_id':user.id})
-        self._badge_convert_dict(userinfo)
+        userinfo = self._badge_convert_dict(userinfo)
 
         if priority_num < -1 or priority_num > 5000:
             await self.bot.say("**Invalid priority number! -1-5000**")
@@ -1303,6 +1302,7 @@ class Leveler:
             db.users.update_one({'user_id':userinfo['user_id']}, {'$set':{
                 "badges":{},
                 }})
+        return db.users.find_one({'user_id':userinfo['user_id']})
 
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(name="add", pass_context = True, no_pm=True)
@@ -1311,8 +1311,6 @@ class Leveler:
 
         user = ctx.message.author
         server = ctx.message.server
-
-        print('"{}"'.format(border_color))
 
         # check members
         required_members = 35
@@ -1332,6 +1330,10 @@ class Leveler:
             serverid = server.id
             servername = server.name
 
+        if '.' in name:
+            await self.bot.say("**Name cannot contain `.`**")
+            return
+
         if not await self._valid_image_url(bg_img):
             await self.bot.say("**Backround is not valid. Enter hex or image url!**")
             return
@@ -1350,8 +1352,7 @@ class Leveler:
                 'badges': {}})
             badges = db.badges.find_one({'server_id':serverid})
 
-        if name not in badges.keys():
-            badges['badges'][name] = {
+        new_badge = {
                 "badge_name": name,
                 "bg_img": bg_img,
                 "price": price,
@@ -1362,13 +1363,36 @@ class Leveler:
                 "priority_num": 0
             }
 
+        if name not in badges['badges'].keys():
+            # create the badge regardless
+            badges['badges'][name] = new_badge
+            db.badges.update_one({'server_id':serverid}, {'$set': {
+                'badges': badges['badges']
+                }})
+            await self.bot.say("**`{}` Badge added in `{}` server.**".format(name, servername))
+        else:
+            # update badge in the server
+            badges['badges'][name] = new_badge
             db.badges.update_one({'server_id':serverid}, {'$set': {
                 'badges': badges['badges']
                 }})
 
-            await self.bot.say("**`{}` Badge added in `{}` server.**".format(name.replace('_', ' '), servername))
-        else:
-            await self.bot.say("The `{}` badge already exists".format(name))
+            # go though all users and update the badge. Doing it this way because dynamic does more accesses when doing profile
+            for user in db.users.find({}):
+                try:
+                    user = self._badge_convert_dict(user)
+                    userbadges = user['badges']
+                    badge_name = "{}_{}".format(name, serverid)
+                    if badge_name in userbadges.keys():
+                        user_priority_num = userbadges[badge_name]['priority_num']
+                        new_badge['priority_num'] = user_priority_num # maintain old priority number set by user
+                        userbadges[badge_name] = new_badge
+                        db.users.update_one({'user_id':user['user_id']}, {'$set': {
+                            'badges': userbadges
+                            }})
+                except:
+                    pass
+            await self.bot.say("**The `{}` badge has been updated**".format(name))
 
     @checks.is_owner()
     @lvlbadge.command(no_pm=True)
@@ -1407,8 +1431,7 @@ class Leveler:
         # creates user if doesn't exist
         await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
-        self._badge_convert_dict(userinfo)
-        userinfo = db.users.find_one({'user_id':user.id})
+        userinfo = self._badge_convert_dict(userinfo)
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
@@ -1423,8 +1446,7 @@ class Leveler:
             # remove the badge if there
             for user_info_temp in db.users.find({}):
                 try:
-                    self._badge_convert_dict(user_info_temp)
-                    user_info_temp = db.users.find_one({'user_id':user_info_temp['user_id']})
+                    user_info_temp = self._badge_convert_dict(user_info_temp)
 
                     badge_name = "{}_{}".format(name, server.id)
                     if badge_name in user_info_temp["badges"].keys():
@@ -1448,8 +1470,7 @@ class Leveler:
         # creates user if doesn't exist
         await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
-        self._badge_convert_dict(userinfo)
-        userinfo = db.users.find_one({'user_id':user.id})
+        userinfo = self._badge_convert_dict(userinfo)
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
@@ -1479,8 +1500,8 @@ class Leveler:
         # creates user if doesn't exist
         await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
-        self._badge_convert_dict(userinfo)
-        userinfo = db.users.find_one({'user_id':user.id})
+        userinfo = self._badge_convert_dict(userinfo)
+
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
             return
