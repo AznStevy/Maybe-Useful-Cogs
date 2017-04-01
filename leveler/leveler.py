@@ -41,7 +41,7 @@ default_avatar_url = "http://i.imgur.com/XPDO9VH.jpg"
 
 try:
     client = MongoClient()
-    db = client['leveler']
+    db = client['leveler_dev']
 except:
     print("Can't load database. Follow instructions on Git/online to install MongoDB.")
 
@@ -1154,13 +1154,15 @@ class Leveler:
         '''Get a list of available badges for server or 'global'.'''
         user = ctx.message.author
         server = ctx.message.server
-        icon = server.icon_url
 
         # get server stuff
-        ids = [('global','Global'), (server.id, server.name)]
+        ids = [('global','Global',self.bot.user.avatar_url), (server.id, server.name, server.icon_url)]
 
-        em = discord.Embed(description='', colour=user.colour)
-        for serverid, servername in ids:
+        title_text = "**Available Badges**"
+        index = 0
+        for serverid, servername, icon_url in ids:
+            em = discord.Embed(description='', colour=user.colour)
+            em.set_author(name="{}".format(servername), icon_url = icon_url)
             msg = ""
             server_badge_info = db.badges.find_one({'server_id':serverid})
             if server_badge_info:
@@ -1177,10 +1179,24 @@ class Leveler:
                     msg += "**• {}** ({}) - {}\n".format(badgename, price, badgeinfo['description'])
             else:
                 msg = "None"
-            em.add_field(name = "__{}__".format(servername), value = msg, inline = False)
 
-        em.set_author(name="Available Badges", icon_url = icon)
-        await self.bot.say(embed = em)
+            em.description = msg
+
+            total_pages = 0
+            for page in pagify(msg, ["\n"]):
+                total_pages +=1
+
+            counter = 1
+            for page in pagify(msg, ["\n"]):
+                if index == 0:
+                    await self.bot.say(title_text, embed = em)
+                else:
+                    await self.bot.say(embed = em)
+                index += 1
+
+                em.set_footer(text = "Page {} of {}".format(counter, total_pages))
+                counter += 1
+
 
     @lvlbadge.command(name="list", pass_context=True, no_pm=True)
     async def listuserbadges(self, ctx, user:discord.Member = None):
@@ -1212,11 +1228,11 @@ class Leveler:
         em = discord.Embed(description='', colour=user.colour)
 
         total_pages = 0
-        for page in pagify(badge_ranks, [" "]):
+        for page in pagify(badge_ranks, ["\n"]):
             total_pages +=1
 
         counter = 1
-        for page in pagify(badge_ranks, [" "]):
+        for page in pagify(badge_ranks, ["\n"]):
             em.description = page
             em.set_author(name="Badges for {}".format(user.name), icon_url = user.avatar_url)
             em.set_footer(text = "Page {} of {}".format(counter, total_pages))
@@ -1347,7 +1363,7 @@ class Leveler:
             return
 
         if not await self._valid_image_url(bg_img):
-            await self.bot.say("**Backround is not valid. Enter hex or image url!**")
+            await self.bot.say("**Background is not valid. Enter hex or image url!**")
             return
 
         if not self._is_hex(border_color):
@@ -1356,6 +1372,10 @@ class Leveler:
 
         if price < -1:
             await self.bot.say("**Price is not valid!**")
+            return
+
+        if len(description.split(" ")) > 40:
+            await self.bot.say("**Description is too long! <=40**")
             return
 
         badges = db.badges.find_one({'server_id':serverid})
@@ -1409,7 +1429,7 @@ class Leveler:
     @checks.is_owner()
     @lvlbadge.command(no_pm=True)
     async def type(self, name:str):
-        """circles, bars, or squares."""
+        """circles or bars."""
         valid_types = ["circles", "bars"]
         if name.lower() not in valid_types:
             await self.bot.say("**That is not a valid badge type!**")
@@ -1435,7 +1455,7 @@ class Leveler:
         server = user.server
 
         if '-global' in name and user.id == self.owner:
-            description = description.replace('-global', '')
+            name = name.replace(' -global', '')
             serverid = 'global'
         else:
             serverid = server.id
@@ -1460,7 +1480,7 @@ class Leveler:
                 try:
                     user_info_temp = self._badge_convert_dict(user_info_temp)
 
-                    badge_name = "{}_{}".format(name, server.id)
+                    badge_name = "{}_{}".format(name, serverid)
                     if badge_name in user_info_temp["badges"].keys():
                         del user_info_temp["badges"][badge_name]
                         db.users.update_one({'user_id':user_info_temp['user_id']}, {'$set':{
@@ -1935,89 +1955,68 @@ class Leveler:
                 ]
             i = 0
             for pair in sorted_badges[:12]:
-                coord = (left + int(mult[i][0])*int(hor_gap+size), vert_pos + int(mult[i][1])*int(vert_gap + size))
-                badge = pair[0]
-                bg_color = badge["bg_img"]
-                border_color = badge["border_color"]
-                size = 24
-                multiplier = 6 # for antialiasing
-                raw_length = size * multiplier
+                try:
+                    coord = (left + int(mult[i][0])*int(hor_gap+size), vert_pos + int(mult[i][1])*int(vert_gap + size))
+                    badge = pair[0]
+                    bg_color = badge["bg_img"]
+                    border_color = badge["border_color"]
+                    size = 24
+                    multiplier = 6 # for antialiasing
+                    raw_length = size * multiplier
 
-                # draw mask circle
-                mask = Image.new('L', (raw_length, raw_length), 0)
-                draw_thumb = ImageDraw.Draw(mask)
-                draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
+                    # draw mask circle
+                    mask = Image.new('L', (raw_length, raw_length), 0)
+                    draw_thumb = ImageDraw.Draw(mask)
+                    draw_thumb.ellipse((0, 0) + (raw_length, raw_length), fill = 255, outline = 0)
 
-                # determine image or color for badge bg
-                if await self._valid_image_url(bg_color):
-                    # get image
-                    async with aiohttp.get(bg_color) as r:
-                        image = await r.content.read()
-                    with open('data/leveler/temp/{}_temp_badge.png'.format(user.id),'wb') as f:
-                        f.write(image)
-                    badge_image = Image.open('data/leveler/temp/{}_temp_badge.png'.format(user.id)).convert('RGBA')
-                    badge_image = badge_image.resize((raw_length, raw_length), Image.ANTIALIAS)
+                    # determine image or color for badge bg
+                    if await self._valid_image_url(bg_color):
+                        # get image
+                        async with aiohttp.get(bg_color) as r:
+                            image = await r.content.read()
+                        with open('data/leveler/temp/{}_temp_badge.png'.format(user.id),'wb') as f:
+                            f.write(image)
+                        badge_image = Image.open('data/leveler/temp/{}_temp_badge.png'.format(user.id)).convert('RGBA')
+                        badge_image = badge_image.resize((raw_length, raw_length), Image.ANTIALIAS)
 
-                    # structured like this because if border = 0, still leaves outline.
-                    if border_color:
-                        square = Image.new('RGBA', (raw_length, raw_length), border_color)
-                        # put border on ellipse/circle
-                        output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
-                        output = output.resize((size, size), Image.ANTIALIAS)
-                        outer_mask = mask.resize((size, size), Image.ANTIALIAS)
-                        process.paste(output, coord, outer_mask)
+                        # structured like this because if border = 0, still leaves outline.
+                        if border_color:
+                            square = Image.new('RGBA', (raw_length, raw_length), border_color)
+                            # put border on ellipse/circle
+                            output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
+                            output = output.resize((size, size), Image.ANTIALIAS)
+                            outer_mask = mask.resize((size, size), Image.ANTIALIAS)
+                            process.paste(output, coord, outer_mask)
 
-                        # put on ellipse/circle
-                        output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
-                        output = output.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
-                        inner_mask = mask.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
-                        process.paste(output, (coord[0] + border_width, coord[1] + border_width), inner_mask)
-                    else:
-                        # put on ellipse/circle
-                        output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
-                        output = output.resize((size, size), Image.ANTIALIAS)
-                        outer_mask = mask.resize((size, size), Image.ANTIALIAS)
-                        process.paste(output, coord, outer_mask)
-
-                    try:
-                        os.remove('data/leveler/temp/{}_temp_badge.png'.format(user.id))
-                    except:
-                        pass
-                else: # if it's just a color
-                    if border_color:
-                        # border
-                        square = Image.new('RGBA', (raw_length, raw_length), border_color)
-                        output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
-                        output = output.resize((size, size), Image.ANTIALIAS)
-                        outer_mask = mask.resize((size, size), Image.ANTIALIAS)
-                        process.paste(output, coord, outer_mask)
-
-                        # put on ellipse/circle
-                        square = Image.new('RGBA', (raw_length, raw_length), bg_color)
-                        output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
-                        output = output.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
-                        inner_mask = mask.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
-                        process.paste(output, (coord[0] + border_width, coord[1] + border_width), inner_mask)
-                        draw.text((self._center(coord[0], coord[0] + size, badge[:6], badge_fnt), coord[1]+8), badge[:6],  font=badge_fnt, fill=text_color) # Text
-                    else:
-                        square = Image.new('RGBA', (raw_length, raw_length), bg_color)
-                        output = ImageOps.fit(square, (raw_length, raw_length), centering=(0.5, 0.5))
-                        output = output.resize((size, size), Image.ANTIALIAS)
-                        outer_mask = mask.resize((size, size), Image.ANTIALIAS)
-                        process.paste(output, coord, outer_mask)
-                        draw.text((self._center(coord[0], coord[0] + size, badge[:6], badge_fnt), coord[1]+8), badge[:6],  font=badge_fnt, fill=text_color) # Text
+                            # put on ellipse/circle
+                            output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
+                            output = output.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
+                            inner_mask = mask.resize((size - total_gap, size - total_gap), Image.ANTIALIAS)
+                            process.paste(output, (coord[0] + border_width, coord[1] + border_width), inner_mask)
+                        else:
+                            # put on ellipse/circle
+                            output = ImageOps.fit(badge_image, (raw_length, raw_length), centering=(0.5, 0.5))
+                            output = output.resize((size, size), Image.ANTIALIAS)
+                            outer_mask = mask.resize((size, size), Image.ANTIALIAS)
+                            process.paste(output, coord, outer_mask)
+                except:
+                    pass
+                # attempt to remove badge image
+                try:
+                    os.remove('data/leveler/temp/{}_temp_badge.png'.format(user.id))
+                except:
+                    pass
                 i += 1
         elif self.settings["badge_type"] == "tags" or self.settings["badge_type"] == "bars":
-            vert_pos = 190
+            vert_pos = 187
             i = 0
             for pair in sorted_badges[:5]:
                 badge = pair[0]
-                bg_color = self.badges[badge]["bg_color"]
-                text_color = self.badges[badge]["text_color"]
-                border_color = self.badges[badge]["border_color"]
+                print(badge)
+                bg_color = badge["bg_img"]
+                border_color = badge["border_color"]
                 left_pos = 10
                 right_pos = 95
-                text = badge.replace("_", " ")
                 total_gap = 4
                 border_width = int(total_gap/2)
                 bar_size = (85, 15)
@@ -2041,15 +2040,8 @@ class Leveler:
                         os.remove('data/leveler/temp/{}_temp_badge.png'.format(user.id))
                     except:
                         pass
-                else:
-                    if border_color != None:
-                        draw.rectangle([(left_pos, vert_pos + i*17), (right_pos, vert_pos + 15 + i*17)], fill = border_color, outline = border_color) # border
-                        draw.rectangle([(left_pos + border_width, vert_pos + border_width + i*17), (right_pos - border_width, vert_pos - border_width + 15 + i*17)], fill = bg_color) # bg
-                    else:
-                        draw.rectangle([(left_pos,vert_pos + i*17), (right_pos, vert_pos + 15 + i*17)], fill = bg_color, outline = border_color) # bg
-                    bar_fnt = ImageFont.truetype(font_bold_file, 14) # a slightly bigger font was requested
-                    draw.text((self._center(left_pos,right_pos, text, bar_fnt), vert_pos + 2 + i*17), text,  font=bar_fnt, fill = text_color) # Credits
-                vert_pos += 2 # spacing
+
+                vert_pos += 3 # spacing
                 i += 1
 
         result = Image.alpha_composite(result, process)
