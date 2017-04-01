@@ -41,7 +41,7 @@ default_avatar_url = "http://i.imgur.com/XPDO9VH.jpg"
 
 try:
     client = MongoClient()
-    db = client['leveler_dev']
+    db = client['leveler']
 except:
     print("Can't load database. Follow instructions on Git/online to install MongoDB.")
 
