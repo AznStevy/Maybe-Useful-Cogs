@@ -250,7 +250,7 @@ class Leveler:
 
         msg += "```ruby\n"
         rank = 1
-        labels = ["♔", "♕", "♖", "♗", "♘", "♙", " ", " ", " ", " "]
+        labels = ["♔", "♕", "♖", "♗", "♘", "♙", "   ", "   ", "   ", "   "]
         for user in sorted_list[:10]:
             msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank-1], u"➤", user[0])
             msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[1]))
@@ -1863,8 +1863,6 @@ class Leveler:
         rep_text = "{} REP".format(userinfo["rep"])
         draw.text((self._center(7, 100, rep_text, rep_fnt), 144), rep_text, font=rep_fnt, fill=white_color)
 
-        draw.text((self._center(5, 100, "Badges", sub_header_fnt), 172), "Badges", font=sub_header_fnt, fill=self._contrast(badge_fill, white_color, rep_fill)) # Badges
-
         exp_text = "{}/{}".format(userinfo["servers"][server.id]["current_exp"],self._required_exp(userinfo["servers"][server.id]["level"])) # Exp
         exp_color = exp_fill
         draw.text((105, 99), exp_text,  font=exp_fnt, fill=(exp_color[0], exp_color[1], exp_color[2], 255)) # Exp Text
@@ -1938,14 +1936,14 @@ class Leveler:
         # TODO: simplify this. it shouldn't be this complicated... sacrifices conciseness for customizability
         if "badge_type" not in self.settings.keys() or self.settings["badge_type"] == "circles":
             # circles require antialiasing
-            vert_pos = 186
-            right_shift = 2
-            left = 9 + right_shift
+            vert_pos = 171
+            right_shift = 0
+            left = 8 + right_shift
             right = 52 + right_shift
-            size = 28
+            size = 27
             total_gap = 4 # /2
-            hor_gap = 6
-            vert_gap = 1
+            hor_gap = 4
+            vert_gap = 2
             border_width = int(total_gap/2)
             mult = [
                 (0,0), (1,0), (2,0),
@@ -1960,7 +1958,6 @@ class Leveler:
                     badge = pair[0]
                     bg_color = badge["bg_img"]
                     border_color = badge["border_color"]
-                    size = 24
                     multiplier = 6 # for antialiasing
                     raw_length = size * multiplier
 
@@ -2459,15 +2456,15 @@ class Leveler:
         users = []
 
         for userinfo in db.users.find({}):
-            server_exp = 0
             try:
+                server_exp = 0
                 userid = userinfo["user_id"]
                 for i in range(userinfo["servers"][server.id]["level"]):
                     server_exp += self._required_exp(i)
                 server_exp += userinfo["servers"][server.id]["current_exp"]
-            except KeyError:
+                users.append((userid, server_exp))
+            except:
                 pass
-            users.append((userid, server_exp))
 
         sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
