@@ -918,12 +918,12 @@ class Leveler:
 
         try:
             bank = self.bot.get_cog('Economy').bank
-            if bank.account_exists(user):
+            if bank.account_exists(user) and self.settings["bg_price"] != 0:
                 if not bank.can_spend(user, self.settings["bg_price"]):
                     await self.bot.say("**Insufficient funds. Backgrounds changes cost: ${}**".format(self.settings["bg_price"]))
                     return False
                 else:
-                    await self.bot.say('**{}, you are about to buy a background for `{}`. Confirm by typing "yes".**'.format(self._is_mention(user), self.settings["bg_price"]))
+                    await self.bot.say('**{}, you are about to buy a background for `{}`. Confirm by typing `yes`.**'.format(self._is_mention(user), self.settings["bg_price"]))
                     answer = await self.bot.wait_for_message(timeout=15, author=user)
                     if answer is None:
                         await self.bot.say('**Purchase canceled.**')
@@ -973,6 +973,7 @@ class Leveler:
         '''Set a user's level. (What a cheater C:).'''
         org_user = ctx.message.author
         server = user.server
+        channel = ctx.message.channel
         userinfo = db.users.find_one({'user_id':user.id})
 
         if server.id in self.settings["disabled_servers"]:
@@ -1005,7 +1006,7 @@ class Leveler:
             "total_exp": userinfo["total_exp"]
             }})
         await self.bot.say("**{}'s Level has been set to {}.**".format(self._is_mention(user), level))
-        await self._handle_levelup(user, userinfo, server)
+        await self._handle_levelup(user, userinfo, server, channel)
 
     @checks.is_owner()
     @lvladmin.command(no_pm=True)
@@ -2415,14 +2416,14 @@ class Leveler:
                 "servers.{}.current_exp".format(server.id): userinfo["servers"][server.id]["current_exp"] + exp - required,
                 "chat_block": time.time()
                 }})
-            await self._handle_levelup(user, userinfo, server)
+            await self._handle_levelup(user, userinfo, server, channel)
         else:
             db.users.update_one({'user_id':user.id}, {'$set':{
                 "servers.{}.current_exp".format(server.id): userinfo["servers"][server.id]["current_exp"] + exp,
                 "chat_block": time.time()
                 }})
 
-    async def _handle_levelup(self, user, userinfo, server):
+    async def _handle_levelup(self, user, userinfo, server, channel):
         if not isinstance(self.settings["lvl_msg"], list):
             self.settings["lvl_msg"] = []
             fileIO("data/leveler/settings.json", "save", self.settings)
