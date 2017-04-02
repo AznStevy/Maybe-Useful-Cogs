@@ -708,15 +708,14 @@ class Leveler:
         """Set your user info."""
         user = ctx.message.author
         server = ctx.message.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
         max_char = 150
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
             return
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
 
         if len(info) < max_char:
             db.users.update_one({'user_id':user.id}, {'$set':{"info": info}})
@@ -729,6 +728,8 @@ class Leveler:
         """Set your level background"""
         user = ctx.message.author
         server = ctx.message.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
 
         if server.id in self.settings["disabled_servers"]:
@@ -739,8 +740,6 @@ class Leveler:
             await self.bot.say("**Text-only commands allowed.**")
             return
 
-        # creates user if doesn't exist
-        await self._create_user(user, server)
 
         if image_name in self.backgrounds["levelup"].keys():
             if await self._process_purchase(ctx):
@@ -754,6 +753,8 @@ class Leveler:
         """Set your profile background"""
         user = ctx.message.author
         server = ctx.message.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
 
         if server.id in self.settings["disabled_servers"]:
@@ -764,8 +765,6 @@ class Leveler:
             await self.bot.say("**Text-only commands allowed.**")
             return
 
-        # creates user if doesn't exist
-        await self._create_user(user, server)
 
         if image_name in self.backgrounds["profile"].keys():
             if await self._process_purchase(ctx):
@@ -779,6 +778,8 @@ class Leveler:
         """Set your rank background"""
         user = ctx.message.author
         server = ctx.message.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
 
         if server.id in self.settings["disabled_servers"]:
@@ -789,8 +790,6 @@ class Leveler:
             await self.bot.say("**Text-only commands allowed.**")
             return
 
-        # creates user if doesn't exist
-        await self._create_user(user, server)
 
         if image_name in self.backgrounds["rank"].keys():
             if await self._process_purchase(ctx):
@@ -804,15 +803,14 @@ class Leveler:
         """Set your title."""
         user = ctx.message.author
         server = ctx.message.server
+        # creates user if doesn't exist
+        await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
         max_char = 20
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("Leveler commands for this server are disabled.")
             return
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
 
         if len(title) < max_char:
             userinfo["title"] = title
@@ -974,6 +972,8 @@ class Leveler:
         org_user = ctx.message.author
         server = user.server
         channel = ctx.message.channel
+        # creates user if doesn't exist
+        await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
 
         if server.id in self.settings["disabled_servers"]:
@@ -983,9 +983,6 @@ class Leveler:
         if level < 0:
             await self.bot.say("**Please enter a positive number.**")
             return
-
-        # creates user if doesn't exist
-        await self._create_user(user, server)
 
         # get rid of old level exp
         old_server_exp = 0
@@ -1939,11 +1936,11 @@ class Leveler:
             # circles require antialiasing
             vert_pos = 171
             right_shift = 0
-            left = 8 + right_shift
+            left = 9 + right_shift
             right = 52 + right_shift
             size = 27
             total_gap = 4 # /2
-            hor_gap = 4
+            hor_gap = 3
             vert_gap = 2
             border_width = int(total_gap/2)
             mult = [
