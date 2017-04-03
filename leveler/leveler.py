@@ -67,6 +67,7 @@ class Leveler:
                 userinfo['user_id'] = userid
                 db.users.insert_one(userinfo)
 
+    @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.command(name = "profile", pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
         """Displays a user profile."""
@@ -79,18 +80,6 @@ class Leveler:
         # creates user if doesn't exist
         await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
-
-        # check cooldown first
-        if "profile_block" not in userinfo:
-            userinfo["profile_block"] = 0
-
-        cooldown = 10
-        elapsed_time = curr_time - userinfo["profile_block"]
-        if elapsed_time > cooldown:
-            pass
-        else:
-            await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time)))
-            return
 
         # check if disabled
         if server.id in self.settings["disabled_servers"]:
@@ -143,6 +132,7 @@ class Leveler:
         em.set_thumbnail(url=user.avatar_url)
         return em
 
+    @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.command(pass_context=True, no_pm=True)
     async def rank(self,ctx,user : discord.Member=None):
         """Displays the rank of a user."""
@@ -155,18 +145,6 @@ class Leveler:
         # creates user if doesn't exist
         await self._create_user(user, server)
         userinfo = db.users.find_one({'user_id':user.id})
-
-        # check cooldown first
-        if "rank_block" not in userinfo:
-            userinfo["rank_block"] = 0
-
-        cooldown = 10
-        elapsed_time = curr_time - userinfo["rank_block"]
-        if elapsed_time > cooldown:
-            pass
-        else:
-            await self.bot.say("**{}, please wait. {}s Cooldown!**".format(self._is_mention(user), int(cooldown - elapsed_time)))
-            return
 
         # check if disabled
         if server.id in self.settings["disabled_servers"]:
@@ -206,6 +184,7 @@ class Leveler:
         else:
             return user.name
 
+    @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.command(pass_context=True, no_pm=True)
     async def top10(self,ctx, global_rank:str = None):
         '''Displays leaderboard. Add "global" parameter for global'''
@@ -884,7 +863,7 @@ class Leveler:
             self.settings["msg_credits"] = {}
 
         self.settings["msg_credits"][server.id] = credits
-        await self.bot.say("**Credits per message logged set to {}.**".format(str(credits)))
+        await self.bot.say("**Credits per message logged set to `{}`.**".format(str(credits)))
 
         fileIO('data/leveler/settings.json', "save", self.settings)
 
@@ -903,10 +882,10 @@ class Leveler:
                 await self.bot.say("**Level-up message lock disabled.**".format(channel.name))
             else:
                 self.settings["lvl_msg_lock"][server.id] = channel.id
-                await self.bot.say("**Level-up message lock changed to #{}.**".format(channel.name))
+                await self.bot.say("**Level-up message lock changed to `#{}`.**".format(channel.name))
         else:
             self.settings["lvl_msg_lock"][server.id] = channel.id
-            await self.bot.say("**Level-up messages locked to #{}**".format(channel.name))
+            await self.bot.say("**Level-up messages locked to `#{}`**".format(channel.name))
 
         fileIO('data/leveler/settings.json', "save", self.settings)
 
@@ -962,7 +941,7 @@ class Leveler:
             await self.bot.say("**That is not a valid background price.**")
         else:
             self.settings["bg_price"] = price
-            await self.bot.say("**Background price set to: $`{}`!**".format(price))
+            await self.bot.say("**Background price set to: `{}`!**".format(price))
             fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.is_owner()
@@ -1002,7 +981,7 @@ class Leveler:
             "servers.{}.current_exp".format(server.id): 0,
             "total_exp": userinfo["total_exp"]
             }})
-        await self.bot.say("**{}'s Level has been set to {}.**".format(self._is_mention(user), level))
+        await self.bot.say("**{}'s Level has been set to `{}`.**".format(self._is_mention(user), level))
         await self._handle_levelup(user, userinfo, server, channel)
 
     @checks.is_owner()
@@ -1038,10 +1017,10 @@ class Leveler:
         server = ctx.message.server
         if server.id in self.settings["disabled_servers"]:
             self.settings["disabled_servers"] = list(filter(lambda a: a != server.id, self.settings["disabled_servers"]))
-            await self.bot.say("**Leveler enabled on {}.**".format(server.name))
+            await self.bot.say("**Leveler enabled on `{}`.**".format(server.name))
         else:
             self.settings["disabled_servers"].append(server.id)
-            await self.bot.say("**Leveler disabled on {}.**".format(server.name))
+            await self.bot.say("**Leveler disabled on `{}`.**".format(server.name))
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
@@ -1070,10 +1049,10 @@ class Leveler:
         else:
             if server.id in self.settings["text_only"]:
                 self.settings["text_only"].remove(server.id)
-                await self.bot.say("**Text-only messages disabled for {}.**".format(server.name))
+                await self.bot.say("**Text-only messages disabled for `{}`.**".format(server.name))
             else:
                 self.settings["text_only"].append(server.id)
-                await self.bot.say("**Text-only messages enabled for {}.**".format(server.name))
+                await self.bot.say("**Text-only messages enabled for `{}`.**".format(server.name))
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
@@ -1102,10 +1081,10 @@ class Leveler:
         else:
             if server.id in self.settings["lvl_msg"]:
                 self.settings["lvl_msg"].remove(server.id)
-                await self.bot.say("**Level-up messages disabled for {}.**".format(server.name))
+                await self.bot.say("**Level-up alerts disabled for `{}`.**".format(server.name))
             else:
                 self.settings["lvl_msg"].append(server.id)
-                await self.bot.say("**Level-up messages enabled for {}.**".format(server.name))
+                await self.bot.say("**Level-up alerts enabled for `{}`.**".format(server.name))
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
@@ -1133,10 +1112,10 @@ class Leveler:
         else:
             if server.id in self.settings["private_lvl_msg"]:
                 self.settings["private_lvl_msg"].remove(server.id)
-                await self.bot.say("**Private level-up messages disabled for {}.**".format(server.name))
+                await self.bot.say("**Private level-up alerts disabled for `{}`.**".format(server.name))
             else:
                 self.settings["private_lvl_msg"].append(server.id)
-                await self.bot.say("**Private level-up messages enabled for {}.**".format(server.name))
+                await self.bot.say("**Private level-up alerts enabled for `{}`.**".format(server.name))
 
         fileIO('data/leveler/settings.json', "save", self.settings)
 
@@ -1285,7 +1264,7 @@ class Leveler:
                                     }})
                                 await self.bot.say('**You have bought the `{}` badge for `{}`.**'.format(name, badge_info['price']))
                             elif bank.account_exists(user) and bank.get_balance(user) < badge_info['price']:
-                                await self.bot.say('**Not enough money! Need {} more.**'.format(badge_info['price'] - bank.get_balance(user)))
+                                await self.bot.say('**Not enough money! Need `{}` more.**'.format(badge_info['price'] - bank.get_balance(user)))
                             else:
                                 await self.bot.say('**User does not exist in bank. Do {}bank register**'.format(prefix))
                 else:
@@ -1315,7 +1294,7 @@ class Leveler:
                 db.users.update_one({'user_id':userinfo['user_id']}, {'$set':{
                     "badges":userinfo['badges'],
                     }})
-                await self.bot.say("**The {} badge priority has been set to {}!**".format(userinfo['badges'][badge]['badge_name'], priority_num))
+                await self.bot.say("**The `{}` badge priority has been set to `{}`!**".format(userinfo['badges'][badge]['badge_name'], priority_num))
                 break
         else:
             await self.bot.say("**You don't have that badge!**")
@@ -1434,7 +1413,7 @@ class Leveler:
             return
 
         self.settings["badge_type"] = name.lower()
-        await self.bot.say("**Badge type set to {}**".format(name.lower()))
+        await self.bot.say("**Badge type set to `{}`**".format(name.lower()))
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     def _is_hex(self, color:str):
@@ -1487,7 +1466,7 @@ class Leveler:
                 except:
                     pass
 
-            await self.bot.say("**The {} badge has been removed.**".format(name))
+            await self.bot.say("**The `{}` badge has been removed.**".format(name))
         else:
             await self.bot.say("**That badge does not exist.**")
 
@@ -1519,7 +1498,7 @@ class Leveler:
         else:
             userinfo["badges"][badge_name] = badges[name]
             db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
-            await self.bot.say("**{} has just given {} the {} badge!**".format(self._is_mention(org_user), self._is_mention(user), name))
+            await self.bot.say("**{} has just given `{}` the `{}` badge!**".format(self._is_mention(org_user), self._is_mention(user), name))
 
     @checks.admin_or_permissions(manage_server=True)
     @lvlbadge.command(pass_context = True, no_pm=True)
@@ -1548,7 +1527,7 @@ class Leveler:
             if userinfo['badges'][badge_name]['price'] == -1:
                 del userinfo["badges"][badge_name]
                 db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
-                await self.bot.say("**{} has taken the {} badge from {}! :upside_down:**".format(self._is_mention(org_user), name, self._is_mention(user)))
+                await self.bot.say("**{} has taken the `{}` badge from {}! :upside_down:**".format(self._is_mention(org_user), name, self._is_mention(user)))
             else:
                 await self.bot.say("**You can't take away purchasable badges!**")
 
