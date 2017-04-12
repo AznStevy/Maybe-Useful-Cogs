@@ -527,7 +527,7 @@ class Osu:
                 timestamps = []
                 for tag in soup.findAll(attrs={'class': 'timeago'}):
                     timestamps.append(datetime.datetime.strptime(tag.contents[0].strip().replace(" UTC", ""), '%Y-%m-%d %H:%M:%S'))
-                timeago = datetime.datetime(1,1,1) + (datetime.datetime.now() - timestamps[1])
+                timeago = datetime.datetime(1,1,1) + (datetime.datetime.utcnow() - timestamps[1])
                 time_ago = "Last Online "
                 if timeago.year-1 != 0:
                     time_ago += "{} Years ".format(timeago.year-1)
