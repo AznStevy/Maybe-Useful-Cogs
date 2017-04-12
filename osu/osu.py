@@ -12,6 +12,7 @@ try:
     from bs4 import BeautifulSoup
 except:
     raise RuntimeError("bs4 required: pip install beautifulsoup4")
+from datetime import datetime, timedelta
 from .utils.dataIO import fileIO
 from cogs.utils import checks
 import logging
@@ -516,13 +517,31 @@ class Osu:
             level_percent = float(user['level']) - level_int
 
             info = ""
-            info += "**▸ Global Rank:** #{} {}\n".format(user['pp_rank'], pp_country_rank)
+            info += "**▸ {} Rank:** #{} {}\n".format(self._get_api_name(api), user['pp_rank'], pp_country_rank)
             info += "**▸ Level:** {} ({:.2f}%)\n".format(level_int, level_percent*100)
             info += "**▸ Total PP:** {}\n".format(user['pp_raw'])
             info += "**▸ Playcount:** {}\n".format(user['playcount'])
             info += "**▸ Hit Accuracy:** {}%".format(user['accuracy'][0:5])
             em.description = info
-            em.set_footer(text = "On Osu! {} Server".format(self._get_api_name(api)))
+            if api == self.osu_settings["type"]["default"]:
+                soup = BeautifulSoup(urllib.request.urlopen("https://osu.ppy.sh/u/{}".format(user['user_id'])), "html.parser")
+                timestamps = []
+                for tag in soup.findAll(attrs={'class': 'timeago'}):
+                    timestamps.append(datetime.strptime(tag.contents[0].strip().replace(" UTC", ""), '%Y-%m-%d %H:%M:%S'))
+                timeago = datetime(1,1,1) + (datetime.now() - timestamps[1])
+                time_ago = "Last Online "
+                if timeago.year-1 != 0:
+                    time_ago += "{} Years ".format(timeago.year-1)
+                if timeago.month-1 !=0:
+                    time_ago += "{} Months ".format(timeago.month-1)
+                if timeago.day-1 !=0:
+                    time_ago += "{} Days ".format(timeago.day-1)
+                if timeago.hour != 0:
+                    time_ago += "{} Hours ".format(timeago.hour)
+                if timeago.minute != 0:
+                    time_ago += "{} Minutes ".format(timeago.minute)
+                time_ago += "{} Seconds ago".format(timeago.second)
+                em.set_footer(text=time_ago)
             return em
         except:
             return None
