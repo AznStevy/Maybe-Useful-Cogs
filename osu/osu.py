@@ -1043,7 +1043,9 @@ class Osu:
         info += "▸ **{:.2f}★** ▸ {}:{} ▸ {}bpm\n".format(float(beatmap['difficultyrating']), m, str(s).zfill(2), beatmap['bpm'])
         if old_user_info != None:
             dpp = float(new_user_info['pp_raw']) - float(old_user_info['pp_raw'])
-            info += "▸ {} ▸ x{} ▸ **{:.2f}pp (+{:.2f})**\n".format(play['score'], play['maxcombo'], float(play['pp']), dpp)
+            if not '-' in str(dpp):
+                dpp = '+{}'.format(dpp)
+            info += "▸ {} ▸ x{} ▸ **{:.2f}pp ({:.2f})**\n".format(play['score'], play['maxcombo'], float(play['pp']), dpp)
             info += "▸ #{} → #{} ({}#{} → #{})".format(old_user_info['pp_rank'], new_user_info['pp_rank'], new_user_info['country'], old_user_info['pp_country_rank'], new_user_info['pp_country_rank'])
         else:
             info += "▸ {} ▸ x{} ▸ **{:.2f}pp**\n".format(play['score'], play['maxcombo'], float(play['pp']))
