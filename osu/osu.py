@@ -574,6 +574,16 @@ class Osu:
         info += "▸ **Rank:** {} ▸ **Combo:** x{}\n".format(userrecent['rank'], userrecent['maxcombo'])
         info += "▸ **Score:** {} ▸ **Misses:** {}\n".format(userrecent['score'], userrecent['countmiss'])
         info += "▸ **Acc:** {:.2f}% ▸ **Stars:** {:.2f}★\n".format(float(acc), float(beatmap['difficultyrating']))
+        
+        scoretime = (datetime.datetime.utcnow() + datetime.timedelta(hours=8)) -  datetime.datetime.strptime(userrecent['date'], '%Y-%m-%d %H:%M:%S')
+        timeago = datetime.datetime(1,1,1) + scoretime
+        timeago_text = "Score from "
+        if timeago.hour != 0:
+            timeago_text += "{} Hours ".format(timeago.hour)
+        if timeago.minute != 0:
+            timeago_text = "{} Minutes ".format(timeago.minute)
+        timeago_text += "{} Seconds ago".format(timeago.second)
+        info += "▸ ".format(timeago_text)
 
         # grab beatmap image
         page = urllib.request.urlopen(beatmap_url)
