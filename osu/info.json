@@ -3,5 +3,6 @@
     "INSTALL_MSG" : "Have an osu! cog.",
     "NAME" : "osu",
     "SHORT" : "Gives osu! profile information for all gamemodes.",
+    "REQUIREMENTS" : ["beautifulsoup4"],
     "DESCRIPTION" : "Gives osu! profile information for all gamemodes... what more do you want lol?"
 }
