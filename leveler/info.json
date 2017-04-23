@@ -3,5 +3,6 @@
     "INSTALL_MSG" : "Have fun annoying people with mentions! Required: `pip3 install numpy scipy pillow pymongo`. You must also install mongodb! To enable level up messages for the server, you must do '[p]lvladmin lvlalert' or '[p]lvladmin lvlalert' enable all to enable for all servers.",
     "NAME" : "leveler",
     "SHORT" : "Level/Experience tracker",
+    "REQUIREMENTS" : ["Pillow","pymongo"],
     "DESCRIPTION" : "Increase activity(or not) on your server with chat exp!"
 }
