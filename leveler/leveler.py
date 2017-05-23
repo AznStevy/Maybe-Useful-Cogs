@@ -5,6 +5,7 @@ from .utils.chat_formatting import pagify
 from __main__ import send_cmd_help
 import platform, asyncio, string, operator, random, textwrap
 import os, re, aiohttp
+import math
 from .utils.dataIO import fileIO
 from cogs.utils import checks
 try:
@@ -67,6 +68,13 @@ class Leveler:
                 userinfo['user_id'] = userid
                 db.users.insert_one(userinfo)
 
+    def create_global(self):
+
+                userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
+                userinfo['user_id'] = userid
+                db.users.insert_one(userinfo)
+
+
     @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.command(name = "profile", pass_context=True, no_pm=True)
     async def profile(self,ctx, *, user : discord.Member=None):
@@ -112,7 +120,7 @@ class Leveler:
         em = discord.Embed(description='', colour=user.colour)
         em.add_field(name="Title:", value = test_empty(userinfo["title"]))
         em.add_field(name="Reps:", value= userinfo["rep"])
-        em.add_field(name="Global Rank:", value = '#{}'.format(await self._find_global_rank(user, server)))
+        em.add_field(name="Global Rank:", value = '#{}'.format(await self._find_global_rank(user)))
         em.add_field(name="Server Rank:", value = '#{}'.format(await self._find_server_rank(user, server)))
         em.add_field(name="Server Level:", value = format(userinfo["servers"][server.id]["level"]))
         em.add_field(name="Total Exp:", value = userinfo["total_exp"])
@@ -184,56 +192,114 @@ class Leveler:
         else:
             return user.name
 
-    @commands.cooldown(1, 10, commands.BucketType.user)
+    # @commands.cooldown(1, 10, commands.BucketType.user)
     @commands.command(pass_context=True, no_pm=True)
-    async def top10(self,ctx, global_rank:str = None):
+    async def top(self, ctx, *options):
         '''Displays leaderboard. Add "global" parameter for global'''
         server = ctx.message.server
+        user = ctx.message.author
 
         if server.id in self.settings["disabled_servers"]:
             await self.bot.say("**Leveler commands for this server are disabled!**")
             return
 
         users = []
-        if global_rank == "global":
-            msg = "**Global Leaderboard for {}**\n".format(self.bot.user.name)
-            # this is also terrible...
+        board_type = ''
+        user_stat = None
+        if '-rep' in options and '-global' in options:
+            msg = "**Global Rep Leaderboard for {}**\n".format(self.bot.user.name)
             for userinfo in db.users.find({}):
                 try:
-                    userid = userinfo['user_id']
-                    for server in self.bot.servers:
-                        temp_user = find(lambda m: m.id == userid, server.members)
-                        if temp_user != None:
-                            break
-                    if temp_user != None:
-                        users.append((temp_user.name, userinfo["total_exp"]))
+                    users.append((userinfo["username"], userinfo["rep"]))
                 except:
-                    pass
-            sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
+                    users.append((userinfo["user_id"], userinfo["rep"]))
+
+                if user.id == userinfo["user_id"]:
+                    user_stat = userinfo["rep"]
+
+            board_type = 'Rep'
+            footer_text = "Rank: {}         {}: {}".format(
+                await self._find_global_rep_rank(user), board_type, user_stat)
+        elif '-global' in options:
+            msg = "**Global Exp Leaderboard for {}**\n".format(self.bot.user.name)
+            for userinfo in db.users.find({}):
+                try:
+                    users.append((userinfo["username"], userinfo["total_exp"]))
+                except:
+                    users.append((userinfo["user_id"], userinfo["total_exp"]))
+
+                if user.id == userinfo["user_id"]:
+                    user_stat = userinfo["total_exp"]
+
+            board_type = 'Points'
+            footer_text = "Rank: {}         {}: {}".format(
+                await self._find_global_rank(user), board_type, user_stat)
+        elif '-rep' in options:
+            msg = "**Rep Leaderboard for {}**\n".format(server.name)
+            for userinfo in db.users.find({}):
+                userid = userinfo["user_id"]
+                if "servers" in userinfo and server.id in userinfo["servers"]:
+                    try:
+                        users.append((userinfo["username"], userinfo["rep"]))
+                    except:
+                        users.append((userinfo["user_id"], userinfo["rep"]))
+
+                if user.id == userinfo["user_id"]:
+                    user_stat = userinfo["rep"]
+
+            board_type = 'Rep'
+            footer_text = "Rank: {}         {}: {}".format(
+                await self._find_server_rep_rank(user, server), board_type, user_stat)
         else:
-            msg = "**Leaderboard for {}**\n".format(server.name)
+            msg = "**Exp Leaderboard for {}**\n".format(server.name)
             for userinfo in db.users.find({}):
                 try:
                     userid = userinfo["user_id"]
                     if "servers" in userinfo and server.id in userinfo["servers"]:
-                        temp_user = find(lambda m: m.id == userid, server.members)
                         server_exp = 0
                         for i in range(userinfo["servers"][server.id]["level"]):
                             server_exp += self._required_exp(i)
                         server_exp +=  userinfo["servers"][server.id]["current_exp"]
-                        if temp_user != None:
-                            users.append((temp_user.name, server_exp))
+                        try:
+                            users.append((userinfo["username"], server_exp))
+                        except:
+                            users.append((userinfo["user_id"], server_exp))
                 except:
                     pass
-            sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
+            board_type = 'Points'
+            footer_text = "Rank: {}         {}: {}".format(
+                await self._find_server_rank(user, server), board_type,
+                await self._find_server_exp(user, server))
+        sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
-        msg += "```ruby\n"
-        rank = 1
-        labels = ["♔", "♕", "♖", "♗", "♘", "♙", "   ", "   ", "   ", "   "]
-        for user in sorted_list[:10]:
-            msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank-1], u"➤", user[0])
-            msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total Points: " + str(user[1]))
+        # multiple page support
+        page = 1
+        pages = math.ceil(len(sorted_list)/10)
+        for option in options:
+            if str(option).isdigit():
+                if page >= 1:
+                    page = int(str(option))
+                else:
+                    await self.bot.say("**Please enter a valid page number! (1 - {})".format(str(pages)))
+                break
+
+        msg += "```python\n"
+        msg += "Rank | Name (Page {})\n".format(page)
+        rank = 1 + 10*(page-1)
+        start_index = 10*page - 10
+        end_index = 10*page
+
+        if page == 1:
+            labels = ["♔", "♕", "♖", "♗", "♘", "♙", "   ", "   ", "   ", "   "]
+        else:
+            labels = ["   ", "   ", "   ", "   ", "   ", "   ", "   ", "   ", "   ", "   "]
+
+        for single_user in sorted_list[start_index:end_index]:
+            msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank - start_index - 1], u"➤", single_user[0])
+            msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total {}: ".format(board_type) + str(single_user[1]))
             rank += 1
+        msg +="----------------------------------------------------\n"
+        msg += footer_text
         msg +="```"
         await self.bot.say(msg)
 
@@ -725,7 +791,7 @@ class Leveler:
                 db.users.update_one({'user_id':user.id}, {'$set':{"levelup_background": self.backgrounds["levelup"][image_name]}})
                 await self.bot.say("**Your new level-up background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list levelup`".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at `{}backgrounds levelup`".format(prefix[0]))
 
     @profileset.command(name = "bg", pass_context=True, no_pm=True)
     async def profilebg(self, ctx, *, image_name:str):
@@ -750,7 +816,7 @@ class Leveler:
                 db.users.update_one({'user_id':user.id}, {'$set':{"profile_background": self.backgrounds["profile"][image_name]}})
                 await self.bot.say("**Your new profile background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list profile`".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at `{}backgrounds profile`".format(prefix[0]))
 
     @rankset.command(name = "bg", pass_context=True, no_pm=True)
     async def rankbg(self, ctx, *, image_name:str):
@@ -775,7 +841,7 @@ class Leveler:
                 db.users.update_one({'user_id':user.id}, {'$set':{"rank_background": self.backgrounds["rank"][image_name]}})
                 await self.bot.say("**Your new rank background has been succesfully set!**")
         else:
-            await self.bot.say("That is not a valid bg. See available bgs at `{}lvlbg list rank`".format(prefix))
+            await self.bot.say("That is not a valid bg. See available bgs at `{}backgrounds rank`".format(prefix[0]))
 
     @profileset.command(pass_context=True, no_pm=True)
     async def title(self, ctx, *, title):
@@ -1120,13 +1186,13 @@ class Leveler:
         fileIO('data/leveler/settings.json', "save", self.settings)
 
     @commands.group(pass_context=True)
-    async def lvlbadge(self, ctx):
+    async def badge(self, ctx):
         """Badge Configuration Options"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
             return
 
-    @lvlbadge.command(name="available", pass_context=True, no_pm=True)
+    @badge.command(name="available", pass_context=True, no_pm=True)
     async def available(self, ctx, global_badge:str = None):
         '''Get a list of available badges for server or 'global'.'''
         user = ctx.message.author
@@ -1175,7 +1241,7 @@ class Leveler:
                 counter += 1
 
 
-    @lvlbadge.command(name="list", pass_context=True, no_pm=True)
+    @badge.command(name="list", pass_context=True, no_pm=True)
     async def listuserbadges(self, ctx, user:discord.Member = None):
         '''Get the badges of a user.'''
         if user == None:
@@ -1216,8 +1282,8 @@ class Leveler:
             await self.bot.say(embed = em)
             counter += 1
 
-    @lvlbadge.command(name="get", pass_context=True, no_pm=True)
-    async def get(self, ctx, name:str, global_badge:str = None):
+    @badge.command(name="buy", pass_context=True, no_pm=True)
+    async def buy(self, ctx, name:str, global_badge:str = None):
         '''Get a badge from repository. optional = "-global"'''
         user = ctx.message.author
         server = ctx.message.server
@@ -1274,7 +1340,7 @@ class Leveler:
         else:
             await self.bot.say('**There are no badges to get! (try `{}lvlbadge get [name] -global`).**'.format(prefix[0]))
 
-    @lvlbadge.command(name="set", pass_context=True, no_pm=True)
+    @badge.command(name="set", pass_context=True, no_pm=True)
     async def set(self, ctx, name:str, priority_num:int):
         '''Set a badge to profile. -1(invis), 0(not on profile), max: 5000.'''
         user = ctx.message.author
@@ -1307,7 +1373,7 @@ class Leveler:
         return db.users.find_one({'user_id':userinfo['user_id']})
 
     @checks.admin_or_permissions(manage_server=True)
-    @lvlbadge.command(name="add", pass_context = True, no_pm=True)
+    @badge.command(name="add", pass_context = True, no_pm=True)
     async def addbadge(self, ctx, name:str, bg_img:str, border_color:str, price:int, *, description:str):
         """Add a badge. name = "Use Quotes", Colors = #hex. bg_img = url, price = -1(non-purchasable), 0,..."""
 
@@ -1404,7 +1470,7 @@ class Leveler:
             await self.bot.say("**The `{}` badge has been updated**".format(name))
 
     @checks.is_owner()
-    @lvlbadge.command(no_pm=True)
+    @badge.command(no_pm=True)
     async def type(self, name:str):
         """circles or bars."""
         valid_types = ["circles", "bars"]
@@ -1424,7 +1490,7 @@ class Leveler:
         return re.search(reg_ex, str(color))
 
     @checks.admin_or_permissions(manage_server=True)
-    @lvlbadge.command(name="delete", pass_context=True, no_pm=True)
+    @badge.command(name="delete", pass_context=True, no_pm=True)
     async def delbadge(self, ctx, *, name:str):
         """Delete a badge and remove from all users."""
         user = ctx.message.author
@@ -1471,7 +1537,7 @@ class Leveler:
             await self.bot.say("**That badge does not exist.**")
 
     @checks.admin_or_permissions(manage_server=True)
-    @lvlbadge.command(pass_context = True, no_pm=True)
+    @badge.command(pass_context = True, no_pm=True)
     async def give(self, ctx, user : discord.Member, name: str):
         """Give a user a badge with a certain name"""
         org_user = ctx.message.author
@@ -1501,7 +1567,7 @@ class Leveler:
             await self.bot.say("**{} has just given `{}` the `{}` badge!**".format(self._is_mention(org_user), self._is_mention(user), name))
 
     @checks.admin_or_permissions(manage_server=True)
-    @lvlbadge.command(pass_context = True, no_pm=True)
+    @badge.command(pass_context = True, no_pm=True)
     async def take(self, ctx, user : discord.Member, name: str):
         """Take a user's badge."""
         org_user = ctx.message.author
@@ -1530,6 +1596,163 @@ class Leveler:
                 await self.bot.say("**{} has taken the `{}` badge from {}! :upside_down:**".format(self._is_mention(org_user), name, self._is_mention(user)))
             else:
                 await self.bot.say("**You can't take away purchasable badges!**")
+
+    @checks.admin_or_permissions(manage_server=True)
+    @badge.command(name = 'link', no_pm=True, pass_context=True)
+    async def linkbadge(self, ctx, badge_name:str, level:int):
+        """Associate a role with a level."""
+        server = ctx.message.server
+        serverbadges = db.badges.find_one({'server_id':server.id})
+
+        if serverbadges == None:
+            await self.bot.say("**This server does not have any badges!**")
+            return
+
+        if badge_name not in serverbadges['badges'].keys():
+            await self.bot.say("**Please make sure the `{}` badge exists!**".format(badge_name))
+            return
+        else:
+            server_linked_badges = db.badgelinks.find_one({'server_id':server.id})
+            if not server_linked_badges:
+                new_server = {
+                    'server_id': server.id,
+                    'badges': {
+                        badge_name:str(level)
+                    }
+                }
+                db.badgelinks.insert_one(new_server)
+            else:
+                server_linked_badges['badges'][badge_name] = str(level)
+                db.badgelinks.update_one({'server_id':server.id}, {'$set':{'badges':server_linked_badges['badges']}})
+            await self.bot.say("**The `{}` badge has been linked to level `{}`**".format(badge_name, level))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @badge.command(name = 'unlink', no_pm=True, pass_context=True)
+    async def unlinkbadge(self, ctx, badge_name:str):
+        """Delete a role/level association."""
+        server = ctx.message.server
+
+        server_linked_badges = db.badgelinks.find_one({'server_id':server.id})
+        badge_links = server_linked_badges['badges']
+
+        if badge_name in badge_links.keys():
+            await self.bot.say("**Badge/Level association `{}`/`{}` removed.**".format(badge_name, badge_links[badge_name]))
+            del badge_links[badge_name]
+            db.badgelinks.update_one({'server_id':server.id},{'$set':{'badges':badge_links}})
+        else:
+            await self.bot.say("**The `{}` badge is not linked to any levels!**".format(badge_name))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @badge.command(name = 'listlinks', no_pm=True, pass_context=True)
+    async def listbadge(self, ctx):
+        """List level/role associations."""
+        server = ctx.message.server
+        user = ctx.message.author
+
+        server_badges = db.badgelinks.find_one({'server_id':server.id})
+
+        em = discord.Embed(description='', colour=user.colour)
+        em.set_author(name="Current Badge - Level Links for {}".format(server.name), icon_url = server.icon_url)
+
+        if server_badges == None or 'badges' not in server_badges or server_badges['badges'] == {}:
+            msg = 'None'
+        else:
+            badges = server_badges['badges']
+            msg = '**Badge** → Level\n'
+            for badge in badges.keys():
+                msg += '**• {} →** {}\n'.format(badge, badges[badge])
+
+        em.description = msg
+        await self.bot.say(embed = em)
+
+    @commands.group(pass_context=True)
+    async def role(self, ctx):
+        """Admin Background Configuration"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+            return
+
+    @checks.admin_or_permissions(manage_server=True)
+    @role.command(name = 'link', no_pm=True, pass_context=True)
+    async def linkrole(self, ctx, role_name:str, level:int, remove_role = None):
+        """Associate a role with a level. Removes previous role if given."""
+        server = ctx.message.server
+
+        role_obj = discord.utils.find(lambda r: r.name == role_name, server.roles)
+        remove_role_obj = discord.utils.find(lambda r: r.name == remove_role, server.roles)
+        if role_obj == None or (remove_role != None and remove_role_obj == None):
+            if remove_role == None:
+                await self.bot.say("**Please make sure the `{}` role exists!**".format(role_name))
+            else:
+                await self.bot.say("**Please make sure the `{}` and/or `{}` roles exist!**".format(role_name, remove_role))
+        else:
+            server_roles = db.roles.find_one({'server_id':server.id})
+            if not server_roles:
+                new_server = {
+                    'server_id': server.id,
+                    'roles': {
+                        role_name: {
+                            'level':str(level),
+                            'remove_role': remove_role
+                            }
+                    }
+                }
+                db.roles.insert_one(new_server)
+            else:
+                if role_name not in server_roles['roles']:
+                    server_roles['roles'][role_name] = {}
+
+                server_roles['roles'][role_name]['level'] = str(level)
+                server_roles['roles'][role_name]['remove_role'] = remove_role
+                db.roles.update_one({'server_id':server.id}, {'$set':{'roles':server_roles['roles']}})
+
+            if remove_role == None:
+                await self.bot.say("**The `{}` role has been linked to level `{}`**".format(role_name, level))
+            else:
+                await self.bot.say("**The `{}` role has been linked to level `{}`. Will also remove `{}` role.**".format(
+                    role_name, level, remove_role))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @role.command(name = 'unlink', no_pm=True, pass_context=True)
+    async def unlinkrole(self, ctx, role_name:str):
+        """Delete a role/level association."""
+        server = ctx.message.server
+
+        server_roles = db.roles.find_one({'server_id':server.id})
+        roles = server_roles['roles']
+
+        if role_name in roles:
+            await self.bot.say("**Role/Level association `{}`/`{}` removed.**".format(role_name, roles[role_name]))
+            del roles[role_name]
+            db.roles.update_one({'server_id':server.id},{'$set':{'roles':roles}})
+        else:
+            await self.bot.say("**The `{}` role is not linked to any levels!**".format(role_name))
+
+    @checks.admin_or_permissions(manage_server=True)
+    @role.command(name = 'listlinks', no_pm=True, pass_context=True)
+    async def listrole(self, ctx):
+        """List level/role associations."""
+        server = ctx.message.server
+        user = ctx.message.author
+
+        server_roles = db.roles.find_one({'server_id':server.id})
+
+        em = discord.Embed(description='', colour=user.colour)
+        em.set_author(name="Current Role - Level Links for {}".format(server.name), icon_url = server.icon_url)
+
+        if server_roles == None or 'roles' not in server_roles or server_roles['roles'] == {}:
+            msg = 'None'
+        else:
+            roles = server_roles['roles']
+            msg = '**Role** → Level\n'
+            for role in roles:
+                if roles[role]['remove_role'] != None:
+                    msg += '**• {} →** {} (Removes: {})\n'.format(role, roles[role]['level'], roles[role]['remove_role'])
+                else:
+                    msg += '**• {} →** {}\n'.format(role, roles[role]['level'])
+
+        em.description = msg
+        await self.bot.say(embed = em)
 
     @lvladmin.group(name = "bg", pass_context=True)
     async def lvladminbg(self, ctx):
@@ -1611,8 +1834,8 @@ class Leveler:
         else:
             await self.bot.say("**That level-up background name doesn't exist.**")
 
-    @lvlset.command(name="listbgs", pass_context=True, no_pm=True)
-    async def listbgs(self, ctx, type:str = None):
+    @commands.command(name="backgrounds", pass_context=True, no_pm=True)
+    async def backgrounds(self, ctx, type:str = None):
         '''Gives a list of backgrounds. [p]lvlset listbgs [profile|rank|levelup]'''
         server = ctx.message.server
         user = ctx.message.author
@@ -1670,7 +1893,7 @@ class Leveler:
 
     async def draw_profile(self, user, server):
         name_fnt = ImageFont.truetype(font_bold_file, 22)
-        header_u_fnt = ImageFont.truetype(font_unicode_file, 18)
+        header_u_fnt = ImageFont.truetype(font_unicode_file, 18, encoding="utf-8")
         title_fnt = ImageFont.truetype(font_file, 18)
         sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
         badge_fnt = ImageFont.truetype(font_bold_file, 10)
@@ -1678,10 +1901,10 @@ class Leveler:
         large_fnt = ImageFont.truetype(font_bold_file, 33)
         level_label_fnt = ImageFont.truetype(font_bold_file, 22)
         general_info_fnt = ImageFont.truetype(font_bold_file, 15)
-        general_info_u_fnt = ImageFont.truetype(font_unicode_file, 12)
+        general_info_u_fnt = ImageFont.truetype(font_unicode_file, 12, encoding="utf-8")
         rep_fnt = ImageFont.truetype(font_bold_file, 26)
         text_fnt = ImageFont.truetype(font_bold_file, 12)
-        text_u_fnt = ImageFont.truetype(font_unicode_file, 8)
+        text_u_fnt = ImageFont.truetype(font_unicode_file, 8, encoding="utf-8")
         credit_fnt = ImageFont.truetype(font_bold_file, 10)
 
         def _write_unicode(text, init_x, y, font, unicode_font, fill):
@@ -1887,7 +2110,7 @@ class Leveler:
             global_symbol = "G "
             fine_adjust = 0
 
-        rank_txt = global_symbol + self._truncate_text("#{}".format(await self._find_global_rank(user, server)), 8)
+        rank_txt = global_symbol + self._truncate_text("#{}".format(await self._find_global_rank(user)), 8)
         exp_txt = self._truncate_text("{}".format(userinfo["total_exp"]), 8)
         _write_unicode(rank_txt, num_align - general_info_u_fnt.getsize(global_symbol)[0] + fine_adjust, 165, general_info_fnt, general_info_u_fnt, info_text_color) # Rank
         _write_unicode(exp_txt, num_align, 180, general_info_fnt, general_info_u_fnt, info_text_color)  # Exp
@@ -2418,15 +2641,45 @@ class Leveler:
                 channel = user
                 name = "You"
 
+            new_level = str(userinfo["servers"][server.id]["level"])
+            # add to appropriate role if necessary
+            try:
+                server_roles = db.roles.find_one({'server_id':server.id})
+                for role in server_roles['roles'].keys():
+                    if int(server_roles['roles'][role]['level']) == int(new_level):
+                        role_obj = discord.utils.find(lambda r: r.name == role, server.roles)
+                        await self.bot.add_roles(user, role_obj)
+
+                        if server_roles['roles'][role]['remove_role'] != None:
+                            remove_role_obj = discord.utils.find(
+                                lambda r: r.name == server_roles['roles'][role]['remove_role'], server.roles)
+                            if remove_role_obj != None:
+                                await self.bot.remove_roles(user, remove_role_obj)
+            except:
+                await self.bot.send_message(channel, 'Role was not set. Missing Permissions!')
+
+            # add appropriate badge if necessary
+            try:
+                server_linked_badges = db.badgelinks.find_one({'server_id':server.id})
+                for badge_name in server_linked_badges['badges']:
+                    if int(server_linked_badges['badges'][badge_name]) == int(new_level):
+                        server_badges = db.badges.find_one({'server_id':server.id})
+                        if server_badges != None and badge_name in server_badges['badges'].keys():
+                            userinfo_db = db.users.find_one({'user_id':user.id})
+                            new_badge_name = "{}_{}".format(badge_name, server.id)
+                            userinfo_db["badges"][new_badge_name] = server_badges['badges'][badge_name]
+                            db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo_db["badges"]}})
+            except:
+                await self.bot.send_message(channel, 'Error. Badge was not given!')
+
             if "text_only" in self.settings and server.id in self.settings["text_only"]:
                 await self.bot.send_typing(channel)
-                em = discord.Embed(description='**{} just gained a level{}! (LEVEL {})**'.format(name, server_identifier, userinfo["servers"][server.id]["level"]), colour=user.colour)
+                em = discord.Embed(description='**{} just gained a level{}! (LEVEL {})**'.format(name, server_identifier, new_level), colour=user.colour)
                 await self.bot.send_message(channel, '', embed = em)
             else:
                 await self.draw_levelup(user, server)
                 await self.bot.send_typing(channel)
                 await self.bot.send_file(channel, 'data/leveler/temp/{}_level.png'.format(user.id), content='**{} just gained a level{}!**'.format(name, server_identifier))
-
 
     async def _find_server_rank(self, user, server):
         targetid = user.id
@@ -2451,6 +2704,25 @@ class Leveler:
                 return rank
             rank+=1
 
+    async def _find_server_rep_rank(self, user, server):
+        targetid = user.id
+        users = []
+        for userinfo in db.users.find({}):
+            userid = userinfo["user_id"]
+            if "servers" in userinfo and server.id in userinfo["servers"]:
+                try:
+                    users.append((userinfo["username"], userinfo["rep"]))
+                except:
+                    users.append((userinfo["user_id"], userinfo["rep"]))
+
+        sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
+
+        rank = 1
+        for a_user in sorted_list:
+            if a_user[0] == targetid:
+                return rank
+            rank+=1
+
     async def _find_server_exp(self, user, server):
         server_exp = 0
         userinfo = db.users.find_one({'user_id':user.id})
@@ -2463,13 +2735,30 @@ class Leveler:
         except:
             return server_exp
 
-    async def _find_global_rank(self, user, server):
+    async def _find_global_rank(self, user):
         users = []
 
         for userinfo in db.users.find({}):
             try:
                 userid = userinfo["user_id"]
                 users.append((userid, userinfo["total_exp"]))
+            except KeyError:
+                pass
+        sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
+
+        rank = 1
+        for stats in sorted_list:
+            if stats[0] == user.id:
+                return rank
+            rank+=1
+
+    async def _find_global_rep_rank(self, user):
+        users = []
+
+        for userinfo in db.users.find({}):
+            try:
+                userid = userinfo["user_id"]
+                users.append((userid, userinfo["rep"]))
             except KeyError:
                 pass
         sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
@@ -2487,6 +2776,7 @@ class Leveler:
             if not userinfo:
                 new_account = {
                     "user_id" : user.id,
+                    "username" : user.name,
                     "servers": {},
                     "total_exp": 0,
                     "profile_background": self.backgrounds["profile"]["default"],
@@ -2507,6 +2797,12 @@ class Leveler:
                 db.users.insert_one(new_account)
 
             userinfo = db.users.find_one({'user_id':user.id})
+
+            if "username" not in userinfo or userinfo["username"] != user.name:
+                db.users.update_one({'user_id':user.id}, {'$set':{
+                        "username": user.name,
+                    }}, upsert = True)
+
             if "servers" not in userinfo or server.id not in userinfo["servers"]:
                 db.users.update_one({'user_id':user.id}, {'$set':{
                         "servers.{}.level".format(server.id): 0,
@@ -2568,6 +2864,7 @@ def check_files():
         "badge_type": "circles",
         "mention" : True,
         "text_only": [],
+        "server_roles": {},
         "rep_cooldown": 43200,
         "chat_cooldown": 120
         }
