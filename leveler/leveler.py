@@ -1372,7 +1372,7 @@ class Leveler:
                 }})
         return db.users.find_one({'user_id':userinfo['user_id']})
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @badge.command(name="add", pass_context = True, no_pm=True)
     async def addbadge(self, ctx, name:str, bg_img:str, border_color:str, price:int, *, description:str):
         """Add a badge. name = "Use Quotes", Colors = #hex. bg_img = url, price = -1(non-purchasable), 0,..."""
@@ -1489,7 +1489,7 @@ class Leveler:
         reg_ex = r'^#(?:[0-9a-fA-F]{3}){1,2}$'
         return re.search(reg_ex, str(color))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @badge.command(name="delete", pass_context=True, no_pm=True)
     async def delbadge(self, ctx, *, name:str):
         """Delete a badge and remove from all users."""
@@ -1536,7 +1536,7 @@ class Leveler:
         else:
             await self.bot.say("**That badge does not exist.**")
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @badge.command(pass_context = True, no_pm=True)
     async def give(self, ctx, user : discord.Member, name: str):
         """Give a user a badge with a certain name"""
@@ -1566,7 +1566,7 @@ class Leveler:
             db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
             await self.bot.say("**{} has just given `{}` the `{}` badge!**".format(self._is_mention(org_user), self._is_mention(user), name))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @badge.command(pass_context = True, no_pm=True)
     async def take(self, ctx, user : discord.Member, name: str):
         """Take a user's badge."""
@@ -1597,7 +1597,7 @@ class Leveler:
             else:
                 await self.bot.say("**You can't take away purchasable badges!**")
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @badge.command(name = 'link', no_pm=True, pass_context=True)
     async def linkbadge(self, ctx, badge_name:str, level:int):
         """Associate a role with a level."""
@@ -1626,7 +1626,7 @@ class Leveler:
                 db.badgelinks.update_one({'server_id':server.id}, {'$set':{'badges':server_linked_badges['badges']}})
             await self.bot.say("**The `{}` badge has been linked to level `{}`**".format(badge_name, level))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_roles=True)
     @badge.command(name = 'unlink', no_pm=True, pass_context=True)
     async def unlinkbadge(self, ctx, badge_name:str):
         """Delete a role/level association."""
@@ -1642,7 +1642,7 @@ class Leveler:
         else:
             await self.bot.say("**The `{}` badge is not linked to any levels!**".format(badge_name))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @badge.command(name = 'listlinks', no_pm=True, pass_context=True)
     async def listbadge(self, ctx):
         """List level/role associations."""
@@ -1672,7 +1672,7 @@ class Leveler:
             await send_cmd_help(ctx)
             return
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @role.command(name = 'link', no_pm=True, pass_context=True)
     async def linkrole(self, ctx, role_name:str, level:int, remove_role = None):
         """Associate a role with a level. Removes previous role if given."""
@@ -1712,7 +1712,7 @@ class Leveler:
                 await self.bot.say("**The `{}` role has been linked to level `{}`. Will also remove `{}` role.**".format(
                     role_name, level, remove_role))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @role.command(name = 'unlink', no_pm=True, pass_context=True)
     async def unlinkrole(self, ctx, role_name:str):
         """Delete a role/level association."""
@@ -1728,7 +1728,7 @@ class Leveler:
         else:
             await self.bot.say("**The `{}` role is not linked to any levels!**".format(role_name))
 
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.mod_or_permissions(manage_roles=True)
     @role.command(name = 'listlinks', no_pm=True, pass_context=True)
     async def listrole(self, ctx):
         """List level/role associations."""
