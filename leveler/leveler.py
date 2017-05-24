@@ -2645,30 +2645,32 @@ class Leveler:
             # add to appropriate role if necessary
             try:
                 server_roles = db.roles.find_one({'server_id':server.id})
-                for role in server_roles['roles'].keys():
-                    if int(server_roles['roles'][role]['level']) == int(new_level):
-                        role_obj = discord.utils.find(lambda r: r.name == role, server.roles)
-                        await self.bot.add_roles(user, role_obj)
+                if server_roles != None:
+                    for role in server_roles['roles'].keys():
+                        if int(server_roles['roles'][role]['level']) == int(new_level):
+                            role_obj = discord.utils.find(lambda r: r.name == role, server.roles)
+                            await self.bot.add_roles(user, role_obj)
 
-                        if server_roles['roles'][role]['remove_role'] != None:
-                            remove_role_obj = discord.utils.find(
-                                lambda r: r.name == server_roles['roles'][role]['remove_role'], server.roles)
-                            if remove_role_obj != None:
-                                await self.bot.remove_roles(user, remove_role_obj)
+                            if server_roles['roles'][role]['remove_role'] != None:
+                                remove_role_obj = discord.utils.find(
+                                    lambda r: r.name == server_roles['roles'][role]['remove_role'], server.roles)
+                                if remove_role_obj != None:
+                                    await self.bot.remove_roles(user, remove_role_obj)
             except:
                 await self.bot.send_message(channel, 'Role was not set. Missing Permissions!')
 
             # add appropriate badge if necessary
             try:
                 server_linked_badges = db.badgelinks.find_one({'server_id':server.id})
-                for badge_name in server_linked_badges['badges']:
-                    if int(server_linked_badges['badges'][badge_name]) == int(new_level):
-                        server_badges = db.badges.find_one({'server_id':server.id})
-                        if server_badges != None and badge_name in server_badges['badges'].keys():
-                            userinfo_db = db.users.find_one({'user_id':user.id})
-                            new_badge_name = "{}_{}".format(badge_name, server.id)
-                            userinfo_db["badges"][new_badge_name] = server_badges['badges'][badge_name]
-                            db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo_db["badges"]}})
+                if server_linked_badges != None:
+                    for badge_name in server_linked_badges['badges']:
+                        if int(server_linked_badges['badges'][badge_name]) == int(new_level):
+                            server_badges = db.badges.find_one({'server_id':server.id})
+                            if server_badges != None and badge_name in server_badges['badges'].keys():
+                                userinfo_db = db.users.find_one({'user_id':user.id})
+                                new_badge_name = "{}_{}".format(badge_name, server.id)
+                                userinfo_db["badges"][new_badge_name] = server_badges['badges'][badge_name]
+                                db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo_db["badges"]}})
             except:
                 await self.bot.send_message(channel, 'Error. Badge was not given!')
 
