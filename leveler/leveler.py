@@ -220,6 +220,7 @@ class Leveler:
             board_type = 'Rep'
             footer_text = "Your Rank: {}         {}: {}".format(
                 await self._find_global_rep_rank(user), board_type, user_stat)
+            icon_url = self.bot.user.avatar_url
         elif '-global' in options:
             title = "Global Exp Leaderboard for {}\n".format(self.bot.user.name)
             for userinfo in db.users.find({}):
@@ -234,6 +235,7 @@ class Leveler:
             board_type = 'Points'
             footer_text = "Your Rank: {}         {}: {}".format(
                 await self._find_global_rank(user), board_type, user_stat)
+            icon_url = self.bot.user.avatar_url
         elif '-rep' in options:
             title = "Rep Leaderboard for {}\n".format(server.name)
             for userinfo in db.users.find({}):
@@ -251,6 +253,7 @@ class Leveler:
             print(await self._find_server_rep_rank(user, server))
             footer_text = "Your Rank: {}         {}: {}".format(
                 await self._find_server_rep_rank(user, server), board_type, user_stat)
+            icon_url = server.icon_url
         else:
             title = "Exp Leaderboard for {}\n".format(server.name)
             for userinfo in db.users.find({}):
@@ -271,6 +274,7 @@ class Leveler:
             footer_text = "Your Rank: {}         {}: {}".format(
                 await self._find_server_rank(user, server), board_type,
                 await self._find_server_exp(user, server))
+            icon_url = server.icon_url
         sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
         # multiple page support
@@ -308,7 +312,7 @@ class Leveler:
         msg += "`{}`".format(footer_text)
 
         em = discord.Embed(description='', colour=user.colour)
-        em.set_author(name=title, icon_url = server.icon_url)
+        em.set_author(name=title, icon_url = icon_url)
         em.description = msg
 
         await self.bot.say(embed = em)
