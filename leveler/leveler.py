@@ -207,7 +207,7 @@ class Leveler:
         board_type = ''
         user_stat = None
         if '-rep' in options and '-global' in options:
-            msg = "**Global Rep Leaderboard for {}**\n".format(self.bot.user.name)
+            title = "Global Rep Leaderboard for {}\n".format(self.bot.user.name)
             for userinfo in db.users.find({}):
                 try:
                     users.append((userinfo["username"], userinfo["rep"]))
@@ -218,10 +218,10 @@ class Leveler:
                     user_stat = userinfo["rep"]
 
             board_type = 'Rep'
-            footer_text = "Rank: {}         {}: {}".format(
+            footer_text = "Your Rank: {}         {}: {}".format(
                 await self._find_global_rep_rank(user), board_type, user_stat)
         elif '-global' in options:
-            msg = "**Global Exp Leaderboard for {}**\n".format(self.bot.user.name)
+            title = "Global Exp Leaderboard for {}\n".format(self.bot.user.name)
             for userinfo in db.users.find({}):
                 try:
                     users.append((userinfo["username"], userinfo["total_exp"]))
@@ -232,10 +232,10 @@ class Leveler:
                     user_stat = userinfo["total_exp"]
 
             board_type = 'Points'
-            footer_text = "Rank: {}         {}: {}".format(
+            footer_text = "Your Rank: {}         {}: {}".format(
                 await self._find_global_rank(user), board_type, user_stat)
         elif '-rep' in options:
-            msg = "**Rep Leaderboard for {}**\n".format(server.name)
+            title = "Rep Leaderboard for {}\n".format(server.name)
             for userinfo in db.users.find({}):
                 userid = userinfo["user_id"]
                 if "servers" in userinfo and server.id in userinfo["servers"]:
@@ -248,10 +248,11 @@ class Leveler:
                     user_stat = userinfo["rep"]
 
             board_type = 'Rep'
-            footer_text = "Rank: {}         {}: {}".format(
+            print(await self._find_server_rep_rank(user, server))
+            footer_text = "Your Rank: {}         {}: {}".format(
                 await self._find_server_rep_rank(user, server), board_type, user_stat)
         else:
-            msg = "**Exp Leaderboard for {}**\n".format(server.name)
+            title = "Exp Leaderboard for {}\n".format(server.name)
             for userinfo in db.users.find({}):
                 try:
                     userid = userinfo["user_id"]
@@ -267,41 +268,50 @@ class Leveler:
                 except:
                     pass
             board_type = 'Points'
-            footer_text = "Rank: {}         {}: {}".format(
+            footer_text = "Your Rank: {}         {}: {}".format(
                 await self._find_server_rank(user, server), board_type,
                 await self._find_server_exp(user, server))
         sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
         # multiple page support
         page = 1
-        pages = math.ceil(len(sorted_list)/10)
+        per_page = 15
+        pages = math.ceil(len(sorted_list)/per_page)
         for option in options:
             if str(option).isdigit():
-                if page >= 1:
+                if page >= 1 and int(option) <= pages:
                     page = int(str(option))
                 else:
-                    await self.bot.say("**Please enter a valid page number! (1 - {})".format(str(pages)))
+                    await self.bot.say("**Please enter a valid page number! (1 - {})**".format(str(pages)))
+                    return
                 break
 
-        msg += "```python\n"
-        msg += "Rank | Name (Page {})\n".format(page)
-        rank = 1 + 10*(page-1)
-        start_index = 10*page - 10
-        end_index = 10*page
+        msg = ""
+        msg += "**Rank              Name (Page {}/{})**\n".format(page, pages)
+        rank = 1 + per_page*(page-1)
+        start_index = per_page*page - per_page
+        end_index = per_page*page
 
-        if page == 1:
-            labels = ["♔", "♕", "♖", "♗", "♘", "♙", "   ", "   ", "   ", "   "]
-        else:
-            labels = ["   ", "   ", "   ", "   ", "   ", "   ", "   ", "   ", "   ", "   "]
+        default_label = "   "
+        special_labels = ["♔", "♕", "♖", "♗", "♘", "♙"]
 
         for single_user in sorted_list[start_index:end_index]:
-            msg += u'{:<2}{:<2}{:<2}   # {:<5}\n'.format(rank, labels[rank - start_index - 1], u"➤", single_user[0])
-            msg += u'{:<2}{:<2}{:<2}    {:<5}\n'.format(" ", " ", " ", "Total {}: ".format(board_type) + str(single_user[1]))
+            if rank-1 < len(special_labels):
+                label = special_labels[rank-1]
+            else:
+                label = default_label
+
+            msg += u'`{:<2}{:<2}{:<2}   # {:<22}'.format(rank, label, u"➤", self._truncate_text(single_user[0],20))
+            msg += u'{:>5}{:<2}{:<2}{:<5}`\n'.format(" ", " ", " ", "Total {}: ".format(board_type) + str(single_user[1]))
             rank += 1
         msg +="----------------------------------------------------\n"
-        msg += footer_text
-        msg +="```"
-        await self.bot.say(msg)
+        msg += "`{}`".format(footer_text)
+
+        em = discord.Embed(description='', colour=user.colour)
+        em.set_author(name=title, icon_url = server.icon_url)
+        em.description = msg
+
+        await self.bot.say(embed = em)
 
     @commands.command(pass_context=True, no_pm=True)
     async def rep(self, ctx, user : discord.Member):
@@ -1722,7 +1732,7 @@ class Leveler:
         roles = server_roles['roles']
 
         if role_name in roles:
-            await self.bot.say("**Role/Level association `{}`/`{}` removed.**".format(role_name, roles[role_name]))
+            await self.bot.say("**Role/Level association `{}`/`{}` removed.**".format(role_name, roles[role_name]['level']))
             del roles[role_name]
             db.roles.update_one({'server_id':server.id},{'$set':{'roles':roles}})
         else:
@@ -1894,18 +1904,18 @@ class Leveler:
     async def draw_profile(self, user, server):
         name_fnt = ImageFont.truetype(font_bold_file, 22)
         header_u_fnt = ImageFont.truetype(font_unicode_file, 18, encoding="utf-8")
-        title_fnt = ImageFont.truetype(font_file, 18)
-        sub_header_fnt = ImageFont.truetype(font_bold_file, 14)
-        badge_fnt = ImageFont.truetype(font_bold_file, 10)
-        exp_fnt = ImageFont.truetype(font_bold_file, 13)
-        large_fnt = ImageFont.truetype(font_bold_file, 33)
-        level_label_fnt = ImageFont.truetype(font_bold_file, 22)
-        general_info_fnt = ImageFont.truetype(font_bold_file, 15)
+        title_fnt = ImageFont.truetype(font_file, 18, encoding="utf-8")
+        sub_header_fnt = ImageFont.truetype(font_bold_file, 14, encoding="utf-8")
+        badge_fnt = ImageFont.truetype(font_bold_file, 10, encoding="utf-8")
+        exp_fnt = ImageFont.truetype(font_bold_file, 13, encoding="utf-8")
+        large_fnt = ImageFont.truetype(font_bold_file, 33, encoding="utf-8")
+        level_label_fnt = ImageFont.truetype(font_bold_file, 22, encoding="utf-8")
+        general_info_fnt = ImageFont.truetype(font_bold_file, 15, encoding="utf-8")
         general_info_u_fnt = ImageFont.truetype(font_unicode_file, 12, encoding="utf-8")
-        rep_fnt = ImageFont.truetype(font_bold_file, 26)
-        text_fnt = ImageFont.truetype(font_bold_file, 12)
+        rep_fnt = ImageFont.truetype(font_bold_file, 26, encoding="utf-8")
+        text_fnt = ImageFont.truetype(font_bold_file, 12, encoding="utf-8")
         text_u_fnt = ImageFont.truetype(font_unicode_file, 8, encoding="utf-8")
-        credit_fnt = ImageFont.truetype(font_bold_file, 10)
+        credit_fnt = ImageFont.truetype(font_bold_file, 10, encoding="utf-8")
 
         def _write_unicode(text, init_x, y, font, unicode_font, fill):
             write_pos = init_x
@@ -2712,10 +2722,7 @@ class Leveler:
         for userinfo in db.users.find({}):
             userid = userinfo["user_id"]
             if "servers" in userinfo and server.id in userinfo["servers"]:
-                try:
-                    users.append((userinfo["username"], userinfo["rep"]))
-                except:
-                    users.append((userinfo["user_id"], userinfo["rep"]))
+                users.append((userinfo["user_id"], userinfo["rep"]))
 
         sorted_list = sorted(users, key=operator.itemgetter(1), reverse=True)
 
