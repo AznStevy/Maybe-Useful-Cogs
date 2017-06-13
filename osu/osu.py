@@ -12,11 +12,11 @@ try:
     from bs4 import BeautifulSoup
 except:
     raise RuntimeError("bs4 required: pip install beautifulsoup4")
-from .utils.dataIO import fileIO
+from .utils.dataIO import dataIO
 from cogs.utils import checks
 import logging
 
-prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
+prefix = dataIO.load_json("data/red/settings.json")['PREFIXES'][0]
 help_msg = [
             "**No linked account (`{}osuset user [username]`) or not using **`{}command [username] [gamemode]`".format(prefix, prefix),
             "**No linked account (`{}osuset user [username]`)**".format(prefix)
@@ -31,10 +31,10 @@ class Osu:
 
     def __init__(self, bot):
         self.bot = bot
-        self.osu_api_key = fileIO("data/osu/apikey.json", "load")
-        self.user_settings = fileIO("data/osu/user_settings.json", "load")
-        self.track = fileIO("data/osu/track.json", "load")
-        self.osu_settings = fileIO("data/osu/osu_settings.json", "load")
+        self.osu_api_key = dataIO.load_json("data/osu/apikey.json")
+        self.user_settings = dataIO.load_json("data/osu/user_settings.json")
+        self.track = dataIO.load_json("data/osu/track.json")
+        self.osu_settings = dataIO.load_json("data/osu/osu_settings.json")
         self.num_max_prof = 8
         self.max_map_disp = 3
 
@@ -56,7 +56,7 @@ class Osu:
         else:
             self.osu_settings["num_track"] = top_num
             msg = "**Now tracking Top {} Plays.**".format(top_num)
-            fileIO("data/osu/osu_settings.json", "save", self.osu_settings)
+            dataIO.save_json("data/osu/osu_settings.json", self.osu_settings)
         await self.bot.say(msg)
 
     @osuset.command(pass_context=True, no_pm=True)
@@ -69,7 +69,7 @@ class Osu:
         else:
             self.osu_settings["num_best_plays"] = top_num
             msg = "**Now Displaying Top {} Plays.**".format(top_num)
-            fileIO("data/osu/osu_settings.json", "save", self.osu_settings)
+            dataIO.save_json("data/osu/osu_settings.json", self.osu_settings)
         await self.bot.say(msg)
 
     @osuset.command(pass_context=True, no_pm=True)
@@ -95,7 +95,7 @@ class Osu:
         elif toggle.lower() == "disable":
             self.osu_settings[server.id]["tracking"] = False
             status = "Disabled"
-        fileIO("data/osu/osu_settings.json", "save", self.osu_settings)
+        dataIO.save_json("data/osu/osu_settings.json", self.osu_settings)
         await self.bot.say("**Player Tracking {} on {}.**".format(server.name, status))
 
     @osuset.command(pass_context=True, no_pm=True)
@@ -149,7 +149,7 @@ class Osu:
             self.osu_settings[server.id]["api"] = self.osu_settings["type"]["default"]
         elif choice.lower() == "ripple":
             self.osu_settings[server.id]["api"] = self.osu_settings["type"]["ripple"]
-        fileIO("data/osu/osu_settings.json", "save", self.osu_settings)
+        dataIO.save_json("data/osu/osu_settings.json", self.osu_settings)
         await self.bot.say("**Switched to `{}` server as default on `{}`.** :arrows_counterclockwise:".format(choice, server.name))
 
     @osuset.command(pass_context=True, no_pm=True)
@@ -169,7 +169,7 @@ class Osu:
         if user.id in self.user_settings:
             self.user_settings[user.id]['default_gamemode'] = int(gamemode)
             await self.bot.say("**`{}`'s default gamemode has been set to `{}`.** :white_check_mark:".format(user.name, modes[gamemode]))
-            fileIO('data/osu/user_settings.json', "save", self.user_settings)
+            dataIO.save_json('data/osu/user_settings.json', self.user_settings)
         else:
             await self.bot.say(help_msg[1])
 
@@ -190,7 +190,7 @@ class Osu:
             return
         else:
             self.osu_api_key["osu_api_key"] = key.content
-            fileIO("data/osu/apikey.json", "save", self.osu_api_key)
+            dataIO.save_json("data/osu/apikey.json", self.osu_api_key)
             await self.bot.whisper("API Key details added. :white_check_mark:")
 
     @commands.command(pass_context=True, no_pm=True)
@@ -261,7 +261,7 @@ class Osu:
                 }
 
                 self.user_settings[user.id] = newuser
-                fileIO('data/osu/user_settings.json', "save", self.user_settings)
+                dataIO.save_json('data/osu/user_settings.json', self.user_settings)
                 await self.bot.say("{}, your account has been linked to osu! username `{}`".format(user.mention, osu_user[0]["username"]))
             except:
                 await self.bot.say("{} doesn't exist in the osu! database.".format(username))
@@ -270,7 +270,7 @@ class Osu:
                 osu_user = list(await get_user(key, self.osu_settings["type"]["default"], username, 1))
                 self.user_settings[user.id]["osu_username"] = username
                 self.user_settings[user.id]["osu_user_id"] = osu_user[0]["user_id"]
-                fileIO('data/osu/user_settings.json', "save", self.user_settings)
+                dataIO.save_json('data/osu/user_settings.json', self.user_settings)
                 await self.bot.say("{}, your osu! username has been edited to `{}`".format(user.mention, osu_user[0]["username"]))
             except:
                 await self.bot.say("{} doesn't exist in the osu! database.".format(username))
@@ -912,7 +912,7 @@ class Osu:
                         count_add += 1
                         msg+="**`{}` added. Will now track on `#{}`**\n".format(username, channel.name)
 
-        fileIO("data/osu/track.json", "save", self.track)
+        dataIO.save_json("data/osu/track.json", self.track)
         if len(msg) > 500:
             await self.bot.say("**Added `{}` users to tracking on `#{}`.**".format(count_add, channel.name))
         else:
@@ -939,7 +939,7 @@ class Osu:
                         del self.track[username]
                     msg+="**No longer tracking `{}` in `#{}`.**\n".format(username, channel.name)
                     count_remove += 1
-                    fileIO("data/osu/track.json", "save", self.track)
+                    dataIO.save_json("data/osu/track.json", self.track)
                 else:
                     msg+="**`{}` is not currently being tracked in `#{}`.**\n".format(username, channel.name)
             else:
@@ -1003,7 +1003,7 @@ class Osu:
                                 #print("Setting last changed time to {}".format(new_timestamps[i]))
                                 self.track[username]["userinfo"][gamemode] = new_user_info
                                 self.track[username]["last_check"] = new_timestamps[i].strftime('%Y-%m-%d %H:%M:%S')
-                                fileIO("data/osu/track.json", "save", self.track)
+                                dataIO.save_json("data/osu/track.json", self.track)
                                 break
                 except:
                     log.info("Failed to load top score for".format(username))
@@ -1178,36 +1178,36 @@ def check_files():
     osu_api_key = {"osu_api_key" : ""}
     api_file = "data/osu/apikey.json"
 
-    if not fileIO(api_file, "check"):
+    if not dataIO.is_valid_json(api_file):
         print("Adding data/osu/apikey.json...")
-        fileIO(api_file, "save", osu_api_key)
+        dataIO.save_json(api_file, osu_api_key)
     else:  # consistency check
-        current = fileIO(api_file, "load")
+        current = dataIO.load_json(api_file)
         if current.keys() != osu_api_key.keys():
             for key in system.keys():
                 if key not in osu_api_key.keys():
                     current[key] = osu_api_key[key]
                     print("Adding " + str(key) +
                           " field to osu apikey.json")
-            fileIO(api_file, "save", current)
+            dataIO.save_json(api_file, current)
 
     # creates file for user backgrounds
     user_file = "data/osu/user_settings.json"
-    if not fileIO(user_file, "check"):
+    if not dataIO.is_valid_json(user_file):
         print("Adding data/osu/user_settings.json...")
-        fileIO(user_file, "save", {})
+        dataIO.save_json(user_file, {})
 
     # creates file for player tracking
     user_file = "data/osu/track.json"
-    if not fileIO(user_file, "check"):
+    if not dataIO.is_valid_json(user_file):
         print("Adding data/osu/track.json...")
-        fileIO(user_file, "save", {})
+        dataIO.save_json(user_file, {})
 
     # creates file for server to use
     settings_file = "data/osu/osu_settings.json"
-    if not fileIO(settings_file, "check"):
+    if not dataIO.is_valid_json(settings_file):
         print("Adding data/osu/osu_settings.json...")
-        fileIO(settings_file, "save", {
+        dataIO.save_json(settings_file, {
             "type": {
                 "default": "osu.ppy.sh",
                 "ripple":"ripple.moe"
