@@ -6,7 +6,7 @@ from __main__ import send_cmd_help
 import platform, asyncio, string, operator, random, textwrap
 import os, re, aiohttp
 import math
-from .utils.dataIO import fileIO
+from .utils.dataIO import dataIO
 from cogs.utils import checks
 try:
     from pymongo import MongoClient
@@ -37,7 +37,7 @@ bg_credits = {
 # directory
 user_directory = "data/leveler/users"
 
-prefix = fileIO("data/red/settings.json", "load")['PREFIXES']
+prefix = dataIO.load_json("data/red/settings.json")['PREFIXES']
 default_avatar_url = "http://i.imgur.com/XPDO9VH.jpg"
 
 try:
@@ -51,10 +51,10 @@ class Leveler:
 
     def __init__(self, bot):
         self.bot = bot
-        self.backgrounds = fileIO("data/leveler/backgrounds.json", "load")
-        self.badges = fileIO("data/leveler/badges.json", "load")
-        self.settings = fileIO("data/leveler/settings.json", "load")
-        bot_settings = fileIO("data/red/settings.json", "load")
+        self.backgrounds = dataIO.load_json("data/leveler/backgrounds.json")
+        self.badges = dataIO.load_json("data/leveler/badges.json")
+        self.settings = dataIO.load_json("data/leveler/settings.json")
+        bot_settings = dataIO.load_json("data/red/settings.json")
         self.owner = bot_settings["OWNER"]
 
         dbs = client.database_names()
@@ -64,13 +64,13 @@ class Leveler:
     def pop_database(self):
         if os.path.exists("data/leveler/users"):
             for userid in os.listdir(user_directory):
-                userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
+                userinfo = dataIO.load_json("data/leveler/users/{}/info.json".format(userid))
                 userinfo['user_id'] = userid
                 db.users.insert_one(userinfo)
 
     def create_global(self):
 
-                userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
+                userinfo = dataIO.load_json("data/leveler/users/{}/info.json".format(userid))
                 userinfo['user_id'] = userid
                 db.users.insert_one(userinfo)
 
@@ -945,7 +945,7 @@ class Leveler:
         self.settings["msg_credits"][server.id] = credits
         await self.bot.say("**Credits per message logged set to `{}`.**".format(str(credits)))
 
-        fileIO('data/leveler/settings.json', "save", self.settings)
+        dataIO.save_json('data/leveler/settings.json', self.settings)
 
     @lvladmin.command(name="lock", pass_context=True, no_pm=True)
     async def lvlmsglock(self, ctx):
@@ -967,7 +967,7 @@ class Leveler:
             self.settings["lvl_msg_lock"][server.id] = channel.id
             await self.bot.say("**Level-up messages locked to `#{}`**".format(channel.name))
 
-        fileIO('data/leveler/settings.json', "save", self.settings)
+        dataIO.save_json('data/leveler/settings.json', self.settings)
 
     async def _process_purchase(self, ctx):
         user = ctx.message.author
@@ -1022,7 +1022,7 @@ class Leveler:
         else:
             self.settings["bg_price"] = price
             await self.bot.say("**Background price set to: `{}`!**".format(price))
-            fileIO('data/leveler/settings.json', "save", self.settings)
+            dataIO.save_json('data/leveler/settings.json', self.settings)
 
     @checks.is_owner()
     @lvladmin.command(pass_context=True, no_pm=True)
@@ -1074,7 +1074,7 @@ class Leveler:
         else:
             self.settings["mention"] = True
             await self.bot.say("**Mentions enabled.**")
-        fileIO('data/leveler/settings.json', "save", self.settings)
+        dataIO.save_json('data/leveler/settings.json', self.settings)
 
     async def _valid_image_url(self, url):
         max_byte = 1000
@@ -1101,7 +1101,7 @@ class Leveler:
         else:
             self.settings["disabled_servers"].append(server.id)
             await self.bot.say("**Leveler disabled on `{}`.**".format(server.name))
-        fileIO('data/leveler/settings.json', "save", self.settings)
+        dataIO.save_json('data/leveler/settings.json', self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(pass_context=True, no_pm=True)
@@ -1133,7 +1133,7 @@ class Leveler:
             else:
                 self.settings["text_only"].append(server.id)
                 await self.bot.say("**Text-only messages enabled for `{}`.**".format(server.name))
-        fileIO('data/leveler/settings.json', "save", self.settings)
+        dataIO.save_json('data/leveler/settings.json', self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(name="alerts", pass_context=True, no_pm=True)
@@ -1165,7 +1165,7 @@ class Leveler:
             else:
                 self.settings["lvl_msg"].append(server.id)
                 await self.bot.say("**Level-up alerts enabled for `{}`.**".format(server.name))
-        fileIO('data/leveler/settings.json', "save", self.settings)
+        dataIO.save_json('data/leveler/settings.json', self.settings)
 
     @checks.admin_or_permissions(manage_server=True)
     @lvladmin.command(name="private", pass_context=True, no_pm=True)
@@ -1197,7 +1197,7 @@ class Leveler:
                 self.settings["private_lvl_msg"].append(server.id)
                 await self.bot.say("**Private level-up alerts enabled for `{}`.**".format(server.name))
 
-        fileIO('data/leveler/settings.json', "save", self.settings)
+        dataIO.save_json('data/leveler/settings.json', self.settings)
 
     @commands.group(pass_context=True)
     async def badge(self, ctx):
@@ -1494,7 +1494,7 @@ class Leveler:
 
         self.settings["badge_type"] = name.lower()
         await self.bot.say("**Badge type set to `{}`**".format(name.lower()))
-        fileIO('data/leveler/settings.json', "save", self.settings)
+        dataIO.save_json('data/leveler/settings.json', self.settings)
 
     def _is_hex(self, color:str):
         if color != None and len(color) != 4 and len(color) != 7:
@@ -1786,7 +1786,7 @@ class Leveler:
             await self.bot.say("**That is not a valid image url!**")
         else:
             self.backgrounds["profile"][name] = url
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            dataIO.save_json('data/leveler/backgrounds.json', self.backgrounds)
             await self.bot.say("**New profile background(`{}`) added.**".format(name))
 
     @checks.is_owner()
@@ -1799,7 +1799,7 @@ class Leveler:
             await self.bot.say("**That is not a valid image url!**")
         else:
             self.backgrounds["rank"][name] = url
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            dataIO.save_json('data/leveler/backgrounds.json', self.backgrounds)
             await self.bot.say("**New rank background(`{}`) added.**".format(name))
 
     @checks.is_owner()
@@ -1812,7 +1812,7 @@ class Leveler:
             await self.bot.say("**That is not a valid image url!**")
         else:
             self.backgrounds["levelup"][name] = url
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            dataIO.save_json('data/leveler/backgrounds.json', self.backgrounds)
             await self.bot.say("**New level-up background(`{}`) added.**".format(name))
 
     @checks.is_owner()
@@ -1821,7 +1821,7 @@ class Leveler:
         '''Delete a profile background.'''
         if name in self.backgrounds["profile"].keys():
             del self.backgrounds["profile"][name]
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            dataIO.save_json('data/leveler/backgrounds.json', self.backgrounds)
             await self.bot.say("**The profile background(`{}`) has been deleted.**".format(name))
         else:
             await self.bot.say("**That profile background name doesn't exist.**")
@@ -1832,7 +1832,7 @@ class Leveler:
         '''Delete a rank background.'''
         if name in self.backgrounds["rank"].keys():
             del self.backgrounds["rank"][name]
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            dataIO.save_json('data/leveler/backgrounds.json', self.backgrounds)
             await self.bot.say("**The rank background(`{}`) has been deleted.**".format(name))
         else:
             await self.bot.say("**That rank background name doesn't exist.**")
@@ -1843,7 +1843,7 @@ class Leveler:
         '''Delete a level background.'''
         if name in self.backgrounds["levelup"].keys():
             del self.backgrounds["levelup"][name]
-            fileIO('data/leveler/backgrounds.json', "save", self.backgrounds)
+            dataIO.save_json('data/leveler/backgrounds.json', self.backgrounds)
             await self.bot.say("**The level-up background(`{}`) has been deleted.**".format(name))
         else:
             await self.bot.say("**That level-up background name doesn't exist.**")
@@ -2639,7 +2639,7 @@ class Leveler:
     async def _handle_levelup(self, user, userinfo, server, channel):
         if not isinstance(self.settings["lvl_msg"], list):
             self.settings["lvl_msg"] = []
-            fileIO("data/leveler/settings.json", "save", self.settings)
+            dataIO.save_json("data/leveler/settings.json", "save", self.settings)
 
         if server.id in self.settings["lvl_msg"]: # if lvl msg is enabled
             # channel lock implementation
@@ -2859,13 +2859,13 @@ def check_folders():
 
 def transfer_info():
     try:
-        users = fileIO("data/leveler/users.json", "load")
+        users = dataIO.load_json("data/leveler/users.json")
         for user_id in users:
             os.makedirs("data/leveler/users/{}".format(user_id))
             # create info.json
             f = "data/leveler/users/{}/info.json".format(user_id)
-            if not fileIO(f, "check"):
-                fileIO(f, "save", users[user_id])
+            if not dataIO.is_valid_json(f):
+                dataIO.save_json(f, users[user_id])
     except:
         pass
 
@@ -2885,7 +2885,7 @@ def check_files():
     settings_path = "data/leveler/settings.json"
     if not os.path.isfile(settings_path):
         print("Creating default leveler settings.json...")
-        fileIO(settings_path, "save", default)
+        dataIO.save_json(settings_path, default)
 
     bgs = {
             "profile": {
@@ -2918,12 +2918,12 @@ def check_files():
     bgs_path = "data/leveler/backgrounds.json"
     if not os.path.isfile(bgs_path):
         print("Creating default leveler backgrounds.json...")
-        fileIO(bgs_path, "save", bgs)
+        dataIO.save_json(bgs_path, "save", bgs)
 
     f = "data/leveler/badges.json"
-    if not fileIO(f, "check"):
+    if not dataIO.is_valid_json(f):
         print("Creating badges.json...")
-        fileIO(f, "save", {})
+        dataIO.save_json(f, {})
 
 def setup(bot):
     check_folders()
