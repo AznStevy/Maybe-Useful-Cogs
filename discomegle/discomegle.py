@@ -4,9 +4,9 @@ import aiohttp
 import asyncio
 import random
 from __main__ import send_cmd_help
-from .utils.dataIO import dataIO, fileIO
+from .utils.dataIO import dataIO
 
-prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
+prefix = dataIO.load_json("data/red/settings.json", "load")['PREFIXES'][0]
 
 class Discomegle:
     """Lets you chat with random person who has access to the bot."""
