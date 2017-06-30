@@ -1,3 +1,7 @@
+# YOU SEE THIS COG RIGHT HERE???? 
+# MAKE IT SIMPLE LIKE TATSUMAKI
+# pls
+
 import discord
 from discord.ext import commands
 from discord.utils import find
