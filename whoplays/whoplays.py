@@ -42,7 +42,7 @@ class WhoPlays:
                 showing = "(Showing 15/{})".format(count_playing)
             else:
                 showing = "({})".format(count_playing)
-            text = "These are the people who are playing"
+            text = "These are the people who are playing "
             text += "{}:\n{}".format(game, showing)
             em.set_author(name=text)
             await self.bot.say(embed=em)
