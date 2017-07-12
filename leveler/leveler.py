@@ -1816,6 +1816,30 @@ class Leveler:
             await self.bot.say("**New level-up background(`{}`) added.**".format(name))
 
     @checks.is_owner()
+    @lvladminbg.group(pass_context=True)
+    async def setcustombg(self, ctx, bg_type:str, user_id:str, img_url:str):
+        """Set one-time custom background"""
+        valid_types = ['profile', 'rank', 'levelup']
+        type_input = bg_type.lower()
+
+        if type_input not in valid_types:
+            await self.bot.say('**Please choose a valid type: `profile`, `rank`, `levelup`.')
+            return
+
+        # test if valid user_id
+        userinfo = db.users.find_one({'user_id':user_id})
+        if not userinfo:
+            await self.bot.say("**That is not a valid user id!**")
+            return
+
+        if not await self._valid_image_url(img_url):
+            await self.bot.say("**That is not a valid image url!**")
+            return
+
+        db.users.update_one({'user_id':user_id}, {'$set':{"{}_background".format(type_input): img_url}})
+        await self.bot.say("**User {} custom {} background set.**".format(user_id, bg_type))
+
+    @checks.is_owner()
     @lvladminbg.command(no_pm=True)
     async def delprofilebg(self, name:str):
         '''Delete a profile background.'''
