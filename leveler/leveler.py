@@ -1816,7 +1816,7 @@ class Leveler:
             await self.bot.say("**New level-up background(`{}`) added.**".format(name))
 
     @checks.is_owner()
-    @lvladminbg.group(pass_context=True)
+    @lvladminbg.command(no_pm=True, pass_context=True)
     async def setcustombg(self, ctx, bg_type:str, user_id:str, img_url:str):
         """Set one-time custom background"""
         valid_types = ['profile', 'rank', 'levelup']
