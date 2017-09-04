@@ -327,12 +327,6 @@ class Leveler:
         # creates user if doesn't exist
         await self._create_user(org_user, server)
         await self._create_user(user, server)
-        org_userinfo = db.users.find_one({'user_id':org_user.id})
-
-        if "rep_block" not in org_userinfo:
-            org_userinfo["rep_block"] = 0
-
-        userinfo = db.users.find_one({'user_id':user.id})
         db.users.update_one({'user_id':user.id}, {'$set':{
         "rep":  userinfo["rep"] - 1,
         }})
