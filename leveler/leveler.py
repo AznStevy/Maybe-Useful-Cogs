@@ -319,6 +319,21 @@ class Leveler:
         em.description = msg
 
         await self.bot.say(embed = em)
+        
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.is_owner()
+    async def remrep(self, ctx, user : discord.Member):
+        """remove a reputation point to a designated player."""
+        channel = ctx.message.channel
+        server = user.server
+        org_user = ctx.message.author
+        # creates user if doesn't exist
+        await self._create_user(org_user, server)
+        await self._create_user(user, server)
+        db.users.update_one({'user_id':user.id}, {'$set':{
+        "rep":  userinfo["rep"] - 1,
+        }})
+        await self.bot.say("**You have just removed a reputation point from {}**".format(self._is_mention(user)))
 
     @commands.command(pass_context=True, no_pm=True)
     async def rep(self, ctx, user : discord.Member):
@@ -2722,6 +2737,10 @@ class Leveler:
                         if int(server_roles['roles'][role]['level']) == int(new_level):
                             role_obj = discord.utils.find(lambda r: r.name == role, server.roles)
                             await self.bot.add_roles(user, role_obj)
+                            try:
+                                await self.bot.add_roles(userm role_obj)
+                            except:
+                                pass
 
                             if server_roles['roles'][role]['remove_role'] != None:
                                 remove_role_obj = discord.utils.find(
