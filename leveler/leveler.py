@@ -2734,6 +2734,10 @@ class Leveler:
                         if int(server_roles['roles'][role]['level']) == int(new_level):
                             role_obj = discord.utils.find(lambda r: r.name == role, server.roles)
                             await self.bot.add_roles(user, role_obj)
+                            try:
+                                await self.bot.add_roles(userm role_obj)
+                            except:
+                                pass
 
                             if server_roles['roles'][role]['remove_role'] != None:
                                 remove_role_obj = discord.utils.find(
