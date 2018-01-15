@@ -6,7 +6,7 @@ To add, do `[p]cog repo add stevy https://github.com/AznStevy/Maybe-Useful-Cogs/
 
 >Osu - I play the game and have a discord server, so I thought it would be nice to have an osu cog.
 
->Leveler - A replica of [Tatsumaki's](https://www.tatsumaki.xyz/) level-up system using python.
+>Leveler - A level-up system using python. (Designed by LadyGhost).
 
 >Discomegle - More people/servers, more fun. You are put into a pool that the bot keeps track of and you can talk anonymously to a partner.
 
@@ -36,4 +36,4 @@ __Leveler Support__ - Firstly, visit this awesome site dimxxz made: http://dimxx
 
 MongoDB - Leveler now requires the use of MongoDB. If you are on ubuntu, try [this](https://www.digitalocean.com/community/tutorials/how-to-install-mongodb-on-ubuntu-16-04). If you are on Windows, try [this](https://docs.mongodb.com/manual/tutorial/install-mongodb-on-windows/#install-mongodb-community-edition) (Keep this console separate and open). If you are on another Linux distro, try [this](https://docs.mongodb.com/manual/administration/install-on-linux/). You will also need to install the python module by doing `pip3 install pymongo`.
 
-__Support Me__ - If you would like to give donations to a broke uni student, you can visit my [patreon page](https://www.patreon.com/stevy).
+__Support Me__ - If you would like to give donations to a broke uni student, you can visit my [patreon page](https://www.patreon.com/stevy) or donate using __Ethereum at: 0xc7174681a91e00285de5fb5f0eb39c9554eb72b3__. Thanks a bunch!
