@@ -1587,7 +1587,7 @@ class Leveler:
         else:
             userinfo["badges"][badge_name] = badges[name]
             db.users.update_one({'user_id':user.id}, {'$set':{"badges": userinfo["badges"]}})
-            await self.bot.say("**{} has just given `{}` the `{}` badge!**".format(self._is_mention(org_user), self._is_mention(user), name))
+            await self.bot.say("**{} has just given {} the `{}` badge!**".format(self._is_mention(org_user), self._is_mention(user), name))
 
     @checks.mod_or_permissions(manage_roles=True)
     @badge.command(pass_context = True, no_pm=True)
