@@ -58,6 +58,10 @@ class Leveler:
         bot_settings = fileIO("data/red/settings.json", "load")
         self.owner = bot_settings["OWNER"]
 
+        # Allocate and precache 100 levels of required_exp calculations
+        self.exp_table = [65]
+        self._total_required_exp(100)
+
         dbs = client.database_names()
         if 'leveler' not in dbs:
             self.pop_database()
@@ -261,9 +265,7 @@ class Leveler:
                 try:
                     userid = userinfo["user_id"]
                     if "servers" in userinfo and server.id in userinfo["servers"]:
-                        server_exp = 0
-                        for i in range(userinfo["servers"][server.id]["level"]):
-                            server_exp += self._required_exp(i)
+                        server_exp = self._total_required_exp(userinfo["servers"][server.id]["level"])
                         server_exp +=  userinfo["servers"][server.id]["current_exp"]
                         try:
                             users.append((userinfo["username"], server_exp))
@@ -387,9 +389,7 @@ class Leveler:
         msg += "Title: {}\n".format(userinfo["title"])
         msg += "Reps: {}\n".format(userinfo["rep"])
         msg += "Server Level: {}\n".format(userinfo["servers"][server.id]["level"])
-        total_server_exp = 0
-        for i in range(userinfo["servers"][server.id]["level"]):
-            total_server_exp += self._required_exp(i)
+        total_server_exp = self._total_required_exp(userinfo["servers"][server.id]["level"])
         total_server_exp += userinfo["servers"][server.id]["current_exp"]
         msg += "Server Exp: {}\n".format(total_server_exp)
         msg += "Total Exp: {}\n".format(userinfo["total_exp"])
@@ -1051,9 +1051,7 @@ class Leveler:
             return
 
         # get rid of old level exp
-        old_server_exp = 0
-        for i in range(userinfo["servers"][server.id]["level"]):
-            old_server_exp += self._required_exp(i)
+        old_server_exp = self._total_required_exp(userinfo["servers"][server.id]["level"])
         userinfo["total_exp"] -= old_server_exp
         userinfo["total_exp"] -= userinfo["servers"][server.id]["current_exp"]
 
@@ -3051,10 +3049,8 @@ class Leveler:
 
         for userinfo in db.users.find({}):
             try:
-                server_exp = 0
                 userid = userinfo["user_id"]
-                for i in range(userinfo["servers"][server.id]["level"]):
-                    server_exp += self._required_exp(i)
+                server_exp = self._total_required_exp(userinfo["servers"][server.id]["level"])
                 server_exp += userinfo["servers"][server.id]["current_exp"]
                 users.append((userid, server_exp))
             except:
@@ -3089,8 +3085,7 @@ class Leveler:
         userinfo = db.users.find_one({'user_id':user.id})
 
         try:
-            for i in range(userinfo["servers"][server.id]["level"]):
-                server_exp += self._required_exp(i)
+            server_exp = server_exp = self._total_required_exp(userinfo["servers"][server.id]["level"])
             server_exp +=  userinfo["servers"][server.id]["current_exp"]
             return server_exp
         except:
@@ -3192,6 +3187,16 @@ class Leveler:
         if level < 0:
             return 0
         return 139*level+65
+
+    # Centralize and cache required_exp calculations
+    def _total_required_exp(self, level):
+        if len(self.exp_table) < level + 1:
+            level_exp = self.exp_table[-1]
+            for l in range(len(self.exp_table),level + 1):
+                level_exp += self._required_exp(l)
+                self.exp_table.append(level_exp)
+
+        return self.exp_table[level]
 
     def _level_exp(self, level: int):
         return level*65 + 139*level*(level-1)//2
