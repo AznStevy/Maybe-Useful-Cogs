@@ -2,10 +2,10 @@ import discord
 from discord.ext import commands
 import random
 import os
-from .utils.dataIO import fileIO
+from .utils.dataIO import dataIO
 from cogs.utils import checks
 
-prefix = fileIO("data/red/settings.json", "load")['PREFIXES'][0]
+prefix = dataIO.load_json("data/red/settings.json")['PREFIXES'][0]
 
 
 class Markov:
@@ -13,7 +13,7 @@ class Markov:
 
     def __init__(self, bot):
         self.bot = bot
-        self.model = fileIO("data/markov/model.json", "load")
+        self.model = dataIO.load_json("data/markov/model.json")
 
     @commands.command(pass_context=True, no_pm=True)
     async def markov(self, ctx, *, msg=None):
@@ -82,7 +82,7 @@ class Markov:
             self.model[server.id][channel.id] = {}
 
         self.model[server.id][channel.id] = {}
-        fileIO('data/markov/model.json', "save", self.model)
+        dataIO.save_json('data/markov/model.json', self.model)
         await self.bot.say("Channel:`{}` data cleared.".format(channel.name))
 
     @commands.command(no_pm=True)
@@ -112,7 +112,7 @@ class Markov:
                         self.model[server.id][channel.id][words[i]] = list()
                     self.model[server.id][channel.id][words[i]].append(words[i+1])
 
-                fileIO('data/markov/model.json', "save", self.model)
+                dataIO.save_json('data/markov/model.json', self.model)
         except:
             pass
 
@@ -127,9 +127,9 @@ def check_folders():
 
 def check_files():
     f = "data/markov/model.json"
-    if not fileIO(f, "check"):
+    if not dataIO.is_valid_json(f):
         print("Creating model.json...")
-        fileIO(f, "save", {})
+        dataIO.save_json(f, {})
 
 
 def setup(bot):
