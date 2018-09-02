@@ -52,6 +52,7 @@ class Leveler:
 
     def __init__(self, bot):
         self.bot = bot
+        self.session = aiohttp.ClientSession()
         self.backgrounds = fileIO("data/leveler/backgrounds.json", "load")
         self.badges = fileIO("data/leveler/badges.json", "load")
         self.settings = fileIO("data/leveler/settings.json", "load")
@@ -74,6 +75,9 @@ class Leveler:
                 userinfo = fileIO("data/leveler/users/{}/info.json".format(userid), "load")
                 userinfo['user_id'] = userid
                 db.users.insert_one(userinfo)
+
+    def __unload(self):
+        self.session.close()
 
 
     @commands.cooldown(1, 10, commands.BucketType.user)
@@ -708,7 +712,7 @@ class Leveler:
         await self.bot.say("**{}**".format(random.choice(phrases)))
         clusters = 10
 
-        async with aiohttp.get(url) as r:
+        async with self.session.get(url) as r:
             image = await r.content.read()
         with open('data/leveler/temp_auto.png','wb') as f:
             f.write(image)
@@ -1087,7 +1091,7 @@ class Leveler:
         max_byte = 1000
 
         try:
-            async with aiohttp.get(url) as r:
+            async with self.session.get(url) as r:
                 image = await r.content.read()
             with open('data/leveler/test.png','wb') as f:
                 f.write(image)
@@ -2004,15 +2008,15 @@ class Leveler:
         bg_image = Image
         profile_image = Image
 
-        async with aiohttp.get(bg_url) as r:
+        async with self.session.get(bg_url) as r:
             image = await r.content.read()
         with open('data/leveler/temp/{}_temp_profile_bg.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
-            async with aiohttp.get(profile_url) as r:
+            async with self.session.get(profile_url) as r:
                 image = await r.content.read()
         except:
-            async with aiohttp.get(default_avatar_url) as r:
+            async with self.session.get(default_avatar_url) as r:
                 image = await r.content.read()
         with open('data/leveler/temp/{}_temp_profile_profile.png'.format(user.id),'wb') as f:
             f.write(image)
@@ -2194,7 +2198,7 @@ class Leveler:
                     # determine image or color for badge bg
                     if await self._valid_image_url(bg_color):
                         # get image
-                        async with aiohttp.get(bg_color) as r:
+                        async with self.session.get(bg_color) as r:
                             image = await r.content.read()
                         with open('data/leveler/temp/{}_temp_badge.png'.format(user.id),'wb') as f:
                             f.write(image)
@@ -2351,23 +2355,23 @@ class Leveler:
         bg_image = Image
         profile_image = Image
 
-        async with aiohttp.get(bg_url) as r:
+        async with self.session.get(bg_url) as r:
             image = await r.content.read()
         with open('data/leveler/temp/{}_temp_rank_bg.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
-            async with aiohttp.get(profile_url) as r:
+            async with self.session.get(profile_url) as r:
                 image = await r.content.read()
         except:
-            async with aiohttp.get(default_avatar_url) as r:
+            async with self.session.get(default_avatar_url) as r:
                 image = await r.content.read()
         with open('data/leveler/temp/{}_temp_rank_profile.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
-            async with aiohttp.get(server_icon_url) as r:
+            async with self.session.get(server_icon_url) as r:
                 image = await r.content.read()
         except:
-            async with aiohttp.get(default_avatar_url) as r:
+            async with self.session.get(default_avatar_url) as r:
                 image = await r.content.read()
         with open('data/leveler/temp/{}_temp_server_icon.png'.format(user.id),'wb') as f:
             f.write(image)
@@ -2559,23 +2563,23 @@ class Leveler:
         bg_image = Image
         profile_image = Image
 
-        async with aiohttp.get(bg_url) as r:
+        async with self.session.get(bg_url) as r:
             image = await r.content.read()
         with open('data/leveler/temp/test_temp_rank_bg.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
-            async with aiohttp.get(profile_url) as r:
+            async with self.session.get(profile_url) as r:
                 image = await r.content.read()
         except:
-            async with aiohttp.get(default_avatar_url) as r:
+            async with self.session.get(default_avatar_url) as r:
                 image = await r.content.read()
         with open('data/leveler/temp/test_temp_rank_profile.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
-            async with aiohttp.get(server_icon_url) as r:
+            async with self.session.get(server_icon_url) as r:
                 image = await r.content.read()
         except:
-            async with aiohttp.get(default_avatar_url) as r:
+            async with self.session.get(default_avatar_url) as r:
                 image = await r.content.read()
         with open('data/leveler/temp/test_temp_server_icon.png'.format(user.id),'wb') as f:
             f.write(image)
@@ -2738,15 +2742,15 @@ class Leveler:
         bg_image = Image
         profile_image = Image
 
-        async with aiohttp.get(bg_url) as r:
+        async with self.session.get(bg_url) as r:
             image = await r.content.read()
         with open('data/leveler/temp/{}_temp_level_bg.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
-            async with aiohttp.get(profile_url) as r:
+            async with self.session.get(profile_url) as r:
                 image = await r.content.read()
         except:
-            async with aiohttp.get(default_avatar_url) as r:
+            async with self.session.get(default_avatar_url) as r:
                 image = await r.content.read()
         with open('data/leveler/temp/{}_temp_level_profile.png'.format(user.id),'wb') as f:
             f.write(image)
@@ -2844,15 +2848,15 @@ class Leveler:
         bg_image = Image
         profile_image = Image
 
-        async with aiohttp.get(bg_url) as r:
+        async with self.session.get(bg_url) as r:
             image = await r.content.read()
         with open('data/leveler/temp/{}_temp_level_bg.png'.format(user.id),'wb') as f:
             f.write(image)
         try:
-            async with aiohttp.get(profile_url) as r:
+            async with self.session.get(profile_url) as r:
                 image = await r.content.read()
         except:
-            async with aiohttp.get(default_avatar_url) as r:
+            async with self.session.get(default_avatar_url) as r:
                 image = await r.content.read()
         with open('data/leveler/temp/{}_temp_level_profile.png'.format(user.id),'wb') as f:
             f.write(image)
